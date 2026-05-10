@@ -1,0 +1,44 @@
+@import "tailwindcss";
+
+:root {
+  --orange: #FF6B35;
+  --purple: #7B2FBE;
+  --green: #00D46A;
+  --gold: #FFD700;
+  --dark: #0D0D0D;
+  --dark2: #1A1A1A;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: "Inter", sans-serif;
+  background: #0D0D0D;
+  color: #fff;
+}
+
+.bebas { font-family: "Bebas Neue", sans-serif; letter-spacing: 0.05em; }
+
+.gradient-text {
+  background: linear-gradient(135deg, #FF6B35, #FFD700, #00D46A);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-bg {
+  background: linear-gradient(135deg, #FF6B35 0%, #7B2FBE 50%, #00D46A 100%);
+}
+
+.card-hover {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px rgba(255, 107, 53, 0.3);
+}
+
+.player-blur {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
