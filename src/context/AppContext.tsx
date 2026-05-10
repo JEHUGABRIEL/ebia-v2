@@ -1,27 +1,18 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 import keycloak, { initKeycloak, getCurrentUser } from "../lib/keycloak";
 
-
 export type EbiaUser = NonNullable<ReturnType<typeof getCurrentUser>>;
 export interface Track { id: string; title: string; artist: string; artistId?: string; audioUrl: string; coverUrl?: string; duration?: number; }
 
 interface AppCtx {
-  user: EbiaUser | null;
-  authReady: boolean;
-  login: () => void;
-  logout: () => void;
-  register: (role: "listener" | "artist") => void;
-  // Player
-  currentTrack: Track | null;
-  isPlaying: boolean;
-  queue: Track[];
+  user: EbiaUser | null; authReady: boolean;
+  login: () => void; logout: () => void; register: (role: "listener" | "artist") => void;
+  currentTrack: Track | null; isPlaying: boolean; queue: Track[];
+  queueIndex: number;
+  isShuffle: boolean; toggleShuffle: () => void;
   playTrack: (track: Track, queue?: Track[]) => void;
-  togglePlay: () => void;
-  nextTrack: () => void;
-  prevTrack: () => void;
-  // UI
-  showLoginModal: boolean;
-  setShowLoginModal: (v: boolean) => void;
+  togglePlay: () => void; nextTrack: () => void; prevTrack: () => void;
+  showLoginModal: boolean; setShowLoginModal: (v: boolean) => void;
 }
 
 const Ctx = createContext<AppCtx | null>(null);
@@ -33,14 +24,12 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [queue, setQueue] = useState<Track[]>([]);
   const [queueIndex, setQueueIndex] = useState(0);
+  const [isShuffle, setIsShuffle] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    initKeycloak().then(() => {
-      setUser(getCurrentUser());
-      setAuthReady(true);
-    }).catch(() => setAuthReady(true));
+    initKeycloak().then(() => { setUser(getCurrentUser()); setAuthReady(true); }).catch(() => setAuthReady(true));
     keycloak.onAuthSuccess = () => setUser(getCurrentUser());
     keycloak.onAuthLogout = () => setUser(null);
     keycloak.onTokenExpired = () => keycloak.updateToken(60);
@@ -52,15 +41,26 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     const audio = audioRef.current;
     audio.src = currentTrack.audioUrl;
     audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
-    audio.onended = () => nextTrack();
+    audio.onended = () => nextTrackFn(queue, queueIndex, isShuffle);
   }, [currentTrack]);
 
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
-    if (isPlaying) audio.play().catch(() => {});
-    else audio.pause();
+    if (isPlaying) audio.play().catch(() => {}); else audio.pause();
   }, [isPlaying]);
+
+  const nextTrackFn = (q: Track[], idx: number, shuffle: boolean) => {
+    if (!q.length) return;
+    let next: number;
+    if (shuffle) {
+      do { next = Math.floor(Math.random() * q.length); } while (q.length > 1 && next === idx);
+    } else {
+      next = (idx + 1) % q.length;
+    }
+    setQueueIndex(next);
+    setCurrentTrack(q[next]);
+  };
 
   const playTrack = (track: Track, q?: Track[]) => {
     if (q) { setQueue(q); setQueueIndex(q.findIndex(t => t.id === track.id)); }
@@ -68,14 +68,9 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const togglePlay = () => setIsPlaying(p => !p);
+  const toggleShuffle = () => setIsShuffle(s => !s);
 
-  const nextTrack = () => {
-    if (!queue.length) return;
-    const next = (queueIndex + 1) % queue.length;
-    setQueueIndex(next);
-    setCurrentTrack(queue[next]);
-  };
-
+  const nextTrack = () => nextTrackFn(queue, queueIndex, isShuffle);
   const prevTrack = () => {
     if (!queue.length) return;
     const prev = (queueIndex - 1 + queue.length) % queue.length;
@@ -89,7 +84,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     keycloak.register({ locale: "fr", redirectUri: window.location.origin + (role === "artist" ? "/artist-dashboard" : "/me") });
 
   return (
-    <Ctx.Provider value={{ user, authReady, login, logout, register, currentTrack, isPlaying, queue, playTrack, togglePlay, nextTrack, prevTrack, showLoginModal, setShowLoginModal }}>
+    <Ctx.Provider value={{ user, authReady, login, logout, register, currentTrack, isPlaying, queue, queueIndex, isShuffle, toggleShuffle, playTrack, togglePlay, nextTrack, prevTrack, showLoginModal, setShowLoginModal }}>
       {children}
     </Ctx.Provider>
   );

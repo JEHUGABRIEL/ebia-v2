@@ -1,98 +1,220 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useApp } from "../context/AppContext";
-import { ArrowRight, Zap, Globe, Music } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { ArrowRight, Play } from "lucide-react";
+
+const TICKER = ["Afro-Pop","Hip-Hop","Afro-Folk","Soukous","Gospel","Afro-Trap","Ndombolo","Bikutsi","Traditionnel","R&B","Afro-Beat","Soul"];
 
 export default function Landing() {
   const { user } = useApp();
   const navigate = useNavigate();
+  const full = [...TICKER,...TICKER,...TICKER,...TICKER];
 
   return (
-    <div className="min-h-screen" style={{ background: "#0D0D0D" }}>
-      {/* Hero */}
-      <div className="relative min-h-screen flex flex-col items-center justify-center text-center px-4 overflow-hidden" style={{ paddingTop: "80px" }}>
-        {/* Animated background blobs */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute w-96 h-96 rounded-full opacity-20 animate-pulse"
-            style={{ background: "radial-gradient(circle, #FF6B35, transparent)", top: "10%", left: "5%" }} />
-          <div className="absolute w-80 h-80 rounded-full opacity-15 animate-pulse"
-            style={{ background: "radial-gradient(circle, #7B2FBE, transparent)", top: "30%", right: "5%", animationDelay: "1s" }} />
-          <div className="absolute w-64 h-64 rounded-full opacity-10 animate-pulse"
-            style={{ background: "radial-gradient(circle, #00D46A, transparent)", bottom: "20%", left: "30%", animationDelay: "2s" }} />
-        </div>
+    <div className="grain" style={{ background: "var(--bg)", color: "var(--text)", overflowX: "hidden" }}>
 
-        <div className="relative z-10 max-w-5xl mx-auto">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border mb-8 text-xs font-bold uppercase tracking-widest"
-            style={{ borderColor: "rgba(255,107,53,0.4)", color: "#FF6B35", background: "rgba(255,107,53,0.1)" }}>
-            <Zap size={12} fill="#FF6B35" />
-            La Pulsation Musicale de la RCA
-          </div>
+      {/* ── HERO ── */}
+      <section style={{
+        minHeight: "100vh", display: "flex", alignItems: "center",
+        padding: "100px 0 60px", position: "relative", overflow: "hidden",
+      }}>
+        {/* Warm glow */}
+        <div style={{
+          position: "absolute", top: "-5%", right: "-10%",
+          width: "700px", height: "700px", borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(232,96,26,0.14) 0%, transparent 65%)",
+          pointerEvents: "none",
+        }} />
 
-          <h1 className="bebas text-7xl md:text-[10rem] leading-none mb-6">
-            <span className="block text-white">Propulser</span>
-            <span className="block gradient-text">la musique</span>
-            <span className="block text-white">centrafricaine</span>
-          </h1>
+        <div style={{ maxWidth: "1360px", margin: "0 auto", padding: "0 48px", width: "100%" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "80px", alignItems: "center" }}>
 
-          <p className="text-zinc-400 text-lg md:text-xl max-w-2xl mx-auto mb-10 font-light">
-            Découvrez, écoutez et soutenez les artistes qui définissent le son de la République Centrafricaine.
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-20">
-            <Link to="/explore"
-              className="flex items-center justify-center gap-3 px-8 py-4 rounded-2xl font-bold text-sm uppercase tracking-widest text-white transition-all hover:scale-105"
-              style={{ background: "linear-gradient(135deg, #FF6B35, #FFD700)" }}>
-              Découvrir les artistes <ArrowRight size={16} />
-            </Link>
-            {!user && (
-              <button onClick={() => navigate("/login")}
-                className="px-8 py-4 rounded-2xl font-bold text-sm uppercase tracking-widest transition-all hover:scale-105 border"
-                style={{ borderColor: "rgba(255,255,255,0.2)", color: "#fff", background: "rgba(255,255,255,0.05)" }}>
-                Rejoindre E-Bia
-              </button>
-            )}
-          </div>
-
-          {/* Stats */}
-          <div className="grid grid-cols-3 gap-4 max-w-md mx-auto">
-            {[
-              { value: "19", label: "Artistes", color: "#FF6B35" },
-              { value: "54", label: "Titres", color: "#FFD700" },
-              { value: "RCA", label: "Origine", color: "#00D46A" },
-            ].map(s => (
-              <div key={s.label} className="rounded-2xl p-4 text-center border"
-                style={{ background: "rgba(255,255,255,0.03)", borderColor: "rgba(255,255,255,0.08)" }}>
-                <div className="bebas text-4xl" style={{ color: s.color }}>{s.value}</div>
-                <div className="text-zinc-500 text-xs uppercase tracking-widest mt-1">{s.label}</div>
+            {/* LEFT – Typographie */}
+            <div>
+              <div className="fade-up" style={{
+                display: "inline-flex", alignItems: "center", gap: "8px",
+                padding: "6px 14px", borderRadius: "99px",
+                border: "1px solid rgba(232,96,26,0.3)", marginBottom: "36px",
+                fontSize: "11px", fontWeight: 600, letterSpacing: "0.18em",
+                textTransform: "uppercase", color: "var(--amber)",
+              }}>
+                <span style={{ width: "5px", height: "5px", borderRadius: "50%", background: "var(--amber)", display: "inline-block" }} />
+                République Centrafricaine
               </div>
-            ))}
+
+              <h1 className="bebas fade-up-2" style={{
+                fontSize: "clamp(72px, 11vw, 148px)",
+                lineHeight: 0.9, letterSpacing: "0.02em",
+                marginBottom: "36px",
+              }}>
+                <span style={{ display: "block", color: "var(--text)" }}>La</span>
+                <span style={{ display: "block", color: "var(--amber)" }}>musique</span>
+                <span style={{ display: "block", color: "var(--text)" }}>de chez</span>
+                <span style={{ display: "block", color: "var(--gold)" }}>nous.</span>
+              </h1>
+
+              <p className="fade-up-3" style={{
+                color: "var(--muted)", fontSize: "17px", lineHeight: 1.7,
+                maxWidth: "460px", marginBottom: "44px", fontWeight: 400,
+              }}>
+                Découvrez, écoutez et soutenez les artistes qui définissent le son de la République Centrafricaine.
+              </p>
+
+              <div className="fade-up-4" style={{ display: "flex", gap: "14px", flexWrap: "wrap" }}>
+                <Link to="/explore" style={{
+                  display: "inline-flex", alignItems: "center", gap: "10px",
+                  padding: "15px 30px", borderRadius: "99px",
+                  background: "var(--amber)", color: "#fff",
+                  fontWeight: 700, fontSize: "13px", letterSpacing: "0.04em",
+                  textDecoration: "none", transition: "transform 0.2s, box-shadow 0.2s",
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = "scale(1.04)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 16px 48px rgba(232,96,26,0.4)"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = "scale(1)"; (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}
+                >
+                  <Play size={14} fill="white" /> Écouter maintenant
+                </Link>
+                {!user && (
+                  <button onClick={() => navigate("/login")} style={{
+                    padding: "15px 30px", borderRadius: "99px",
+                    background: "transparent", border: "1px solid rgba(240,235,227,0.18)",
+                    color: "var(--text)", fontWeight: 600, fontSize: "13px",
+                    cursor: "pointer", transition: "background 0.2s, border-color 0.2s",
+                  }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.06)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(240,235,227,0.35)"; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(240,235,227,0.18)"; }}
+                  >
+                    Rejoindre E-Bia <ArrowRight size={13} style={{ display: "inline", marginLeft: "4px", verticalAlign: "-2px" }} />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* RIGHT – Orbe */}
+            <div style={{ flexShrink: 0 }} className="hidden md:block">
+              <div style={{
+                width: "380px", height: "380px", borderRadius: "50%",
+                border: "1px solid rgba(232,96,26,0.18)",
+                background: "radial-gradient(circle at 35% 35%, rgba(232,96,26,0.1), rgba(201,147,10,0.06) 60%, transparent)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                position: "relative",
+              }}>
+                {/* Cercles concentriques */}
+                {[280, 200, 130].map((s, i) => (
+                  <div key={i} style={{
+                    position: "absolute", width: s, height: s, borderRadius: "50%",
+                    border: `1px solid rgba(232,96,26,${0.06 + i * 0.06})`,
+                  }} />
+                ))}
+                <div style={{ textAlign: "center", position: "relative", zIndex: 1 }}>
+                  <div className="bebas" style={{ fontSize: "68px", color: "var(--amber)", lineHeight: 1, letterSpacing: "0.08em" }}>E-BIA</div>
+                  <div style={{ fontSize: "10px", color: "var(--muted)", letterSpacing: "0.22em", textTransform: "uppercase", marginTop: "6px" }}>Music Platform · RCA</div>
+                </div>
+
+                {/* Floating pill – En cours */}
+                <div style={{
+                  position: "absolute", top: "32px", right: "-44px",
+                  background: "var(--bg3)", border: "1px solid var(--border)",
+                  borderRadius: "12px", padding: "10px 14px",
+                  display: "flex", alignItems: "center", gap: "10px",
+                  boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+                }}>
+                  <div style={{
+                    width: "28px", height: "28px", borderRadius: "50%",
+                    background: "var(--amber)", display: "flex", alignItems: "center", justifyContent: "center",
+                  }}>
+                    <Play size={10} fill="white" color="white" />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text)" }}>En cours</div>
+                    <div style={{ fontSize: "10px", color: "var(--muted)" }}>Idylle Mamba</div>
+                  </div>
+                </div>
+
+                {/* Floating badge – artistes */}
+                <div style={{
+                  position: "absolute", bottom: "48px", left: "-52px",
+                  background: "var(--bg3)", border: "1px solid var(--border)",
+                  borderRadius: "10px", padding: "10px 14px",
+                  fontSize: "11px", fontWeight: 700, color: "var(--gold)",
+                  boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+                }}>
+                  ♪ 19 artistes RCA
+                </div>
+              </div>
+            </div>
           </div>
         </div>
+      </section>
 
-        {/* Scroll indicator */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
-          <div className="w-6 h-10 rounded-full border-2 border-zinc-600 flex items-start justify-center pt-2">
-            <div className="w-1 h-2 rounded-full bg-zinc-400" />
-          </div>
+      {/* ── TICKER ── */}
+      <div style={{
+        borderTop: "1px solid var(--border)", borderBottom: "1px solid var(--border)",
+        overflow: "hidden", padding: "14px 0", background: "#0D0D0D",
+      }}>
+        <div className="marquee-track">
+          {full.map((g, i) => (
+            <span key={i} style={{
+              padding: "0 28px", fontSize: "11px", fontWeight: 600,
+              letterSpacing: "0.18em", textTransform: "uppercase",
+              color: i % 2 === 0 ? "var(--muted)" : "var(--amber)",
+            }}>
+              {g}&nbsp;&nbsp;<span style={{ color: "rgba(240,235,227,0.12)" }}>•</span>
+            </span>
+          ))}
         </div>
       </div>
 
-      {/* Features */}
-      <div className="max-w-6xl mx-auto px-4" style={{ padding: "80px 16px 120px" }}>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {/* ── STATS ── */}
+      <div style={{ maxWidth: "1360px", margin: "0 auto", padding: "100px 48px" }}>
+        <div style={{
+          display: "grid", gridTemplateColumns: "repeat(3, 1fr)",
+          border: "1px solid var(--border)", borderRadius: "20px", overflow: "hidden",
+        }}>
           {[
-            { icon: Music, title: "Écoute libre", desc: "Profitez de toute la musique centrafricaine sans restriction. Pas de compte requis.", color: "#FF6B35" },
-            { icon: Globe, title: "Artistes locaux", desc: "Soutenez directement les artistes de la RCA en les suivant et en partageant leur musique.", color: "#7B2FBE" },
-            { icon: Zap, title: "Qualité audio", desc: "Streaming haute qualité pour une expérience d'écoute optimale.", color: "#00D46A" },
+            { value: "19", label: "Artistes centrafricains", note: "et en croissance", c: "var(--amber)" },
+            { value: "54", label: "Titres disponibles", note: "écoute 100% libre", c: "var(--gold)" },
+            { value: "∞", label: "Musique à découvrir", note: "de la RCA au monde", c: "var(--text)" },
+          ].map((s, i) => (
+            <div key={i} style={{
+              padding: "56px 48px", background: "var(--bg)",
+              borderRight: i < 2 ? "1px solid var(--border)" : "none",
+            }}>
+              <div className="bebas" style={{ fontSize: "88px", lineHeight: 1, color: s.c, marginBottom: "14px" }}>{s.value}</div>
+              <div style={{ fontSize: "15px", fontWeight: 600, color: "var(--text)", marginBottom: "4px" }}>{s.label}</div>
+              <div style={{ fontSize: "12px", color: "var(--muted)", letterSpacing: "0.04em" }}>{s.note}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── FEATURES ── */}
+      <div style={{ maxWidth: "1360px", margin: "0 auto", padding: "0 48px 140px" }}>
+        <div style={{ marginBottom: "64px" }}>
+          <div style={{
+            fontSize: "11px", fontWeight: 600, letterSpacing: "0.2em",
+            color: "var(--amber)", textTransform: "uppercase", marginBottom: "16px",
+          }}>Pourquoi E-Bia</div>
+          <h2 className="bebas" style={{ fontSize: "56px", color: "var(--text)", lineHeight: 1 }}>
+            La plateforme faite pour nous
+          </h2>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "20px" }}>
+          {[
+            { num: "01", title: "Écoute libre", desc: "Toute la musique centrafricaine sans restriction. Aucun compte requis pour commencer à écouter.", c: "var(--amber)" },
+            { num: "02", title: "Artistes locaux", desc: "Soutenez directement les artistes de la RCA. Suivez-les, partagez leur musique, faites rayonner leur talent.", c: "var(--gold)" },
+            { num: "03", title: "Qualité premium", desc: "Streaming haute qualité optimisé pour les connexions centrafricaines. Une expérience fluide, partout.", c: "var(--text)" },
           ].map(f => (
-            <div key={f.title} className="rounded-3xl p-8 border card-hover"
-              style={{ background: "rgba(255,255,255,0.03)", borderColor: "rgba(255,255,255,0.08)" }}>
-              <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
-                style={{ background: `${f.color}20` }}>
-                <f.icon size={24} style={{ color: f.color }} />
-              </div>
-              <h3 className="bebas text-2xl text-white mb-2">{f.title}</h3>
-              <p className="text-zinc-500 text-sm leading-relaxed">{f.desc}</p>
+            <div key={f.num} className="card-lift" style={{
+              padding: "44px 40px", borderRadius: "20px",
+              border: "1px solid var(--border)", background: "rgba(240,235,227,0.018)",
+              cursor: "default",
+            }}
+            onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = "rgba(232,96,26,0.3)"}
+            onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"}
+            >
+              <div className="bebas" style={{ fontSize: "80px", color: f.c, opacity: 0.12, lineHeight: 1, marginBottom: "28px" }}>{f.num}</div>
+              <h3 style={{ fontSize: "19px", fontWeight: 700, color: "var(--text)", marginBottom: "12px" }}>{f.title}</h3>
+              <p style={{ fontSize: "14px", color: "var(--muted)", lineHeight: 1.75 }}>{f.desc}</p>
             </div>
           ))}
         </div>

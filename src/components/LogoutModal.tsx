@@ -1,57 +1,70 @@
 import { useApp } from "../context/AppContext";
 import { LogOut, X } from "lucide-react";
 
-interface Props {
-  open: boolean;
-  onClose: () => void;
-}
+interface Props { open: boolean; onClose: () => void; }
 
 export default function LogoutModal({ open, onClose }: Props) {
   const { logout } = useApp();
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-6"
-      style={{ background: "rgba(0,0,0,0.8)", backdropFilter: "blur(8px)" }}
-      onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="w-full max-w-md rounded-3xl overflow-hidden"
-        style={{ background: "#1A1A1A", border: "1px solid rgba(255,255,255,0.1)" }}>
-        
+    <div onClick={e => e.target === e.currentTarget && onClose()} style={{
+      position: "fixed", inset: 0, zIndex: 200,
+      display: "flex", alignItems: "center", justifyContent: "center", padding: "24px",
+      background: "rgba(0,0,0,0.75)", backdropFilter: "blur(12px)",
+    }}>
+      <div style={{
+        width: "100%", maxWidth: "380px", borderRadius: "20px",
+        background: "var(--bg2)", border: "1px solid rgba(240,235,227,0.1)",
+        boxShadow: "0 32px 80px rgba(0,0,0,0.6)", overflow: "hidden",
+        animation: "fadeUp 0.2s ease both",
+      }}>
+        {/* Top accent line */}
+        <div style={{ height: "3px", background: "linear-gradient(90deg, var(--amber), var(--gold))" }} />
+
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b"
-          style={{ borderColor: "rgba(255,255,255,0.08)" }}>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl flex items-center justify-center"
-              style={{ background: "rgba(255,107,53,0.15)" }}>
-              <LogOut size={18} style={{ color: "#FF6B35" }} />
+        <div style={{ padding: "24px 24px 0", display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <div style={{ width: "40px", height: "40px", borderRadius: "12px", background: "rgba(232,96,26,0.12)", border: "1px solid rgba(232,96,26,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <LogOut size={17} style={{ color: "var(--amber)" }} />
             </div>
-            <h2 className="bebas text-2xl text-white tracking-wider">Déconnexion</h2>
+            <div>
+              <h2 className="bebas" style={{ fontSize: "22px", color: "var(--text)", letterSpacing: "0.05em", lineHeight: 1 }}>Déconnexion</h2>
+              <p style={{ fontSize: "11px", color: "var(--muted)", marginTop: "3px" }}>E-Bia · Votre compte</p>
+            </div>
           </div>
-          <button onClick={onClose}
-            className="w-8 h-8 rounded-xl flex items-center justify-center transition-all hover:bg-white/10"
-            style={{ color: "#9ca3af" }}>
-            <X size={16} />
-          </button>
+          <button onClick={onClose} style={{ width: "28px", height: "28px", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", background: "none", border: "none", cursor: "pointer", color: "var(--muted)", transition: "background 0.15s, color 0.15s", flexShrink: 0 }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.07)"; (e.currentTarget as HTMLElement).style.color = "var(--text)"; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "none"; (e.currentTarget as HTMLElement).style.color = "var(--muted)"; }}
+          ><X size={15} /></button>
         </div>
 
         {/* Body */}
-        <div className="p-6">
-          <p className="text-zinc-400 text-sm leading-relaxed mb-8">
-            Vous êtes sur le point de vous déconnecter de votre compte E-Bia. 
-            Vous devrez vous reconnecter pour accéder à votre espace.
+        <div style={{ padding: "20px 24px 24px" }}>
+          <p style={{ fontSize: "14px", color: "var(--muted)", lineHeight: 1.65, marginBottom: "24px" }}>
+            Vous allez quitter votre espace. Vos données restent sauvegardées et vous pourrez vous reconnecter à tout moment.
           </p>
 
-          <div className="flex flex-col gap-3">
-            <button onClick={() => { logout(); onClose(); }}
-              className="w-full py-4 rounded-2xl font-bold text-sm uppercase tracking-widest text-black transition-all hover:scale-[1.02] hover:brightness-110"
-              style={{ background: "linear-gradient(135deg, #FF6B35, #FFD700)" }}>
-              Oui, me déconnecter
-            </button>
-            <button onClick={onClose}
-              className="w-full py-4 rounded-2xl font-bold text-sm uppercase tracking-widest transition-all hover:bg-white/10"
-              style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff" }}>
-              Annuler
-            </button>
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            <button onClick={() => { logout(); onClose(); }} style={{
+              width: "100%", padding: "15px", borderRadius: "12px", border: "none", cursor: "pointer",
+              background: "var(--amber)", color: "#fff",
+              fontSize: "12px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.12em",
+              transition: "box-shadow 0.2s, transform 0.15s",
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 32px rgba(232,96,26,0.45)"; (e.currentTarget as HTMLElement).style.transform = "scale(1.02)"; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = "none"; (e.currentTarget as HTMLElement).style.transform = "scale(1)"; }}
+            >Se déconnecter</button>
+
+            <button onClick={onClose} style={{
+              width: "100%", padding: "14px", borderRadius: "12px", cursor: "pointer",
+              background: "transparent", border: "1px solid rgba(240,235,227,0.1)", color: "var(--muted)",
+              fontSize: "12px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em",
+              transition: "background 0.15s, color 0.15s, border-color 0.15s",
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.05)"; (e.currentTarget as HTMLElement).style.color = "var(--text)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(240,235,227,0.25)"; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--muted)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(240,235,227,0.1)"; }}
+            >Annuler</button>
           </div>
         </div>
       </div>

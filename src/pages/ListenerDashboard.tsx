@@ -1,20 +1,19 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useApp } from "../context/AppContext";
 import { useNavigate } from "react-router-dom";
-import { Home, Search, Library, Heart, Users, Settings, Plus, Play, ChevronRight, Music2, LogOut } from "lucide-react";
+import { Home, Search, Library, Heart, Users, Settings, Plus, ChevronRight, Music2, LogOut, Camera, Mic2 } from "lucide-react";
 import LogoutModal from "../components/LogoutModal";
 
 type Section = "accueil" | "recherche" | "bibliotheque" | "favoris" | "suivis" | "parametres";
 
 const MOCK_RECENT = [
-  { id: "1", title: "On va se marier", artist: "Idylle Mamba", genre: "Afro-Folk", color: "#FF6B35", avatar: "https://images.unsplash.com/photo-1516585427167-9f4af9627e6c?w=80" },
-  { id: "2", title: "Bande de Bangui", artist: "Cool Fawa", genre: "Hip-Hop", color: "#7B2FBE", avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80" },
-  { id: "3", title: "Mawa", artist: "Ley Kartel", genre: "Afro-Pop", color: "#00D46A", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80" },
-  { id: "4", title: "Kondogbia", artist: "Mansdou", genre: "Afro-Trap", color: "#FFD700", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80" },
-  { id: "5", title: "Calm Down", artist: "Ley Kartel", genre: "Pop", color: "#FF6B35", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80" },
-  { id: "6", title: "One Africa", artist: "Cool Fawa", genre: "Afro-Beat", color: "#7B2FBE", avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80" },
+  { id: "1", title: "On va se marier", artist: "Idylle Mamba", avatar: "https://images.unsplash.com/photo-1516585427167-9f4af9627e6c?w=80" },
+  { id: "2", title: "Bande de Bangui", artist: "Cool Fawa", avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80" },
+  { id: "3", title: "Mawa", artist: "Ley Kartel", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80" },
+  { id: "4", title: "Kondogbia", artist: "Mansdou", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80" },
+  { id: "5", title: "Calm Down", artist: "Ley Kartel", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80" },
+  { id: "6", title: "One Africa", artist: "Cool Fawa", avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80" },
 ];
-
 const MOCK_ARTISTS = [
   { id: "1", name: "Idylle Mamba", genre: "Afro-Folk", slug: "idylle-mamba", avatar: "https://images.unsplash.com/photo-1516585427167-9f4af9627e6c?w=200" },
   { id: "2", name: "Cool Fawa", genre: "Hip-Hop", slug: "cool-fawa", avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200" },
@@ -22,12 +21,17 @@ const MOCK_ARTISTS = [
   { id: "4", name: "KT Pop", genre: "Pop", slug: "kt-pop", avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200" },
   { id: "5", name: "Mansdou", genre: "Afro-Trap", slug: "mansdou", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200" },
 ];
-
 const MOCK_FAVORITES = [
-  { id: "1", title: "One Africa", artist: "Cool Fawa", duration: "4:20", color: "#7B2FBE" },
-  { id: "2", title: "Faro Faro", artist: "Idylle Mamba", duration: "3:55", color: "#FF6B35" },
-  { id: "3", title: "Regal", artist: "Mansdou", duration: "3:30", color: "#FFD700" },
-  { id: "4", title: "Mawa", artist: "Ley Kartel", duration: "4:10", color: "#00D46A" },
+  { id: "1", title: "One Africa", artist: "Cool Fawa", duration: "4:20" },
+  { id: "2", title: "Faro Faro", artist: "Idylle Mamba", duration: "3:55" },
+  { id: "3", title: "Regal", artist: "Mansdou", duration: "3:30" },
+  { id: "4", title: "Mawa", artist: "Ley Kartel", duration: "4:10" },
+];
+const GENRES = [
+  { label: "Afro-Pop", bg: "#7B2200" }, { label: "Hip-Hop", bg: "#3B1A5C" },
+  { label: "Afro-Trap", bg: "#5C3000" }, { label: "Folk", bg: "#0F3D22" },
+  { label: "Jazz", bg: "#0F2A40" }, { label: "Urbain", bg: "#2A0F40" },
+  { label: "Gospel", bg: "#40280F" }, { label: "Traditionnel", bg: "#0F2E1A" },
 ];
 
 export default function ListenerDashboard() {
@@ -36,180 +40,215 @@ export default function ListenerDashboard() {
   const [section, setSection] = useState<Section>("accueil");
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [artistModalOpen, setArtistModalOpen] = useState(false);
+  const [artistStep, setArtistStep] = useState(1);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!user) return null;
 
-  const sidebarLinks = [
-    { id: "accueil" as Section, icon: Home, label: "Accueil" },
-    { id: "recherche" as Section, icon: Search, label: "Rechercher" },
-    { id: "bibliotheque" as Section, icon: Library, label: "Bibliothèque" },
-  ];
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Bonjour" : hour < 18 ? "Bon après-midi" : "Bonsoir";
 
-  const playlistLinks = [
-    { id: "favoris" as Section, icon: Heart, label: "Titres favoris", color: "#00D46A" },
-    { id: "suivis" as Section, icon: Users, label: "Artistes suivis", color: "#7B2FBE" },
-    { id: "parametres" as Section, icon: Settings, label: "Paramètres", color: "#9ca3af" },
-  ];
-
-  const sidebarStyle = {
-    background: "#000",
-    width: "240px",
-    minWidth: "240px",
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => setAvatarUrl(ev.target?.result as string);
+    reader.readAsDataURL(file);
   };
 
-return (
-    <div className="flex" style={{ height: "calc(100vh - 64px)", marginTop: "64px", background: "#0D0D0D" }}>
+  const navLinks: { id: Section; icon: typeof Home; label: string }[] = [
+    { id: "accueil", icon: Home, label: "Accueil" },
+    { id: "recherche", icon: Search, label: "Rechercher" },
+    { id: "bibliotheque", icon: Library, label: "Bibliothèque" },
+  ];
+  const libLinks: { id: Section; icon: typeof Heart; label: string; color: string }[] = [
+    { id: "favoris", icon: Heart, label: "Titres favoris", color: "var(--amber)" },
+    { id: "suivis", icon: Users, label: "Artistes suivis", color: "var(--gold)" },
+    { id: "parametres", icon: Settings, label: "Paramètres", color: "var(--muted)" },
+  ];
+
+  const AvatarBlock = ({ size = 64, withEdit = false }: { size?: number; withEdit?: boolean }) => (
+    <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
+      {avatarUrl ? (
+        <img src={avatarUrl} alt="Avatar" style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover", display: "block" }} />
+      ) : (
+        <div style={{ width: size, height: size, borderRadius: "50%", background: "linear-gradient(135deg, var(--amber), var(--gold))", display: "flex", alignItems: "center", justifyContent: "center", fontSize: size * 0.35, fontWeight: 800, color: "#fff" }}>
+          {user.displayName?.[0]?.toUpperCase()}
+        </div>
+      )}
+      {withEdit && (
+        <>
+          <button onClick={() => fileInputRef.current?.click()} style={{
+            position: "absolute", bottom: 0, right: 0, width: "28px", height: "28px", borderRadius: "50%",
+            background: "var(--amber)", border: "2px solid var(--bg)", display: "flex", alignItems: "center", justifyContent: "center",
+            cursor: "pointer",
+          }}>
+            <Camera size={12} color="white" />
+          </button>
+          <input ref={fileInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleAvatarChange} />
+        </>
+      )}
+    </div>
+  );
+
+  return (
+    <div style={{ display: "flex", height: "100vh", background: "var(--bg)" }}>
 
       {/* ── SIDEBAR ── */}
-      <div className="hidden md:flex flex-col gap-2 p-2 overflow-y-auto" style={sidebarStyle}>
-        {/* Nav principale */}
-        <div className="rounded-xl p-4" style={{ background: "#121212" }}>
-          {sidebarLinks.map(link => (
-            <button key={link.id} onClick={() => setSection(link.id)}
-              className="w-full flex items-center gap-4 px-3 py-3 rounded-lg transition-all text-left"
-              style={{ color: section === link.id ? "#fff" : "#9ca3af" }}>
-              <link.icon size={22} style={{ color: section === link.id ? "#FF6B35" : "inherit" }} />
-              <span className="font-bold text-sm">{link.label}</span>
+      <aside style={{ width: "236px", minWidth: "236px", display: "flex", flexDirection: "column", gap: "8px", padding: "8px", background: "#000", overflow: "hidden" }} className="hidden md:flex">
+
+        {/* Logo */}
+        <div style={{ padding: "16px 12px 8px", display: "flex", alignItems: "center", gap: "8px" }}>
+          <div style={{ width: "28px", height: "28px", borderRadius: "7px", background: "var(--amber)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Music2 size={14} color="white" />
+          </div>
+          <span className="bebas" style={{ fontSize: "16px", color: "var(--text)", letterSpacing: "0.1em" }}>E-BIA</span>
+        </div>
+
+        {/* Nav */}
+        <div style={{ background: "var(--bg2)", borderRadius: "12px", padding: "8px" }}>
+          {navLinks.map(l => (
+            <button key={l.id} onClick={() => setSection(l.id)} style={{
+              width: "100%", display: "flex", alignItems: "center", gap: "12px",
+              padding: "10px 12px", borderRadius: "8px", cursor: "pointer",
+              background: section === l.id ? "rgba(232,96,26,0.1)" : "transparent",
+              border: "none", color: section === l.id ? "var(--text)" : "var(--muted)", transition: "all 0.15s", textAlign: "left",
+            }}>
+              <l.icon size={18} style={{ color: section === l.id ? "var(--amber)" : "inherit", flexShrink: 0 }} />
+              <span style={{ fontWeight: 600, fontSize: "13px" }}>{l.label}</span>
             </button>
           ))}
         </div>
 
         {/* Bibliothèque */}
-        <div className="rounded-xl p-4 flex-1" style={{ background: "#121212" }}>
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-zinc-400 font-bold text-sm flex items-center gap-2">
-              <Library size={18} /> Ma bibliothèque
-            </span>
-            <button className="text-zinc-400 hover:text-white transition-colors p-1">
-              <Plus size={18} />
-            </button>
+        <div style={{ background: "var(--bg2)", borderRadius: "12px", padding: "14px 12px", flex: 1, display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px", padding: "0 4px" }}>
+            <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.1em" }}>Bibliothèque</span>
+            <Plus size={15} style={{ color: "var(--muted)", cursor: "pointer" }} />
           </div>
-
-          <div className="space-y-1">
-            {playlistLinks.map(link => (
-              <button key={link.id} onClick={() => setSection(link.id)}
-                className="w-full flex items-center gap-3 px-2 py-2 rounded-lg transition-all text-left hover:bg-white/5"
-                style={{ color: section === link.id ? "#fff" : "#9ca3af" }}>
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
-                  style={{ background: `${link.color}25` }}>
-                  <link.icon size={16} style={{ color: link.color }} />
+          <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+            {libLinks.map(l => (
+              <button key={l.id} onClick={() => setSection(l.id)} style={{
+                display: "flex", alignItems: "center", gap: "10px",
+                padding: "8px 10px", borderRadius: "8px", cursor: "pointer",
+                background: section === l.id ? "rgba(240,235,227,0.04)" : "transparent",
+                border: "none", textAlign: "left", transition: "background 0.15s",
+              }}
+              onMouseEnter={e => { if (section !== l.id) (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.04)"; }}
+              onMouseLeave={e => { if (section !== l.id) (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+              >
+                <div style={{ width: "34px", height: "34px", borderRadius: "8px", flexShrink: 0, background: `${l.color}18`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <l.icon size={14} style={{ color: l.color }} />
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-white">{link.label}</p>
-                  <p className="text-xs text-zinc-600">Playlist</p>
+                  <p style={{ fontSize: "12px", fontWeight: 700, color: "var(--text)" }}>{l.label}</p>
+                  <p style={{ fontSize: "10px", color: "var(--muted)" }}>Playlist</p>
                 </div>
               </button>
             ))}
           </div>
 
-          {/* Profil en bas */}
-          <div className="mt-auto pt-4 border-t" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
-            <div className="flex items-center gap-3 px-2 py-2">
-              <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-black text-black flex-shrink-0"
-                style={{ background: "linear-gradient(135deg, #FF6B35, #FFD700)" }}>
-                {user.displayName?.[0]?.toUpperCase()}
+          {/* Profil sidebar */}
+          <div style={{ marginTop: "auto", paddingTop: "12px", borderTop: "1px solid var(--border)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "4px 6px" }}>
+              <AvatarBlock size={30} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontSize: "11px", fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user.displayName}</p>
+                <p style={{ fontSize: "10px", color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Auditeur</p>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-white text-xs font-bold truncate">{user.displayName}</p>
-                <p className="text-zinc-600 text-xs truncate">{user.email}</p>
-              </div>
-              <button onClick={() => setLogoutOpen(true)} className="text-zinc-600 hover:text-white transition-colors">
-                <LogOut size={14} />
+              <button onClick={() => setLogoutOpen(true)} style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer", padding: "4px", borderRadius: "6px", transition: "all 0.15s" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "var(--text)"; (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.06)"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "var(--muted)"; (e.currentTarget as HTMLElement).style.background = "none"; }}>
+                <LogOut size={13} />
               </button>
             </div>
           </div>
         </div>
-      </div>
+      </aside>
 
-      {/* ── CONTENU PRINCIPAL ── */}
-      <div className="flex-1 overflow-y-auto" style={{ background: "linear-gradient(180deg, #1a0a00 0%, #0D0D0D 300px)" }}>
-        <div className="p-6 max-w-5xl">
+      {/* ── MAIN ── */}
+      <main style={{ flex: 1, overflowY: "auto", background: section === "accueil" ? "linear-gradient(180deg, #1C0C04 0%, var(--bg) 320px)" : "var(--bg)" }}>
+        <div style={{ padding: "32px", maxWidth: "1100px" }}>
 
           {/* ── ACCUEIL ── */}
           {section === "accueil" && (
-            <div className="space-y-8">
-              <div>
-                <h1 className="bebas text-4xl text-white mb-1">
-                  {new Date().getHours() < 12 ? "Bonjour" : new Date().getHours() < 18 ? "Bon après-midi" : "Bonsoir"}, {user.displayName?.split(" ")[0]} 👋
-                </h1>
-                <p className="text-zinc-500 text-sm">Que voulez-vous écouter aujourd'hui ?</p>
-              </div>
-
-              {/* Écoutes récentes — grille 3x2 */}
-              <div>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {MOCK_RECENT.map(track => (
-                    <button key={track.id}
-                      className="flex items-center gap-3 rounded-lg overflow-hidden text-left transition-all group hover:bg-white/10"
-                      style={{ background: "rgba(255,255,255,0.08)" }}>
-                      <img src={track.avatar} alt={track.title}
-                        className="w-14 h-14 object-cover flex-shrink-0" />
-                      <div className="flex-1 min-w-0 pr-2">
-                        <p className="text-white text-sm font-bold truncate">{track.title}</p>
-                        <p className="text-zinc-500 text-xs truncate">{track.artist}</p>
-                      </div>
-                      <div className="pr-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <div className="w-8 h-8 rounded-full flex items-center justify-center"
-                          style={{ background: "#FF6B35" }}>
-                          <Play size={14} className="text-black ml-0.5" fill="black" />
-                        </div>
-                      </div>
-                    </button>
-                  ))}
+            <div style={{ display: "flex", flexDirection: "column", gap: "40px" }}>
+              {/* Greeting */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px" }}>
+                <div>
+                  <h1 className="bebas" style={{ fontSize: "44px", color: "var(--text)", lineHeight: 1, marginBottom: "4px" }}>
+                    {greeting}, {user.displayName?.split(" ")[0]}
+                  </h1>
+                  <p style={{ fontSize: "13px", color: "var(--muted)" }}>Que voulez-vous écouter aujourd'hui ?</p>
                 </div>
+                {/* Devenir artiste — CTA subtil */}
+                <button onClick={() => setArtistModalOpen(true)} style={{
+                  display: "flex", alignItems: "center", gap: "8px", flexShrink: 0,
+                  padding: "10px 18px", borderRadius: "99px", cursor: "pointer",
+                  border: "1px solid rgba(232,96,26,0.35)", background: "rgba(232,96,26,0.08)",
+                  color: "var(--amber)", fontSize: "12px", fontWeight: 700, letterSpacing: "0.06em",
+                  transition: "all 0.2s",
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(232,96,26,0.16)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(232,96,26,0.6)"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(232,96,26,0.08)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(232,96,26,0.35)"; }}
+                >
+                  <Mic2 size={14} /> Devenir artiste
+                </button>
               </div>
 
-              {/* Artistes populaires */}
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="bebas text-2xl text-white">Artistes populaires</h2>
-                  <button onClick={() => navigate("/explore")}
-                    className="text-zinc-500 text-xs font-bold uppercase tracking-widest hover:text-white transition-colors">
-                    Tout afficher
+              {/* Écoutes récentes */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px" }}>
+                {MOCK_RECENT.map(track => (
+                  <button key={track.id} style={{ display: "flex", alignItems: "center", borderRadius: "8px", overflow: "hidden", textAlign: "left", background: "rgba(240,235,227,0.06)", border: "none", cursor: "pointer", transition: "background 0.15s" }}
+                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.1)"}
+                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.06)"}>
+                    <img src={track.avatar} alt={track.title} style={{ width: "52px", height: "52px", objectFit: "cover", flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0, padding: "0 12px" }}>
+                      <p style={{ fontSize: "13px", fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{track.title}</p>
+                      <p style={{ fontSize: "11px", color: "var(--muted)", marginTop: "2px" }}>{track.artist}</p>
+                    </div>
                   </button>
+                ))}
+              </div>
+
+              {/* Artistes */}
+              <div>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "18px" }}>
+                  <h2 className="bebas" style={{ fontSize: "24px", color: "var(--text)" }}>Artistes populaires</h2>
+                  <button onClick={() => navigate("/explore")} style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", background: "none", border: "none", cursor: "pointer" }}
+                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = "var(--text)"}
+                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = "var(--muted)"}
+                  >Tout afficher</button>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "12px" }}>
                   {MOCK_ARTISTS.map(artist => (
-                    <button key={artist.id} onClick={() => navigate(`/artist/${artist.slug}`)}
-                      className="p-4 rounded-xl text-left transition-all hover:bg-white/5 group">
-                      <div className="relative mb-4">
-                        <img src={artist.avatar} alt={artist.name}
-                          className="w-full aspect-square rounded-full object-cover" />
-                        <div className="absolute bottom-2 right-2 w-10 h-10 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0"
-                          style={{ background: "#FF6B35" }}>
-                          <Play size={16} className="text-black ml-0.5" fill="black" />
-                        </div>
-                      </div>
-                      <p className="text-white font-bold text-sm truncate">{artist.name}</p>
-                      <p className="text-zinc-500 text-xs mt-0.5">{artist.genre}</p>
+                    <button key={artist.id} onClick={() => navigate(`/artist/${artist.slug}`)} style={{ padding: "14px 10px", borderRadius: "12px", textAlign: "left", background: "transparent", border: "none", cursor: "pointer", transition: "background 0.15s" }}
+                      onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.04)"}
+                      onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}>
+                      <img src={artist.avatar} alt={artist.name} style={{ width: "100%", aspectRatio: "1", borderRadius: "50%", objectFit: "cover", display: "block", marginBottom: "10px" }} />
+                      <p style={{ fontSize: "12px", fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{artist.name}</p>
+                      <p style={{ fontSize: "11px", color: "var(--muted)", marginTop: "2px" }}>{artist.genre}</p>
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* Nouveautés E-Bia */}
+              {/* Nouveautés */}
               <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="bebas text-2xl text-white">Nouveautés E-Bia</h2>
-                  <button className="text-zinc-500 text-xs font-bold uppercase tracking-widest hover:text-white transition-colors">
-                    Tout afficher
-                  </button>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "18px" }}>
+                  <h2 className="bebas" style={{ fontSize: "24px", color: "var(--text)" }}>Nouveautés E-Bia</h2>
+                  <button style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", background: "none", border: "none", cursor: "pointer" }}>Tout afficher</button>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "14px" }}>
                   {MOCK_RECENT.slice(0, 4).map(track => (
-                    <button key={track.id}
-                      className="p-4 rounded-xl text-left transition-all hover:bg-white/5 group"
-                      style={{ background: "rgba(255,255,255,0.04)" }}>
-                      <div className="relative mb-3">
-                        <img src={track.avatar} alt={track.title}
-                          className="w-full aspect-square rounded-lg object-cover" />
-                        <div className="absolute bottom-2 right-2 w-10 h-10 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0"
-                          style={{ background: "#FF6B35" }}>
-                          <Play size={16} className="text-black ml-0.5" fill="black" />
-                        </div>
-                      </div>
-                      <p className="text-white font-bold text-sm truncate">{track.title}</p>
-                      <p className="text-zinc-500 text-xs mt-0.5">{track.artist}</p>
+                    <button key={track.id} style={{ padding: "14px", borderRadius: "12px", textAlign: "left", background: "rgba(240,235,227,0.03)", border: "1px solid var(--border)", cursor: "pointer", transition: "all 0.15s" }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.06)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(232,96,26,0.2)"; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.03)"; (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; }}>
+                      <img src={track.avatar} alt={track.title} style={{ width: "100%", aspectRatio: "1", borderRadius: "8px", objectFit: "cover", display: "block", marginBottom: "10px" }} />
+                      <p style={{ fontSize: "13px", fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{track.title}</p>
+                      <p style={{ fontSize: "11px", color: "var(--muted)", marginTop: "3px" }}>{track.artist}</p>
                     </button>
                   ))}
                 </div>
@@ -220,25 +259,21 @@ return (
           {/* ── RECHERCHE ── */}
           {section === "recherche" && (
             <div>
-              <h1 className="bebas text-3xl text-white mb-6">Rechercher</h1>
-              <div className="relative mb-8">
-                <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" />
-                <input value={search} onChange={e => setSearch(e.target.value)}
-                  placeholder="Artistes, titres, genres..."
-                  className="w-full py-4 pl-12 pr-4 rounded-full text-white text-sm outline-none"
-                  style={{ background: "#2a2a2a", border: "1px solid rgba(255,255,255,0.1)" }} />
+              <h1 className="bebas" style={{ fontSize: "36px", color: "var(--text)", marginBottom: "22px" }}>Rechercher</h1>
+              <div style={{ position: "relative", marginBottom: "32px" }}>
+                <Search size={15} style={{ position: "absolute", left: "16px", top: "50%", transform: "translateY(-50%)", color: "var(--muted)" }} />
+                <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Artistes, titres, genres..." style={{ width: "100%", padding: "13px 18px 13px 44px", borderRadius: "99px", background: "var(--bg3)", border: "1px solid var(--border)", color: "var(--text)", fontSize: "14px", outline: "none", transition: "border-color 0.2s", boxSizing: "border-box" as const }}
+                  onFocus={e => (e.target as HTMLInputElement).style.borderColor = "rgba(232,96,26,0.4)"}
+                  onBlur={e => (e.target as HTMLInputElement).style.borderColor = "var(--border)"} />
               </div>
-              <div>
-                <h2 className="bebas text-2xl text-white mb-4">Parcourir les genres</h2>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {["Afro-Pop", "Hip-Hop", "Afro-Trap", "Folk", "Jazz", "Urbain", "Gospel", "Traditionnel"].map((genre, i) => (
-                    <button key={genre} onClick={() => navigate("/explore")}
-                      className="p-6 rounded-xl text-left font-bold text-white text-lg overflow-hidden relative"
-                      style={{ background: ["#E61E32","#7B2FBE","#FF6B35","#00D46A","#FFD700","#1DB954","#E91429","#148A08"][i] }}>
-                      {genre}
-                    </button>
-                  ))}
-                </div>
+              <h2 style={{ fontSize: "14px", fontWeight: 700, color: "var(--text)", marginBottom: "14px" }}>Parcourir les genres</h2>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "10px" }}>
+                {GENRES.map(g => (
+                  <button key={g.label} onClick={() => navigate("/explore")} style={{ padding: "22px 18px", borderRadius: "12px", textAlign: "left", fontWeight: 700, fontSize: "14px", color: "#fff", background: g.bg, border: "none", cursor: "pointer", transition: "filter 0.15s" }}
+                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.filter = "brightness(1.2)"}
+                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.filter = "brightness(1)"}
+                  >{g.label}</button>
+                ))}
               </div>
             </div>
           )}
@@ -246,24 +281,20 @@ return (
           {/* ── BIBLIOTHÈQUE ── */}
           {section === "bibliotheque" && (
             <div>
-              <h1 className="bebas text-3xl text-white mb-6">Ma bibliothèque</h1>
-              <div className="space-y-2">
-                {[
-                  { label: "Titres favoris", count: MOCK_FAVORITES.length, icon: Heart, color: "#00D46A", id: "favoris" as Section },
-                  { label: "Artistes suivis", count: MOCK_ARTISTS.length, icon: Users, color: "#7B2FBE", id: "suivis" as Section },
-                ].map(item => (
-                  <button key={item.label} onClick={() => setSection(item.id)}
-                    className="w-full flex items-center gap-4 p-4 rounded-xl transition-all hover:bg-white/5 text-left"
-                    style={{ background: "rgba(255,255,255,0.04)" }}>
-                    <div className="w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0"
-                      style={{ background: `${item.color}20` }}>
-                      <item.icon size={24} style={{ color: item.color }} />
+              <h1 className="bebas" style={{ fontSize: "36px", color: "var(--text)", marginBottom: "22px" }}>Ma bibliothèque</h1>
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                {[{ label: "Titres favoris", count: MOCK_FAVORITES.length, icon: Heart, color: "var(--amber)", id: "favoris" as Section }, { label: "Artistes suivis", count: MOCK_ARTISTS.length, icon: Users, color: "var(--gold)", id: "suivis" as Section }].map(item => (
+                  <button key={item.label} onClick={() => setSection(item.id)} style={{ display: "flex", alignItems: "center", gap: "14px", padding: "14px 18px", borderRadius: "12px", textAlign: "left", background: "rgba(240,235,227,0.03)", border: "1px solid var(--border)", cursor: "pointer", transition: "background 0.15s" }}
+                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.06)"}
+                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.03)"}>
+                    <div style={{ width: "48px", height: "48px", borderRadius: "10px", flexShrink: 0, background: `${item.color}18`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <item.icon size={20} style={{ color: item.color }} />
                     </div>
-                    <div className="flex-1">
-                      <p className="text-white font-bold">{item.label}</p>
-                      <p className="text-zinc-500 text-sm">{item.count} éléments</p>
+                    <div style={{ flex: 1 }}>
+                      <p style={{ fontSize: "14px", fontWeight: 700, color: "var(--text)" }}>{item.label}</p>
+                      <p style={{ fontSize: "12px", color: "var(--muted)", marginTop: "2px" }}>{item.count} éléments</p>
                     </div>
-                    <ChevronRight size={16} className="text-zinc-600" />
+                    <ChevronRight size={15} style={{ color: "var(--muted)" }} />
                   </button>
                 ))}
               </div>
@@ -273,38 +304,33 @@ return (
           {/* ── FAVORIS ── */}
           {section === "favoris" && (
             <div>
-              <div className="flex items-end gap-6 mb-8 p-8 rounded-2xl"
-                style={{ background: "linear-gradient(135deg, #00D46A30, transparent)" }}>
-                <div className="w-40 h-40 rounded-2xl flex items-center justify-center flex-shrink-0"
-                  style={{ background: "linear-gradient(135deg, #00D46A, #00D46A50)" }}>
-                  <Heart size={60} className="text-white" fill="white" />
+              <div style={{ display: "flex", alignItems: "flex-end", gap: "28px", padding: "36px", borderRadius: "16px", marginBottom: "28px", background: "linear-gradient(135deg, rgba(232,96,26,0.15), transparent)" }}>
+                <div style={{ width: "120px", height: "120px", borderRadius: "14px", flexShrink: 0, background: "linear-gradient(135deg, var(--amber), var(--gold))", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <Heart size={44} color="white" fill="white" />
                 </div>
                 <div>
-                  <p className="text-zinc-400 text-xs uppercase tracking-widest mb-1">Playlist</p>
-                  <h1 className="bebas text-5xl text-white mb-2">Titres favoris</h1>
-                  <p className="text-zinc-500 text-sm">{user.displayName} · {MOCK_FAVORITES.length} titres</p>
+                  <p style={{ fontSize: "10px", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.15em", marginBottom: "6px" }}>Playlist</p>
+                  <h1 className="bebas" style={{ fontSize: "44px", color: "var(--text)", lineHeight: 1, marginBottom: "6px" }}>Titres favoris</h1>
+                  <p style={{ fontSize: "13px", color: "var(--muted)" }}>{user.displayName} · {MOCK_FAVORITES.length} titres</p>
                 </div>
               </div>
-              <div className="space-y-1">
-                <div className="flex items-center gap-4 px-4 pb-3 text-zinc-600 text-xs uppercase tracking-widest border-b"
-                  style={{ borderColor: "rgba(255,255,255,0.08)" }}>
-                  <span className="w-8 text-center">#</span>
-                  <span className="flex-1">Titre</span>
-                  <span>Durée</span>
+              <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "14px", padding: "0 14px 10px", fontSize: "10px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--muted)", borderBottom: "1px solid var(--border)" }}>
+                  <span style={{ width: "22px", textAlign: "center" }}>#</span><span style={{ flex: 1 }}>Titre</span><span>Durée</span>
                 </div>
                 {MOCK_FAVORITES.map((track, i) => (
-                  <div key={track.id} className="flex items-center gap-4 px-4 py-3 rounded-lg transition-all group hover:bg-white/5">
-                    <span className="w-8 text-center text-zinc-600 group-hover:hidden text-sm">{i + 1}</span>
-                    <Play size={14} className="w-8 hidden group-hover:block text-white" fill="white" />
-                    <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
-                      style={{ background: `${track.color}25` }}>
-                      <Music2 size={14} style={{ color: track.color }} />
+                  <div key={track.id} style={{ display: "flex", alignItems: "center", gap: "14px", padding: "11px 14px", borderRadius: "8px", transition: "background 0.15s", cursor: "pointer" }}
+                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.04)"}
+                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}>
+                    <span style={{ width: "22px", textAlign: "center", fontSize: "12px", color: "var(--muted)" }}>{i + 1}</span>
+                    <div style={{ width: "34px", height: "34px", borderRadius: "6px", flexShrink: 0, background: "rgba(232,96,26,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <Music2 size={13} style={{ color: "var(--amber)" }} />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-white font-bold text-sm truncate">{track.title}</p>
-                      <p className="text-zinc-500 text-xs">{track.artist}</p>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: "13px", fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{track.title}</p>
+                      <p style={{ fontSize: "11px", color: "var(--muted)" }}>{track.artist}</p>
                     </div>
-                    <span className="text-zinc-600 text-sm">{track.duration}</span>
+                    <span style={{ fontSize: "12px", color: "var(--muted)" }}>{track.duration}</span>
                   </div>
                 ))}
               </div>
@@ -314,22 +340,15 @@ return (
           {/* ── SUIVIS ── */}
           {section === "suivis" && (
             <div>
-              <h1 className="bebas text-3xl text-white mb-6">Artistes suivis</h1>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
+              <h1 className="bebas" style={{ fontSize: "36px", color: "var(--text)", marginBottom: "24px" }}>Artistes suivis</h1>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "16px" }}>
                 {MOCK_ARTISTS.map(artist => (
-                  <button key={artist.id} onClick={() => navigate(`/artist/${artist.slug}`)}
-                    className="p-4 rounded-xl text-center transition-all hover:bg-white/5 group"
-                    style={{ background: "rgba(255,255,255,0.04)" }}>
-                    <div className="relative mx-auto mb-3 w-24 h-24">
-                      <img src={artist.avatar} alt={artist.name}
-                        className="w-full h-full rounded-full object-cover" />
-                      <div className="absolute inset-0 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                        style={{ background: "rgba(0,0,0,0.5)" }}>
-                        <Play size={24} className="text-white" fill="white" />
-                      </div>
-                    </div>
-                    <p className="text-white font-bold text-sm">{artist.name}</p>
-                    <p className="text-zinc-500 text-xs mt-1">Artiste</p>
+                  <button key={artist.id} onClick={() => navigate(`/artist/${artist.slug}`)} style={{ padding: "14px 10px", borderRadius: "12px", textAlign: "center", background: "transparent", border: "none", cursor: "pointer", transition: "background 0.15s" }}
+                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.04)"}
+                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}>
+                    <img src={artist.avatar} alt={artist.name} style={{ width: "72px", height: "72px", borderRadius: "50%", objectFit: "cover", display: "block", margin: "0 auto 10px" }} />
+                    <p style={{ fontSize: "12px", fontWeight: 700, color: "var(--text)" }}>{artist.name}</p>
+                    <p style={{ fontSize: "10px", color: "var(--muted)", marginTop: "2px" }}>Artiste</p>
                   </button>
                 ))}
               </div>
@@ -338,63 +357,158 @@ return (
 
           {/* ── PARAMÈTRES ── */}
           {section === "parametres" && (
-            <div className="max-w-lg">
-              <h1 className="bebas text-3xl text-white mb-6">Paramètres</h1>
-              <div className="space-y-4">
-                <div className="p-6 rounded-2xl" style={{ background: "rgba(255,255,255,0.04)" }}>
-                  <h2 className="bebas text-xl text-white mb-4">Compte</h2>
-                  <div className="space-y-3">
+            <div style={{ maxWidth: "560px" }}>
+              <h1 className="bebas" style={{ fontSize: "36px", color: "var(--text)", marginBottom: "28px" }}>Paramètres</h1>
+              <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+
+                {/* Photo de profil */}
+                <div style={{ padding: "28px", borderRadius: "16px", background: "rgba(240,235,227,0.03)", border: "1px solid var(--border)" }}>
+                  <h2 className="bebas" style={{ fontSize: "20px", color: "var(--text)", marginBottom: "20px" }}>Photo de profil</h2>
+                  <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
+                    <AvatarBlock size={80} withEdit={true} />
                     <div>
-                      <label className="text-zinc-500 text-xs uppercase tracking-widest block mb-1">Nom</label>
-                      <input defaultValue={user.displayName}
-                        className="w-full py-3 px-4 rounded-xl text-white text-sm outline-none"
-                        style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }} />
+                      <p style={{ fontSize: "13px", fontWeight: 600, color: "var(--text)", marginBottom: "4px" }}>
+                        {avatarUrl ? "Photo mise à jour ✓" : "Ajouter une photo"}
+                      </p>
+                      <p style={{ fontSize: "12px", color: "var(--muted)", marginBottom: "12px" }}>JPG, PNG ou GIF · max 5 Mo</p>
+                      <button onClick={() => fileInputRef.current?.click()} style={{ padding: "8px 16px", borderRadius: "8px", background: "rgba(240,235,227,0.07)", border: "1px solid var(--border)", color: "var(--text)", fontSize: "12px", fontWeight: 600, cursor: "pointer", transition: "background 0.15s" }}
+                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.12)"}
+                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.07)"}>
+                        {avatarUrl ? "Changer la photo" : "Choisir une photo"}
+                      </button>
                     </div>
+                  </div>
+                </div>
+
+                {/* Compte */}
+                <div style={{ padding: "28px", borderRadius: "16px", background: "rgba(240,235,227,0.03)", border: "1px solid var(--border)" }}>
+                  <h2 className="bebas" style={{ fontSize: "20px", color: "var(--text)", marginBottom: "20px" }}>Compte</h2>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                    {[{ label: "Nom", value: user.displayName, disabled: false }, { label: "Email", value: user.email, disabled: true }].map(f => (
+                      <div key={f.label}>
+                        <label style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--muted)", display: "block", marginBottom: "6px" }}>{f.label}</label>
+                        <input defaultValue={f.value ?? ""} disabled={f.disabled} style={{ width: "100%", padding: "12px 14px", borderRadius: "10px", background: f.disabled ? "rgba(240,235,227,0.02)" : "var(--bg3)", border: "1px solid var(--border)", color: f.disabled ? "var(--muted)" : "var(--text)", fontSize: "14px", outline: "none", boxSizing: "border-box" as const }} />
+                      </div>
+                    ))}
+                    <button style={{ alignSelf: "flex-start", padding: "10px 20px", borderRadius: "99px", background: "var(--amber)", color: "#fff", border: "none", fontSize: "11px", fontWeight: 700, cursor: "pointer" }}>Sauvegarder</button>
+                  </div>
+                </div>
+
+                {/* Préférences */}
+                <div style={{ padding: "28px", borderRadius: "16px", background: "rgba(240,235,227,0.03)", border: "1px solid var(--border)" }}>
+                  <h2 className="bebas" style={{ fontSize: "20px", color: "var(--text)", marginBottom: "18px" }}>Préférences</h2>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                    {[{ label: "Notifications", desc: "Nouvelles sorties des artistes suivis", on: true }, { label: "Qualité audio haute", desc: "Utilise plus de données mobiles", on: false }, { label: "Lecture automatique", desc: "Continuer avec des titres similaires", on: false }].map(s => (
+                      <div key={s.label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <div>
+                          <p style={{ fontSize: "13px", fontWeight: 600, color: "var(--text)" }}>{s.label}</p>
+                          <p style={{ fontSize: "11px", color: "var(--muted)", marginTop: "2px" }}>{s.desc}</p>
+                        </div>
+                        <div style={{ width: "38px", height: "21px", borderRadius: "99px", cursor: "pointer", background: s.on ? "var(--amber)" : "var(--bg3)", border: "1px solid var(--border)", display: "flex", alignItems: "center", padding: "2px", justifyContent: s.on ? "flex-end" : "flex-start", transition: "background 0.2s", flexShrink: 0 }}>
+                          <div style={{ width: "15px", height: "15px", borderRadius: "50%", background: "#fff" }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Devenir artiste */}
+                <div style={{ padding: "24px 28px", borderRadius: "16px", background: "rgba(232,96,26,0.06)", border: "1px solid rgba(232,96,26,0.2)" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px" }}>
                     <div>
-                      <label className="text-zinc-500 text-xs uppercase tracking-widest block mb-1">Email</label>
-                      <input value={user.email} disabled
-                        className="w-full py-3 px-4 rounded-xl text-zinc-500 text-sm"
-                        style={{ background: "rgba(255,255,255,0.03)" }} />
+                      <p style={{ fontSize: "14px", fontWeight: 700, color: "var(--text)", marginBottom: "4px" }}>Vous êtes artiste ?</p>
+                      <p style={{ fontSize: "12px", color: "var(--muted)" }}>Publiez votre musique et touchez des milliers d'auditeurs</p>
                     </div>
-                    <button className="px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest text-black"
-                      style={{ background: "linear-gradient(135deg, #FF6B35, #FFD700)" }}>
-                      Sauvegarder
+                    <button onClick={() => setArtistModalOpen(true)} style={{ display: "flex", alignItems: "center", gap: "7px", padding: "10px 18px", borderRadius: "99px", background: "var(--amber)", border: "none", color: "#fff", fontSize: "12px", fontWeight: 700, cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap" }}>
+                      <Mic2 size={13} /> Devenir artiste
                     </button>
                   </div>
                 </div>
 
-                <div className="p-6 rounded-2xl space-y-4" style={{ background: "rgba(255,255,255,0.04)" }}>
-                  <h2 className="bebas text-xl text-white">Préférences</h2>
-                  {[
-                    { label: "Notifications", desc: "Nouvelles sorties des artistes suivis" },
-                    { label: "Qualité audio haute", desc: "Utilise plus de données mobiles" },
-                    { label: "Lecture automatique", desc: "Continuer avec des titres similaires" },
-                  ].map((s, i) => (
-                    <div key={s.label} className="flex items-center justify-between">
-                      <div>
-                        <p className="text-white text-sm font-bold">{s.label}</p>
-                        <p className="text-zinc-600 text-xs">{s.desc}</p>
-                      </div>
-                      <div className="w-10 h-6 rounded-full flex items-center cursor-pointer px-1"
-                        style={{ background: i === 0 ? "#FF6B35" : "rgba(255,255,255,0.2)", justifyContent: i === 0 ? "flex-end" : "flex-start" }}>
-                        <div className="w-4 h-4 rounded-full bg-white" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <button onClick={() => setLogoutOpen(true)}
-                  className="w-full py-4 rounded-xl font-bold text-sm uppercase tracking-widest transition-all hover:scale-105"
-                  style={{ background: "rgba(255,59,48,0.1)", border: "1px solid rgba(255,59,48,0.3)", color: "#FF3B30" }}>
+                {/* Déconnexion */}
+                <button onClick={() => setLogoutOpen(true)} style={{ width: "100%", padding: "15px", borderRadius: "12px", background: "rgba(220,50,50,0.06)", border: "1px solid rgba(220,50,50,0.2)", color: "#f08080", fontWeight: 700, fontSize: "12px", cursor: "pointer", transition: "background 0.15s", textTransform: "uppercase", letterSpacing: "0.08em" }}
+                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "rgba(220,50,50,0.12)"}
+                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "rgba(220,50,50,0.06)"}>
                   Se déconnecter
                 </button>
               </div>
             </div>
           )}
         </div>
-      </div>
+      </main>
 
       <LogoutModal open={logoutOpen} onClose={() => setLogoutOpen(false)} />
+
+      {/* ── MODAL DEVENIR ARTISTE ── */}
+      {artistModalOpen && (
+        <div onClick={e => e.target === e.currentTarget && setArtistModalOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: "24px", background: "rgba(0,0,0,0.75)", backdropFilter: "blur(12px)" }}>
+          <div style={{ width: "100%", maxWidth: "440px", borderRadius: "20px", background: "var(--bg2)", border: "1px solid rgba(240,235,227,0.1)", boxShadow: "0 32px 80px rgba(0,0,0,0.6)", overflow: "hidden", animation: "fadeUp 0.2s ease both" }}>
+            <div style={{ height: "3px", background: "linear-gradient(90deg, var(--amber), var(--gold))" }} />
+
+            {artistStep === 1 && (
+              <div style={{ padding: "28px" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <div style={{ width: "38px", height: "38px", borderRadius: "10px", background: "rgba(232,96,26,0.12)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <Mic2 size={16} style={{ color: "var(--amber)" }} />
+                    </div>
+                    <div>
+                      <h2 className="bebas" style={{ fontSize: "20px", color: "var(--text)", lineHeight: 1 }}>Devenir artiste</h2>
+                      <p style={{ fontSize: "11px", color: "var(--muted)" }}>Étape 1 sur 2</p>
+                    </div>
+                  </div>
+                  <button onClick={() => { setArtistModalOpen(false); setArtistStep(1); }} style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer" }}>✕</button>
+                </div>
+
+                <div style={{ padding: "20px", borderRadius: "12px", background: "rgba(232,96,26,0.06)", border: "1px solid rgba(232,96,26,0.15)", marginBottom: "20px" }}>
+                  <p style={{ fontSize: "13px", color: "var(--text)", fontWeight: 600, marginBottom: "8px" }}>Avec un compte artiste, vous pouvez :</p>
+                  {["📤 Publier vos titres et albums", "📊 Accéder à vos statistiques d'écoute", "🎤 Créer votre profil artiste officiel", "💰 Recevoir vos revenus de streaming"].map(b => (
+                    <p key={b} style={{ fontSize: "13px", color: "var(--muted)", marginTop: "6px" }}>{b}</p>
+                  ))}
+                </div>
+
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <button onClick={() => setArtistStep(2)} style={{ flex: 1, padding: "14px", borderRadius: "11px", background: "var(--amber)", border: "none", color: "#fff", fontSize: "12px", fontWeight: 800, cursor: "pointer", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                    Continuer →
+                  </button>
+                  <button onClick={() => { setArtistModalOpen(false); setArtistStep(1); }} style={{ padding: "14px 18px", borderRadius: "11px", background: "transparent", border: "1px solid var(--border)", color: "var(--muted)", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}>
+                    Annuler
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {artistStep === 2 && (
+              <div style={{ padding: "28px" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px" }}>
+                  <div>
+                    <h2 className="bebas" style={{ fontSize: "20px", color: "var(--text)", lineHeight: 1 }}>Votre nom d'artiste</h2>
+                    <p style={{ fontSize: "11px", color: "var(--muted)" }}>Étape 2 sur 2</p>
+                  </div>
+                  <button onClick={() => { setArtistModalOpen(false); setArtistStep(1); }} style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer" }}>✕</button>
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                  {[{ label: "Nom d'artiste", ph: "Ex: Idylle Mamba" }, { label: "Genre musical", ph: "Ex: Afro-Folk, Hip-Hop..." }, { label: "Ville", ph: "Ex: Bangui" }].map(f => (
+                    <div key={f.label}>
+                      <label style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--muted)", display: "block", marginBottom: "6px" }}>{f.label}</label>
+                      <input placeholder={f.ph} style={{ width: "100%", padding: "12px 14px", borderRadius: "10px", background: "var(--bg3)", border: "1px solid var(--border)", color: "var(--text)", fontSize: "14px", outline: "none", boxSizing: "border-box" as const, transition: "border-color 0.2s" }}
+                        onFocus={e => (e.target as HTMLInputElement).style.borderColor = "rgba(232,96,26,0.5)"}
+                        onBlur={e => (e.target as HTMLInputElement).style.borderColor = "var(--border)"} />
+                    </div>
+                  ))}
+                  <div style={{ display: "flex", gap: "8px", marginTop: "4px" }}>
+                    <button onClick={() => setArtistStep(1)} style={{ padding: "13px 16px", borderRadius: "10px", background: "transparent", border: "1px solid var(--border)", color: "var(--muted)", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}>← Retour</button>
+                    <button onClick={() => { setArtistModalOpen(false); setArtistStep(1); navigate("/artist-dashboard"); }} style={{ flex: 1, padding: "13px", borderRadius: "10px", background: "var(--amber)", border: "none", color: "#fff", fontSize: "12px", fontWeight: 800, cursor: "pointer", letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                      Créer mon profil artiste
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -2,13 +2,14 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { getArtist, type Artist, audioUrl } from "../lib/api";
 import { useApp } from "../context/AppContext";
-import { Play, Heart, MapPin, ArrowLeft, CheckCircle, Headphones } from "lucide-react";
+import { Play, Heart, MapPin, ArrowLeft, CheckCircle, Headphones, Pause } from "lucide-react";
 
 export default function ArtistProfile() {
   const { slug } = useParams<{ slug: string }>();
   const [artist, setArtist] = useState<Artist | null>(null);
   const [loading, setLoading] = useState(true);
   const [followed, setFollowed] = useState(false);
+  const [hoveredTrack, setHoveredTrack] = useState<string | null>(null);
   const { user, playTrack, setShowLoginModal, currentTrack, isPlaying } = useApp();
 
   useEffect(() => {
@@ -37,130 +38,228 @@ export default function ArtistProfile() {
     }, queue);
   };
 
-  const colors = ["#FF6B35", "#7B2FBE", "#00D46A", "#FFD700"];
-  const artistColor = colors[(artist?.name?.length || 0) % colors.length];
-
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: "#0D0D0D" }}>
-      <div className="bebas text-3xl" style={{ color: "#FF6B35" }}>Chargement...</div>
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg)" }}>
+      <div className="bebas" style={{ fontSize: "28px", color: "var(--amber)" }}>Chargement...</div>
     </div>
   );
 
   if (!artist) return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: "#0D0D0D" }}>
-      <div className="bebas text-3xl text-zinc-600">Artiste introuvable</div>
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg)" }}>
+      <div className="bebas" style={{ fontSize: "28px", color: "var(--muted)" }}>Artiste introuvable</div>
     </div>
   );
 
   return (
-    <div className="min-h-screen pb-32" style={{ background: "#0D0D0D" }}>
-      {/* Hero plein écran */}
-      <div className="relative h-[70vh] min-h-[500px] overflow-hidden">
+    <div style={{ minHeight: "100vh", background: "var(--bg)", paddingBottom: "120px" }}>
+
+      {/* ── HERO ── */}
+      <div style={{ position: "relative", height: "75vh", minHeight: "520px", overflow: "hidden" }}>
+
+        {/* Image */}
         {artist.cover_url || artist.avatar_url ? (
           <img src={artist.cover_url || artist.avatar_url} alt={artist.name}
-            className="w-full h-full object-cover" />
+            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
         ) : (
-          <div className="w-full h-full" style={{ background: `linear-gradient(135deg, ${artistColor}40, #0D0D0D)` }} />
+          <div style={{ width: "100%", height: "100%", background: "linear-gradient(135deg, rgba(232,96,26,0.3), var(--bg))" }} />
         )}
 
-        {/* Overlay gradient */}
-        <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(13,13,13,0.7) 60%, #0D0D0D 100%)" }} />
+        {/* Gradient overlay — plus sombre en bas */}
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(8,8,8,0.25) 0%, rgba(8,8,8,0.5) 50%, rgba(8,8,8,0.98) 100%)" }} />
 
-        {/* Color accent overlay */}
-        <div className="absolute inset-0 mix-blend-color opacity-20"
-          style={{ background: `radial-gradient(ellipse at 30% 50%, ${artistColor}, transparent 60%)` }} />
+        {/* Warm tint */}
+        <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at 20% 80%, rgba(232,96,26,0.12), transparent 60%)", pointerEvents: "none" }} />
 
         {/* Back button */}
-        <Link to="/explore" className="absolute top-20 left-4 p-3 rounded-2xl border transition-all hover:scale-105"
-          style={{ background: "rgba(0,0,0,0.5)", borderColor: "rgba(255,255,255,0.1)" }}>
-          <ArrowLeft size={20} className="text-white" />
+        <Link to="/explore" style={{
+          position: "absolute", top: "88px", left: "48px",
+          display: "flex", alignItems: "center", gap: "8px",
+          padding: "8px 16px", borderRadius: "99px",
+          background: "rgba(8,8,8,0.6)", border: "1px solid rgba(240,235,227,0.15)",
+          color: "var(--muted)", textDecoration: "none", fontSize: "13px", fontWeight: 600,
+          backdropFilter: "blur(8px)", transition: "color 0.15s",
+          zIndex: 2,
+        }}
+        onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = "var(--text)"}
+        onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = "var(--muted)"}
+        >
+          <ArrowLeft size={14} /> Retour
         </Link>
 
-        {/* Artist info */}
-        <div className="absolute bottom-0 left-0 right-0 p-6 md:p-10">
-          <div className="max-w-4xl mx-auto">
+        {/* Artist info — bottom left */}
+        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "0 48px 48px", zIndex: 2 }}>
+          <div style={{ maxWidth: "1360px", margin: "0 auto" }}>
+
             {artist.verified && (
-              <div className="flex items-center gap-2 mb-3">
-                <CheckCircle size={16} style={{ color: artistColor }} />
-                <span className="text-xs font-bold uppercase tracking-widest" style={{ color: artistColor }}>Artiste certifié</span>
+              <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "14px" }}>
+                <CheckCircle size={14} style={{ color: "var(--amber)" }} />
+                <span style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--amber)" }}>
+                  Artiste certifié
+                </span>
               </div>
             )}
-            <h1 className="bebas text-6xl md:text-9xl text-white leading-none mb-4">{artist.name}</h1>
-            <div className="flex items-center gap-4 flex-wrap">
-              <span className="text-sm font-bold uppercase tracking-widest" style={{ color: artistColor }}>{artist.genre}</span>
-              <span className="text-zinc-600">·</span>
-              <div className="flex items-center gap-1 text-zinc-400 text-sm"><MapPin size={12} />{artist.city}, RCA</div>
-              <span className="text-zinc-600">·</span>
-              <div className="flex items-center gap-1 text-zinc-400 text-sm"><Headphones size={12} />{Number(artist.plays_count).toLocaleString()} écoutes</div>
+
+            <h1 className="bebas" style={{
+              fontSize: "clamp(56px, 10vw, 120px)", color: "#fff",
+              lineHeight: 0.9, marginBottom: "20px", letterSpacing: "0.02em",
+            }}>{artist.name}</h1>
+
+            <div style={{ display: "flex", alignItems: "center", gap: "20px", flexWrap: "wrap" }}>
+              <span style={{ fontSize: "12px", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--amber)" }}>
+                {artist.genre}
+              </span>
+              <span style={{ color: "rgba(240,235,227,0.2)", fontSize: "16px" }}>·</span>
+              <div style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "13px", color: "rgba(240,235,227,0.5)" }}>
+                <MapPin size={12} /> {artist.city}, RCA
+              </div>
+              <span style={{ color: "rgba(240,235,227,0.2)", fontSize: "16px" }}>·</span>
+              <div style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "13px", color: "rgba(240,235,227,0.5)" }}>
+                <Headphones size={12} /> {Number(artist.plays_count || 0).toLocaleString()} écoutes
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Content */}
-      <div className="max-w-4xl mx-auto px-4 md:px-10 mt-8">
-        {/* Actions */}
-        <div className="flex items-center gap-4 mb-8">
-          <button onClick={handleFollow}
-            className="flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm uppercase tracking-widest transition-all hover:scale-105"
-            style={{
-              background: followed ? artistColor : "transparent",
-              border: `2px solid ${artistColor}`,
-              color: followed ? "#000" : artistColor,
-            }}>
-            <Heart size={16} fill={followed ? "currentColor" : "none"} />
+      {/* ── CONTENT ── */}
+      <div style={{ maxWidth: "1360px", margin: "0 auto", padding: "40px 48px 0" }}>
+
+        {/* Actions row */}
+        <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "48px" }}>
+          {/* Big play button */}
+          {artist.tracks && artist.tracks.length > 0 && (
+            <button onClick={() => handlePlay(artist.tracks![0].id)} style={{
+              width: "52px", height: "52px", borderRadius: "50%",
+              background: "var(--amber)", border: "none", cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              transition: "transform 0.15s, box-shadow 0.15s", flexShrink: 0,
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = "scale(1.08)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 32px rgba(232,96,26,0.5)"; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = "scale(1)"; (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}
+            >
+              <Play size={20} fill="white" color="white" style={{ marginLeft: "2px" }} />
+            </button>
+          )}
+
+          {/* Follow */}
+          <button onClick={handleFollow} style={{
+            display: "flex", alignItems: "center", gap: "8px",
+            padding: "12px 24px", borderRadius: "99px", cursor: "pointer",
+            fontSize: "12px", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase",
+            border: `1.5px solid ${followed ? "var(--amber)" : "rgba(240,235,227,0.25)"}`,
+            background: followed ? "rgba(232,96,26,0.12)" : "transparent",
+            color: followed ? "var(--amber)" : "var(--muted)",
+            transition: "all 0.2s",
+          }}
+          onMouseEnter={e => { if (!followed) { (e.currentTarget as HTMLElement).style.borderColor = "rgba(240,235,227,0.5)"; (e.currentTarget as HTMLElement).style.color = "var(--text)"; }}}
+          onMouseLeave={e => { if (!followed) { (e.currentTarget as HTMLElement).style.borderColor = "rgba(240,235,227,0.25)"; (e.currentTarget as HTMLElement).style.color = "var(--muted)"; }}}
+          >
+            <Heart size={15} fill={followed ? "currentColor" : "none"} />
             {followed ? "Suivi" : "Suivre"}
           </button>
         </div>
 
-        {/* Bio */}
-        {artist.bio && (
-          <div className="mb-8 p-6 rounded-3xl border"
-            style={{ background: "rgba(255,255,255,0.03)", borderColor: "rgba(255,255,255,0.08)" }}>
-            <p className="text-zinc-400 leading-relaxed">{artist.bio}</p>
-          </div>
-        )}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: "48px", alignItems: "start" }}>
 
-        {/* Tracks */}
-        <h2 className="bebas text-4xl mb-4" style={{ color: artistColor }}>Titres</h2>
-        {!artist.tracks?.length ? (
-          <div className="text-center text-zinc-600 py-12 bebas text-2xl">Aucun titre disponible</div>
-        ) : (
-          <div className="space-y-2">
-            {artist.tracks.map((track, i) => {
-              const isActive = currentTrack?.id === track.id;
-              return (
-                <button key={track.id} onClick={() => handlePlay(track.id)}
-                  className="w-full flex items-center gap-4 p-4 rounded-2xl text-left transition-all group hover:scale-[1.01]"
-                  style={{
-                    background: isActive ? `${artistColor}15` : "rgba(255,255,255,0.04)",
-                    border: `1px solid ${isActive ? artistColor : "rgba(255,255,255,0.08)"}`,
-                  }}>
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-all"
-                    style={{ background: isActive ? artistColor : "rgba(255,255,255,0.08)" }}>
-                    {isActive && isPlaying ? (
-                      <div className="flex gap-0.5 items-end h-4">
-                        {[1,2,3].map(b => (
-                          <div key={b} className="w-1 rounded-full animate-pulse" style={{ background: "#000", height: `${[12,8,10][b-1]}px`, animationDelay: `${b*0.1}s` }} />
-                        ))}
+          {/* LEFT — Tracklist */}
+          <div>
+            <h2 className="bebas" style={{ fontSize: "28px", color: "var(--text)", marginBottom: "20px", letterSpacing: "0.05em" }}>Titres</h2>
+
+            {!artist.tracks?.length ? (
+              <div style={{ textAlign: "center", padding: "60px 0" }}>
+                <div className="bebas" style={{ fontSize: "24px", color: "var(--muted)" }}>Aucun titre disponible</div>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                {/* Header row */}
+                <div style={{ display: "flex", alignItems: "center", gap: "16px", padding: "0 16px 12px", fontSize: "10px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "var(--muted)", borderBottom: "1px solid var(--border)" }}>
+                  <span style={{ width: "28px", textAlign: "center" }}>#</span>
+                  <span style={{ flex: 1 }}>Titre</span>
+                  <span>Durée</span>
+                </div>
+
+                {artist.tracks.map((track, i) => {
+                  const isActive = currentTrack?.id === track.id;
+                  const isHovered = hoveredTrack === track.id;
+
+                  return (
+                    <div key={track.id}
+                      onMouseEnter={() => setHoveredTrack(track.id)}
+                      onMouseLeave={() => setHoveredTrack(null)}
+                      onClick={() => handlePlay(track.id)}
+                      style={{
+                        display: "flex", alignItems: "center", gap: "16px",
+                        padding: "12px 16px", borderRadius: "10px", cursor: "pointer",
+                        background: isActive ? "rgba(232,96,26,0.08)" : isHovered ? "rgba(240,235,227,0.04)" : "transparent",
+                        transition: "background 0.15s",
+                      }}>
+
+                      {/* Numéro / Play */}
+                      <div style={{ width: "28px", textAlign: "center", flexShrink: 0 }}>
+                        {isHovered || isActive ? (
+                          <div style={{ width: "28px", height: "28px", borderRadius: "50%", background: isActive ? "var(--amber)" : "rgba(240,235,227,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto" }}>
+                            {isActive && isPlaying ? (
+                              <Pause size={11} fill="white" color="white" />
+                            ) : (
+                              <Play size={11} fill={isActive ? "white" : "var(--text)"} color={isActive ? "white" : "var(--text)"} style={{ marginLeft: "1px" }} />
+                            )}
+                          </div>
+                        ) : (
+                          <span style={{ fontSize: "13px", color: isActive ? "var(--amber)" : "var(--muted)", fontWeight: 600 }}>{i + 1}</span>
+                        )}
                       </div>
-                    ) : (
-                      <span className={`text-sm font-bold ${isActive ? "text-black" : "text-zinc-500 group-hover:hidden"}`}>{i + 1}</span>
-                    )}
-                    <Play size={16} className="hidden group-hover:block text-zinc-400" style={{ display: isActive ? "none" : undefined }} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold truncate" style={{ color: isActive ? artistColor : "#fff" }}>{track.title}</p>
-                    <p className="text-xs font-bold uppercase tracking-widest text-zinc-600">{track.genre}</p>
-                  </div>
-                  <span className="text-zinc-600 text-sm tabular-nums">
-                    {Math.floor(track.duration_s / 60)}:{String(track.duration_s % 60).padStart(2, "0")}
-                  </span>
-                </button>
-              );
-            })}
+
+                      {/* Title + genre */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontSize: "14px", fontWeight: 700, color: isActive ? "var(--amber)" : "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: "2px" }}>
+                          {track.title}
+                        </p>
+                        <p style={{ fontSize: "11px", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)" }}>
+                          {track.genre}
+                        </p>
+                      </div>
+
+                      {/* Duration */}
+                      <span style={{ fontSize: "13px", color: "var(--muted)", fontVariantNumeric: "tabular-nums", flexShrink: 0 }}>
+                        {Math.floor(track.duration_s / 60)}:{String(track.duration_s % 60).padStart(2, "0")}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
-        )}
+
+          {/* RIGHT — Bio + Stats */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+
+            {/* Stats card */}
+            <div style={{ padding: "24px", borderRadius: "16px", background: "rgba(240,235,227,0.03)", border: "1px solid var(--border)" }}>
+              <h3 style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "var(--muted)", marginBottom: "20px" }}>Statistiques</h3>
+              <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                {[
+                  { label: "Écoutes", value: Number(artist.plays_count || 0).toLocaleString() },
+                  { label: "Titres", value: String(artist.tracks?.length || 0) },
+                  { label: "Genre", value: artist.genre || "—" },
+                  { label: "Ville", value: artist.city || "—" },
+                ].map(s => (
+                  <div key={s.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontSize: "13px", color: "var(--muted)" }}>{s.label}</span>
+                    <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--text)" }}>{s.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Bio */}
+            {artist.bio && (
+              <div style={{ padding: "24px", borderRadius: "16px", background: "rgba(240,235,227,0.03)", border: "1px solid var(--border)" }}>
+                <h3 style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "var(--muted)", marginBottom: "14px" }}>À propos</h3>
+                <p style={{ fontSize: "14px", color: "rgba(240,235,227,0.55)", lineHeight: 1.75 }}>{artist.bio}</p>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
