@@ -147,6 +147,33 @@ export const uploadArtistImage = (field: "avatar" | "cover", file: File): Promis
   });
 };
 
+/* ── Upload profil utilisateur ── */
+export const uploadUserAvatar = (file: File): Promise<{ url: string }> => {
+  const fd = new FormData();
+  fd.append('file', file);
+  return fetch('http://localhost/api/v1/auth/upload/avatar', {
+    method: 'POST',
+    headers: keycloak.token ? { Authorization: `Bearer ${keycloak.token}` } : {},
+    body: fd,
+  }).then(async res => {
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json() as Promise<{ url: string }>;
+  });
+};
+
+export const uploadIdDoc = (file: File): Promise<{ message: string; key: string }> => {
+  const fd = new FormData();
+  fd.append('file', file);
+  return fetch('http://localhost/api/v1/auth/upload/id-doc', {
+    method: 'POST',
+    headers: keycloak.token ? { Authorization: `Bearer ${keycloak.token}` } : {},
+    body: fd,
+  }).then(async res => {
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json() as Promise<{ message: string; key: string }>;
+  });
+};
+
 /* ── Social ── */
 export const recordPlay = (trackId: string) =>
   post<{ plays_count: number }>(`/api/v1/tracks/${trackId}/play`, {});
