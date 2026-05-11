@@ -5,11 +5,14 @@ const MINIO = "http://localhost/audio";
 export const audioUrl = (filename: string) => `${MINIO}/${filename}`;
 
 /* ── Helpers HTTP ── */
-const authHeaders = (extra: Record<string, string> = {}): Record<string, string> => ({
-  "Content-Type": "application/json",
-  ...(keycloak.token ? { Authorization: `Bearer ${keycloak.token}` } : {}),
-  ...extra,
-});
+const authHeaders = (extra: Record<string, string> = {}): Record<string, string> => {
+  const token = sessionStorage.getItem("ebia_token") || keycloak.token;
+  return {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...extra,
+  };
+};
 
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
@@ -122,7 +125,7 @@ export const deleteMyTrack = (trackId: string) =>
 export const uploadTrack = (formData: FormData): Promise<MyTrack> =>
   fetch(`${BASE}/api/v1/artists/me/tracks`, {
     method: "POST",
-    headers: keycloak.token ? { Authorization: `Bearer ${keycloak.token}` } : {},
+    headers: (sessionStorage.getItem('ebia_token') || keycloak.token) ? { Authorization: `Bearer ${sessionStorage.getItem('ebia_token') || keycloak.token!}` } : undefined,
     body: formData,
   }).then(async res => {
     if (!res.ok) {
@@ -139,7 +142,7 @@ export const uploadArtistImage = (field: "avatar" | "cover", file: File): Promis
   fd.append("file", file);
   return fetch(`${BASE}/api/v1/artists/me/images`, {
     method: "POST",
-    headers: keycloak.token ? { Authorization: `Bearer ${keycloak.token}` } : {},
+    headers: (sessionStorage.getItem('ebia_token') || keycloak.token) ? { Authorization: `Bearer ${sessionStorage.getItem('ebia_token') || keycloak.token!}` } : undefined,
     body: fd,
   }).then(async res => {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -153,7 +156,7 @@ export const uploadUserAvatar = (file: File): Promise<{ url: string }> => {
   fd.append('file', file);
   return fetch('http://localhost/api/v1/auth/upload/avatar', {
     method: 'POST',
-    headers: keycloak.token ? { Authorization: `Bearer ${keycloak.token}` } : {},
+    headers: (sessionStorage.getItem('ebia_token') || keycloak.token) ? { Authorization: `Bearer ${sessionStorage.getItem('ebia_token') || keycloak.token!}` } : undefined,
     body: fd,
   }).then(async res => {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -166,7 +169,7 @@ export const uploadIdDoc = (file: File): Promise<{ message: string; key: string 
   fd.append('file', file);
   return fetch('http://localhost/api/v1/auth/upload/id-doc', {
     method: 'POST',
-    headers: keycloak.token ? { Authorization: `Bearer ${keycloak.token}` } : {},
+    headers: (sessionStorage.getItem('ebia_token') || keycloak.token) ? { Authorization: `Bearer ${sessionStorage.getItem('ebia_token') || keycloak.token!}` } : undefined,
     body: fd,
   }).then(async res => {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);

@@ -1,47 +1,77 @@
-import { X, Music2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Music2, X, ArrowRight, Mic2 } from "lucide-react";
 import { useApp } from "../context/AppContext";
 
 export default function LoginModal() {
-  const { showLoginModal, setShowLoginModal, login, register } = useApp();
+  const { showLoginModal, setShowLoginModal } = useApp();
+  const navigate = useNavigate();
+
   if (!showLoginModal) return null;
 
+  const go = (path: string) => { setShowLoginModal(false); navigate(path); };
+
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,0.85)" }}
-      onClick={e => e.target === e.currentTarget && setShowLoginModal(false)}>
-      <div className="rounded-3xl p-8 w-full max-w-sm relative"
-        style={{ background: "#1A1A1A", border: "1px solid rgba(255,255,255,0.1)" }}>
-        <button onClick={() => setShowLoginModal(false)}
-          className="absolute top-4 right-4 p-2 rounded-xl text-zinc-500 hover:text-white transition-colors"
-          style={{ background: "rgba(255,255,255,0.05)" }}>
-          <X size={16} />
-        </button>
+    <div onClick={e => e.target === e.currentTarget && setShowLoginModal(false)}
+      style={{ position: "fixed", inset: 0, zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: "24px", background: "rgba(0,0,0,0.75)", backdropFilter: "blur(12px)" }}>
+      <div style={{ width: "100%", maxWidth: "360px", borderRadius: "20px", background: "var(--bg2)", border: "1px solid rgba(240,235,227,0.1)", boxShadow: "0 32px 80px rgba(0,0,0,0.6)", overflow: "hidden", animation: "fadeUp 0.2s ease both" }}>
+        <div style={{ height: "3px", background: "linear-gradient(90deg, var(--amber), var(--gold))" }} />
 
-        <div className="text-center mb-6">
-          <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
-            style={{ background: "linear-gradient(135deg, #FF6B35, #FFD700)" }}>
-            <Music2 size={24} className="text-black" />
+        <div style={{ padding: "28px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px" }}>
+            <div style={{ width: "44px", height: "44px", borderRadius: "12px", background: "var(--amber)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Music2 size={20} color="white" />
+            </div>
+            <button onClick={() => setShowLoginModal(false)} style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer", padding: "4px" }}>
+              <X size={18} />
+            </button>
           </div>
-          <h2 className="bebas text-3xl text-white mb-1">Rejoindre E-Bia</h2>
-          <p className="text-zinc-500 text-xs">Connectez-vous pour profiter de toutes les fonctionnalités</p>
-        </div>
 
-        <div className="space-y-3">
-          <button onClick={login}
-            className="w-full py-4 rounded-2xl font-bold text-sm uppercase tracking-widest text-black transition-all hover:scale-105"
-            style={{ background: "linear-gradient(135deg, #FF6B35, #FFD700)" }}>
-            Se connecter
-          </button>
-          <button onClick={() => { setShowLoginModal(false); register("listener"); }}
-            className="w-full py-3 rounded-2xl font-bold text-xs uppercase tracking-widest transition-all hover:scale-105"
-            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff" }}>
-            Créer un compte auditeur
-          </button>
-          <button onClick={() => { setShowLoginModal(false); register("artist"); }}
-            className="w-full py-3 rounded-2xl font-bold text-xs uppercase tracking-widest transition-all hover:scale-105"
-            style={{ background: "rgba(255,107,53,0.1)", border: "1px solid rgba(255,107,53,0.3)", color: "#FF6B35" }}>
-            Je suis un artiste
-          </button>
+          <h2 className="bebas" style={{ fontSize: "24px", color: "var(--text)", marginBottom: "6px", letterSpacing: "0.05em" }}>
+            Rejoindre E-Bia
+          </h2>
+          <p style={{ fontSize: "13px", color: "var(--muted)", marginBottom: "24px", lineHeight: 1.6 }}>
+            Connectez-vous pour profiter de toutes les fonctionnalités — suivre des artistes, liker des titres et plus encore.
+          </p>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            <button onClick={() => go("/login")} style={{
+              width: "100%", padding: "14px", borderRadius: "11px", border: "none",
+              background: "var(--amber)", color: "#fff", fontSize: "12px", fontWeight: 800,
+              cursor: "pointer", textTransform: "uppercase", letterSpacing: "0.1em",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
+              transition: "box-shadow 0.2s",
+            }}
+            onMouseEnter={e => (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 32px rgba(232,96,26,0.45)"}
+            onMouseLeave={e => (e.currentTarget as HTMLElement).style.boxShadow = "none"}
+            >
+              Se connecter <ArrowRight size={14} />
+            </button>
+
+            <button onClick={() => go("/login?tab=register&role=listener")} style={{
+              width: "100%", padding: "13px", borderRadius: "11px",
+              background: "transparent", border: "1px solid rgba(240,235,227,0.15)",
+              color: "var(--text)", fontSize: "12px", fontWeight: 700,
+              cursor: "pointer", transition: "background 0.15s",
+            }}
+            onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.06)"}
+            onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}
+            >
+              Créer un compte auditeur
+            </button>
+
+            <button onClick={() => go("/login?tab=register&role=artist")} style={{
+              width: "100%", padding: "13px", borderRadius: "11px",
+              background: "transparent", border: "1px solid rgba(232,96,26,0.25)",
+              color: "var(--amber)", fontSize: "12px", fontWeight: 700,
+              cursor: "pointer", transition: "background 0.15s",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
+            }}
+            onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "rgba(232,96,26,0.08)"}
+            onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}
+            >
+              <Mic2 size={13} /> Je suis un artiste
+            </button>
+          </div>
         </div>
       </div>
     </div>

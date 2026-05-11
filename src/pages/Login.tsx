@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useApp } from "../context/AppContext";
 import { Eye, EyeOff, Music2, ArrowLeft, Check, Upload, AlertCircle } from "lucide-react";
-import keycloak from "../lib/keycloak";
 import { registerListener, registerArtist, getArtists, type Artist } from "../lib/api";
 
 /* ── Données onboarding auditeur ── */
@@ -95,7 +94,7 @@ const StepBar = ({ current, total }: { current: number; total: number }) => (
 );
 
 export default function Login() {
-  const { user, authReady } = useApp();
+  const { user, authReady, loginWithCredentials } = useApp();
   const navigate = useNavigate();
 
   const [isLogin, setIsLogin] = useState(true);
@@ -150,14 +149,15 @@ export default function Login() {
     if (!email || !password) { setError("Remplissez tous les champs"); return; }
     setLoading(true); setError("");
     try {
-      const res = await fetch("http://localhost/api/v1/auth/login", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-      const data = await res.json() as { error?: string };
-      if (!res.ok) { setError(data.error || "Email ou mot de passe incorrect"); return; }
-      keycloak.login({ loginHint: email, redirectUri: window.location.origin + "/me" });
-    } catch { setError("Erreur réseau."); }
+      await loginWithCredentials(email, password);
+      // Redirection directe sans passer par Keycloak UI
+      const token = sessionStorage.getItem("ebia_token");
+      if (token) {
+        const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+        const roles: string[] = payload.realm_access?.roles ?? [];
+        navigate(roles.includes("artist") || roles.includes("admin") ? "/artist-dashboard" : "/me");
+      }
+    } catch (e: unknown) { setError(e instanceof Error ? e.message : "Erreur réseau."); }
     finally { setLoading(false); }
   };
 
@@ -165,7 +165,9 @@ export default function Login() {
     setLoading(true); setError("");
     try {
       await registerListener({ email, password, firstName, lastName, genres: selGenres, favoriteArtistIds: selArtists });
-      keycloak.login({ loginHint: email, redirectUri: window.location.origin + "/me" });
+      // Login automatique après inscription
+      await loginWithCredentials(email, password);
+      navigate("/me");
     } catch (e: unknown) { setError(e instanceof Error ? e.message : "Erreur création compte."); }
     finally { setLoading(false); }
   };
@@ -174,7 +176,8 @@ export default function Login() {
     setLoading(true); setError("");
     try {
       await registerArtist({ email, password, firstName, lastName, stageName, birthDate, idType, idNumber, genre: artistGenre, city, bio, phone });
-      keycloak.login({ loginHint: email, redirectUri: window.location.origin + "/artist-dashboard" });
+      await loginWithCredentials(email, password);
+      navigate("/artist-dashboard");
     } catch (e: unknown) { setError(e instanceof Error ? e.message : "Erreur création compte."); }
     finally { setLoading(false); }
   };
