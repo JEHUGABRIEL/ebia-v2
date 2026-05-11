@@ -28,6 +28,7 @@ export default function ArtistDashboard() {
   const [section, setSection] = useState<Section>("accueil");
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [playingId, setPlayingId] = useState<string | null>(null);
+  const [deleteModal, setDeleteModal] = useState<{ open: boolean; trackId: string | null; trackTitle: string }>({ open: false, trackId: null, trackTitle: "" });
 
   /* Data */
   const [profile, setProfile] = useState<MyArtistProfile | null>(null);
@@ -139,10 +140,13 @@ export default function ArtistDashboard() {
   };
 
   /* Supprimer titre */
-  const handleDelete = async (trackId: string) => {
-    if (!confirm("Supprimer ce titre ?")) return;
-    try { await deleteMyTrack(trackId); loadTracks(); loadStats(); loadProfile(); }
-    catch { alert("Erreur lors de la suppression"); }
+  const confirmDelete = async () => {
+    if (!deleteModal.trackId) return;
+    try {
+      await deleteMyTrack(deleteModal.trackId);
+      setDeleteModal({ open: false, trackId: null, trackTitle: "" });
+      loadTracks(); loadStats(); loadProfile();
+    } catch { alert("Erreur lors de la suppression"); }
   };
 
   /* Sauvegarder profil */
@@ -452,7 +456,7 @@ export default function ArtistDashboard() {
                           </span>
                         </div>
 
-                        <button onClick={() => handleDelete(track.id)} style={{ width: "32px", height: "32px", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", background: "none", border: "none", cursor: "pointer", color: "var(--muted)", transition: "all 0.15s" }}
+                        <button onClick={() => setDeleteModal({ open: true, trackId: track.id, trackTitle: track.title })} style={{ width: "32px", height: "32px", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", background: "none", border: "none", cursor: "pointer", color: "var(--muted)", transition: "all 0.15s" }}
                           onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(220,50,50,0.1)"; (e.currentTarget as HTMLElement).style.color = "#f08080"; }}
                           onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "none"; (e.currentTarget as HTMLElement).style.color = "var(--muted)"; }}>
                           <Trash2 size={13} />
@@ -802,6 +806,78 @@ export default function ArtistDashboard() {
       </main>
 
       <LogoutModal open={logoutOpen} onClose={() => setLogoutOpen(false)} />
+
+      {/* ── MODAL SUPPRESSION TITRE ── */}
+      {deleteModal.open && (
+        <div onClick={e => e.target === e.currentTarget && setDeleteModal({ open: false, trackId: null, trackTitle: "" })}
+          style={{ position: "fixed", inset: 0, zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: "24px", background: "rgba(0,0,0,0.75)", backdropFilter: "blur(12px)" }}>
+          <div style={{ width: "100%", maxWidth: "380px", borderRadius: "20px", background: "var(--bg2)", border: "1px solid rgba(240,235,227,0.1)", boxShadow: "0 32px 80px rgba(0,0,0,0.6)", overflow: "hidden", animation: "fadeUp 0.2s ease both" }}>
+            <div style={{ height: "3px", background: "linear-gradient(90deg, #dc3232, #e05c5c)" }} />
+            <div style={{ padding: "28px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
+                <div style={{ width: "40px", height: "40px", borderRadius: "12px", background: "rgba(220,50,50,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <Trash2 size={17} style={{ color: "#f08080" }} />
+                </div>
+                <div>
+                  <h2 className="bebas" style={{ fontSize: "20px", color: "var(--text)", lineHeight: 1 }}>Supprimer le titre</h2>
+                  <p style={{ fontSize: "11px", color: "var(--muted)", marginTop: "3px" }}>Action irréversible</p>
+                </div>
+              </div>
+              <p style={{ fontSize: "14px", color: "var(--muted)", lineHeight: 1.65, marginBottom: "24px" }}>
+                Vous êtes sur le point de supprimer <strong style={{ color: "var(--text)" }}>"{deleteModal.trackTitle}"</strong>. Le fichier audio sera définitivement supprimé.
+              </p>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <button onClick={confirmDelete} style={{ flex: 1, padding: "14px", borderRadius: "11px", background: "rgba(220,50,50,0.85)", border: "none", color: "#fff", fontSize: "12px", fontWeight: 800, cursor: "pointer", textTransform: "uppercase", letterSpacing: "0.1em", transition: "box-shadow 0.2s" }}
+                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.boxShadow = "0 6px 24px rgba(220,50,50,0.45)"}
+                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.boxShadow = "none"}>
+                  Supprimer
+                </button>
+                <button onClick={() => setDeleteModal({ open: false, trackId: null, trackTitle: "" })} style={{ flex: 1, padding: "14px", borderRadius: "11px", background: "transparent", border: "1px solid var(--border)", color: "var(--muted)", fontSize: "12px", fontWeight: 700, cursor: "pointer", transition: "all 0.15s" }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.06)"; (e.currentTarget as HTMLElement).style.color = "var(--text)"; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--muted)"; }}>
+                  Annuler
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL SUPPRESSION TITRE ── */}
+      {deleteModal.open && (
+        <div onClick={e => e.target === e.currentTarget && setDeleteModal({ open: false, trackId: null, trackTitle: "" })}
+          style={{ position: "fixed", inset: 0, zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: "24px", background: "rgba(0,0,0,0.75)", backdropFilter: "blur(12px)" }}>
+          <div style={{ width: "100%", maxWidth: "380px", borderRadius: "20px", background: "var(--bg2)", border: "1px solid rgba(240,235,227,0.1)", boxShadow: "0 32px 80px rgba(0,0,0,0.6)", overflow: "hidden", animation: "fadeUp 0.2s ease both" }}>
+            <div style={{ height: "3px", background: "linear-gradient(90deg, #dc3232, #e05c5c)" }} />
+            <div style={{ padding: "28px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
+                <div style={{ width: "40px", height: "40px", borderRadius: "12px", background: "rgba(220,50,50,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <Trash2 size={17} style={{ color: "#f08080" }} />
+                </div>
+                <div>
+                  <h2 className="bebas" style={{ fontSize: "20px", color: "var(--text)", lineHeight: 1 }}>Supprimer le titre</h2>
+                  <p style={{ fontSize: "11px", color: "var(--muted)", marginTop: "3px" }}>Action irréversible</p>
+                </div>
+              </div>
+              <p style={{ fontSize: "14px", color: "var(--muted)", lineHeight: 1.65, marginBottom: "24px" }}>
+                Vous êtes sur le point de supprimer <strong style={{ color: "var(--text)" }}>"{deleteModal.trackTitle}"</strong>. Le fichier audio sera définitivement supprimé.
+              </p>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <button onClick={confirmDelete} style={{ flex: 1, padding: "14px", borderRadius: "11px", background: "rgba(220,50,50,0.85)", border: "none", color: "#fff", fontSize: "12px", fontWeight: 800, cursor: "pointer", textTransform: "uppercase", letterSpacing: "0.1em", transition: "box-shadow 0.2s" }}
+                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.boxShadow = "0 6px 24px rgba(220,50,50,0.45)"}
+                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.boxShadow = "none"}>
+                  Supprimer
+                </button>
+                <button onClick={() => setDeleteModal({ open: false, trackId: null, trackTitle: "" })} style={{ flex: 1, padding: "14px", borderRadius: "11px", background: "transparent", border: "1px solid var(--border)", color: "var(--muted)", fontSize: "12px", fontWeight: 700, cursor: "pointer", transition: "all 0.15s" }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.06)"; (e.currentTarget as HTMLElement).style.color = "var(--text)"; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--muted)"; }}>
+                  Annuler
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
