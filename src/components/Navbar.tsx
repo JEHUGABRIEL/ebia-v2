@@ -29,7 +29,7 @@ export default function Navbar() {
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
-  const navLinks = [{ to: "/explore", label: "Artistes" }, { to: "/concerts", label: "Concerts" }];
+  const navLinks = [{ to: "/explore", label: "Artistes" }, { to: "/concerts", label: "Concerts" }, { to: "/radio", label: "Radios 🔴" }, { to: "/recognize", label: "🎵 Identifier" }];
 
   return (
     <>

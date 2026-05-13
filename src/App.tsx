@@ -11,6 +11,8 @@ import Concerts from "./pages/Concerts";
 import Footer from "./components/Footer";
 import Login from "./pages/Login";
 import ListenerDashboard from "./pages/ListenerDashboard";
+import Radio from "./pages/Radio";
+import Recognize from "./pages/Recognize";
 import ArtistDashboard from "./pages/ArtistDashboard";
 
 const NO_CHROME = ["/login", "/me", "/artist-dashboard"];
@@ -26,6 +28,8 @@ function AppContent() {
         <Route path="/explore" element={<Explore />} />
         <Route path="/artist/:slug" element={<ArtistProfile />} />
         <Route path="/concerts" element={<Concerts />} />
+          <Route path="/radio" element={<Radio />} />
+          <Route path="/recognize" element={<Recognize />} />
         <Route path="/login" element={<Login />} />
         <Route path="/me" element={<AuthGuard><ListenerDashboard /></AuthGuard>} />
         <Route path="/artist-dashboard" element={<ArtistGuard><ArtistDashboard /></ArtistGuard>} />
