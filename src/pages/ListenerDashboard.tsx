@@ -97,7 +97,7 @@ export default function ListenerDashboard() {
     <div style={{ display: "flex", height: "100vh", background: "var(--bg)" }}>
 
       {/* ── SIDEBAR ── */}
-      <aside style={{ width: "236px", minWidth: "236px", display: "flex", flexDirection: "column", gap: "8px", padding: "8px", background: "#000", overflow: "hidden" }} className="hidden md:flex">
+      <aside className="sidebar-dashboard" style={{ flexDirection: "column", gap: "8px", padding: "8px", background: "#000", overflow: "hidden" }}>
 
         {/* Logo */}
         <div style={{ padding: "16px 12px 8px", display: "flex", alignItems: "center", gap: "8px" }}>

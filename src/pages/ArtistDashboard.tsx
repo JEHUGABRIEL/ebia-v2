@@ -217,7 +217,7 @@ export default function ArtistDashboard() {
     <div style={{ display: "flex", height: "100vh", background: "var(--bg)" }}>
 
       {/* ── SIDEBAR ── */}
-      <aside style={{ width: "236px", minWidth: "236px", display: "flex", flexDirection: "column", gap: "8px", padding: "8px", background: "#000" }}>
+      <aside className="sidebar-dashboard" style={{ flexDirection: "column", gap: "8px", padding: "8px", background: "#000" }}>
         <div style={{ padding: "16px 12px 8px", display: "flex", alignItems: "center", gap: "8px" }}>
           <div style={{ width: "28px", height: "28px", borderRadius: "7px", background: "var(--amber)", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <Music2 size={14} color="white" />
