@@ -540,8 +540,10 @@ export default function Login() {
 
   return (
     <div style={{ display: "flex", height: "100vh", background: "var(--bg)", overflow: "hidden" }}>
-      <div style={{ width: "50%", flexShrink: 0, display: "flex", flexDirection: "column", justifyContent: "center", padding: "36px 52px", overflowY: "auto", borderRight: "1px solid rgba(240,235,227,0.06)" }}>
+      <div style={{ width: "50%", flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "36px 24px", overflowY: "auto", borderRight: "1px solid rgba(240,235,227,0.06)" }}>
+        <div style={{ width: "100%", maxWidth: "360px" }}>
         {renderContent()}
+        </div>
       </div>
       <Carousel />
     </div>
