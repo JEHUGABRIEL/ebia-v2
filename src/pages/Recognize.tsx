@@ -96,7 +96,7 @@ export default function Recognize() {
     fd.append("file", blob, "recognition.webm");
 
     try {
-      const res = await fetch("http://localhost/api/v1/recognize", {
+      const res = await fetch("https://api-gateway-production-1c84.up.railway.app/api/v1/recognize", {
         method: "POST", body: fd,
       });
       const data = await res.json() as { found: boolean; track?: TrackResult; confidence?: number; message?: string };

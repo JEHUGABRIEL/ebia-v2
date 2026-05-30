@@ -1,6 +1,6 @@
 import keycloak from "./keycloak";
 
-const BASE = "http://localhost";
+const BASE = "https://api-gateway-production-1c84.up.railway.app";
 const MINIO = "http://localhost/audio";
 export const audioUrl = (filename: string) => `${MINIO}/${filename}`;
 
@@ -154,7 +154,7 @@ export const uploadArtistImage = (field: "avatar" | "cover", file: File): Promis
 export const uploadUserAvatar = (file: File): Promise<{ url: string }> => {
   const fd = new FormData();
   fd.append('file', file);
-  return fetch('http://localhost/api/v1/auth/upload/avatar', {
+  return fetch(`${BASE}/api/v1/auth/upload/avatar`, {
     method: 'POST',
     headers: (sessionStorage.getItem('ebia_token') || keycloak.token) ? { Authorization: `Bearer ${sessionStorage.getItem('ebia_token') || keycloak.token!}` } : undefined,
     body: fd,
@@ -167,7 +167,7 @@ export const uploadUserAvatar = (file: File): Promise<{ url: string }> => {
 export const uploadIdDoc = (file: File): Promise<{ message: string; key: string }> => {
   const fd = new FormData();
   fd.append('file', file);
-  return fetch('http://localhost/api/v1/auth/upload/id-doc', {
+  return fetch(`${BASE}/api/v1/auth/upload/id-doc`, {
     method: 'POST',
     headers: (sessionStorage.getItem('ebia_token') || keycloak.token) ? { Authorization: `Bearer ${sessionStorage.getItem('ebia_token') || keycloak.token!}` } : undefined,
     body: fd,

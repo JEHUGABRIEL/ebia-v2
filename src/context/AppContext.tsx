@@ -115,7 +115,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
 
   /* Login via notre formulaire — pas de redirect Keycloak */
   const loginWithCredentials = async (email: string, password: string) => {
-    const res = await fetch("http://localhost/api/v1/auth/login", {
+    const res = await fetch("https://api-gateway-production-1c84.up.railway.app/api/v1/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
@@ -134,7 +134,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const playTrack = (track: Track, q?: Track[]) => {
     if (q) { setQueue(q); setQueueIndex(q.findIndex(t => t.id === track.id)); }
     setCurrentTrack(track);
-    fetch(`http://localhost/api/v1/tracks/${track.id}/play`, {
+    fetch(`https://api-gateway-production-1c84.up.railway.app/api/v1/tracks/${track.id}/play`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ offline: false }),
     }).catch(() => {});

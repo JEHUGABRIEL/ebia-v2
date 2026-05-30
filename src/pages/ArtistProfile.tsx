@@ -28,12 +28,12 @@ export default function ArtistProfile() {
     if (!track) return;
     const queue = artist.tracks.map(t => ({
       id: t.id, title: t.title, artist: artist.name,
-      audioUrl: (t as any).file_path ? `http://localhost/audio/${(t as any).file_path}` : audioUrl(t.id + ".mp3"),
+      audioUrl: (t as any).file_path ? `https://api-gateway-production-1c84.up.railway.app/audio/${(t as any).file_path}` : audioUrl(t.id + ".mp3"),
       coverUrl: artist.avatar_url,
     }));
     playTrack({
       id: track.id, title: track.title, artist: artist.name,
-      audioUrl: (track as any).file_path ? `http://localhost/audio/${(track as any).file_path}` : audioUrl(track.id + ".mp3"),
+      audioUrl: (track as any).file_path ? `https://api-gateway-production-1c84.up.railway.app/audio/${(track as any).file_path}` : audioUrl(track.id + ".mp3"),
       coverUrl: artist.avatar_url,
     }, queue);
   };
