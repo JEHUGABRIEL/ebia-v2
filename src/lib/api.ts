@@ -1,7 +1,7 @@
 import keycloak from "./keycloak";
 
 const BASE = "https://api-gateway-production-1c84.up.railway.app";
-const MINIO = "http://localhost/audio";
+const MINIO = "https://minio-production-d09f.up.railway.app/ebia-audio";
 export const audioUrl = (filename: string) => `${MINIO}/${filename}`;
 
 /* ── Helpers HTTP ── */
