@@ -25,8 +25,8 @@ export default function Landing() {
           pointerEvents: "none",
         }} />
 
-        <div style={{ maxWidth: "1360px", margin: "0 auto", padding: "0 48px", width: "100%" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "80px", alignItems: "center" }}>
+        <div className="section-pad" style={{ maxWidth: "1360px", margin: "0 auto", width: "100%" }}>
+          <div className="hero-grid">
 
             {/* LEFT – Typographie */}
             <div>
@@ -89,7 +89,7 @@ export default function Landing() {
             </div>
 
             {/* RIGHT – Orbe */}
-            <div style={{ flexShrink: 0 }} className="hidden md:block">
+            <div style={{ flexShrink: 0 }} className="hero-orb hidden md:block">
               <div style={{
                 width: "380px", height: "380px", borderRadius: "50%",
                 border: "1px solid rgba(232,96,26,0.18)",
@@ -164,9 +164,8 @@ export default function Landing() {
       </div>
 
       {/* ── STATS ── */}
-      <div style={{ maxWidth: "1360px", margin: "0 auto", padding: "100px 48px" }}>
-        <div style={{
-          display: "grid", gridTemplateColumns: "repeat(3, 1fr)",
+      <div className="section-pad" style={{ maxWidth: "1360px", margin: "0 auto", paddingTop: "100px", paddingBottom: "100px" }}>
+        <div className="stats-grid" style={{
           border: "1px solid var(--border)", borderRadius: "20px", overflow: "hidden",
         }}>
           {[
@@ -187,7 +186,7 @@ export default function Landing() {
       </div>
 
       {/* ── FEATURES ── */}
-      <div style={{ maxWidth: "1360px", margin: "0 auto", padding: "0 48px 140px" }}>
+      <div className="section-pad" style={{ maxWidth: "1360px", margin: "0 auto", paddingBottom: "140px" }}>
         <div style={{ marginBottom: "64px" }}>
           <div style={{
             fontSize: "11px", fontWeight: 600, letterSpacing: "0.2em",
@@ -198,7 +197,7 @@ export default function Landing() {
           </h2>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "20px" }}>
+        <div className="features-grid">
           {[
             { num: "01", title: "Écoute libre", desc: "Toute la musique centrafricaine sans restriction. Aucun compte requis pour commencer à écouter.", c: "var(--amber)" },
             { num: "02", title: "Artistes locaux", desc: "Soutenez directement les artistes de la RCA. Suivez-les, partagez leur musique, faites rayonner leur talent.", c: "var(--gold)" },

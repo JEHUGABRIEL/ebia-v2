@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useApp } from "../context/AppContext";
-import { Eye, EyeOff, Music2, ArrowLeft, Check, Upload, AlertCircle } from "lucide-react";
+import { Eye, EyeOff, ArrowLeft, Check, Upload, AlertCircle } from "lucide-react";
+import EbiaLogo from "../components/EbiaLogo";
 import { registerListener, registerArtist, getArtists, type Artist } from "../lib/api";
 
 /* ── Données onboarding auditeur ── */
@@ -234,9 +235,7 @@ export default function Login() {
           <ArrowLeft size={13} /> Retour
         </Link>
         <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "32px" }}>
-          <div style={{ width: "34px", height: "34px", borderRadius: "9px", background: "var(--amber)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Music2 size={17} color="#fff" />
-          </div>
+          <EbiaLogo size={34} />
           <span className="bebas" style={{ fontSize: "19px", color: "var(--text)", letterSpacing: "0.1em" }}>E-BIA</span>
         </div>
         <div style={{ marginBottom: "24px" }}>
@@ -287,9 +286,7 @@ export default function Login() {
           <ArrowLeft size={13} /> Retour
         </Link>
         <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "28px" }}>
-          <div style={{ width: "34px", height: "34px", borderRadius: "9px", background: "var(--amber)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Music2 size={17} color="#fff" />
-          </div>
+          <EbiaLogo size={34} />
           <span className="bebas" style={{ fontSize: "19px", color: "var(--text)", letterSpacing: "0.1em" }}>E-BIA</span>
         </div>
 
@@ -540,7 +537,7 @@ export default function Login() {
 
   return (
     <div style={{ display: "flex", height: "100vh", background: "var(--bg)", overflow: "hidden" }}>
-      <div style={{ width: "50%", flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "36px 24px", overflowY: "auto", borderRight: "1px solid rgba(240,235,227,0.06)" }}>
+      <div className="login-form-panel" style={{ width: "50%", flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "36px 24px", overflowY: "auto", borderRight: "1px solid rgba(240,235,227,0.06)" }}>
         <div style={{ width: "100%", maxWidth: "360px" }}>
         {renderContent()}
         </div>

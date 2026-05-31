@@ -9,7 +9,7 @@ type TrackResult = {
   plays_count: number; artist: string; artist_slug: string; artist_avatar?: string;
 };
 
-const RECORD_SECONDS = 8;
+const RECORD_SECONDS = 10;
 
 export default function Recognize() {
   const navigate = useNavigate();

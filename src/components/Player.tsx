@@ -117,7 +117,7 @@ export default function Player() {
           </div>
         </div>
 
-        <div style={{ maxWidth: "1360px", margin: "0 auto", padding: "10px 32px", display: "flex", alignItems: "center", gap: "16px" }}>
+        <div className="player-inner">
 
           {/* Track info */}
           <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1, minWidth: 0 }}>
@@ -136,7 +136,7 @@ export default function Player() {
           {/* Controls — center */}
           <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
             {/* Shuffle */}
-            <button onClick={toggleShuffle} style={{ width: "34px", height: "34px", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", background: isShuffle ? "rgba(232,96,26,0.15)" : "transparent", border: "none", cursor: "pointer", color: isShuffle ? "var(--amber)" : "var(--muted)", transition: "all 0.15s", position: "relative" }}>
+            <button className="player-shuffle" onClick={toggleShuffle} style={{ width: "34px", height: "34px", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", background: isShuffle ? "rgba(232,96,26,0.15)" : "transparent", border: "none", cursor: "pointer", color: isShuffle ? "var(--amber)" : "var(--muted)", transition: "all 0.15s", position: "relative" }}>
               <Shuffle size={16} />
               {isShuffle && <span style={{ position: "absolute", bottom: "4px", width: "4px", height: "4px", borderRadius: "50%", background: "var(--amber)" }} />}
             </button>

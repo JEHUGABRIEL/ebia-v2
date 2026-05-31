@@ -26,8 +26,8 @@ export default function Explore() {
     <div style={{ minHeight: "100vh", background: "var(--bg)", paddingBottom: "120px" }}>
 
       {/* ── HERO BANNER ── */}
-      <div style={{
-        padding: "120px 48px 64px",
+      <div className="section-pad page-hero-pad" style={{
+        paddingTop: "120px", paddingBottom: "64px",
         maxWidth: "1360px", margin: "0 auto",
       }}>
         <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: "32px", flexWrap: "wrap", marginBottom: "48px" }}>

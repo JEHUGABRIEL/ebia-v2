@@ -1,5 +1,6 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { Menu, X, LogOut, LayoutDashboard, ChevronDown, Music2, Radio, Mic } from "lucide-react";
+import { Menu, X, LogOut, LayoutDashboard, ChevronDown, Radio, Mic } from "lucide-react";
+import EbiaLogo from "./EbiaLogo";
 import { useState, useEffect, useRef } from "react";
 import { useApp } from "../context/AppContext";
 import LogoutModal from "./LogoutModal";
@@ -55,9 +56,7 @@ export default function Navbar() {
 
           {/* Logo */}
           <Link to="/" style={{ display: "flex", alignItems: "center", gap: "8px", textDecoration: "none", flexShrink: 0 }}>
-            <div style={{ width: "30px", height: "30px", borderRadius: "8px", background: "var(--amber)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <Music2 size={14} color="#fff" />
-            </div>
+            <EbiaLogo size={30} />
             <span className="bebas" style={{ fontSize: "17px", color: "var(--text)", letterSpacing: "0.1em" }}>E-BIA</span>
           </Link>
 
@@ -170,7 +169,7 @@ export default function Navbar() {
                     background: active ? "rgba(232,96,26,0.08)" : "transparent",
                     fontWeight: 600, fontSize: "14px", textDecoration: "none",
                   }}>
-                    {Icon ? <Icon size={16} /> : <Music2 size={16} />}
+                    {Icon ? <Icon size={16} /> : null}
                     {link.label}
                   </Link>
                 );
