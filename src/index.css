@@ -194,6 +194,13 @@ body {
     padding-left: 20px !important;
     padding-right: 20px !important;
   }
+  .footer-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 32px !important;
+  }
+  .footer-grid > div:first-child {
+    grid-column: 1 / -1;
+  }
   .login-form-panel {
     width: 100% !important;
     border-right: none !important;

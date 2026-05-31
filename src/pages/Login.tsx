@@ -145,7 +145,7 @@ export default function Login() {
 
   /* Validations par étape */
   const canNext1 = email && password.length >= 8 && firstName && password === confirmPassword;
-  const canNext2Artist = stageName && birthDate && idNumber && artistGenre && city;
+  const canNext2Artist = stageName && birthDate && idNumber;
   const canFinishListener = selArtists.length >= 1;
 
   /* Soumission */

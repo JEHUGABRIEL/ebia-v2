@@ -4,9 +4,9 @@ import { useNavigate, Link } from "react-router-dom";
 import { Home, Search, Library, Heart, Users, Settings, Plus, ChevronRight, LogOut, Camera, Mic2, Music2 } from "lucide-react";
 import LogoutModal from "../components/LogoutModal";
 import EbiaLogo from "../components/EbiaLogo";
-import { getArtists, type Artist } from "../lib/api";
+import { getArtists, getTracks, type Artist } from "../lib/api";
 
-type Section = "accueil" | "recherche" | "bibliotheque" | "favoris" | "suivis" | "parametres";
+type Section = "accueil" | "recherche" | "bibliotheque" | "favoris" | "suivis" | "parametres" | "decouvrir";
 
 const MOCK_RECENT = [
   { id: "1", title: "On va se marier", artist: "Idylle Mamba", avatar: "https://images.unsplash.com/photo-1516585427167-9f4af9627e6c?w=80" },
@@ -46,10 +46,12 @@ export default function ListenerDashboard() {
   const [artistModalOpen, setArtistModalOpen] = useState(false);
   const [artistStep, setArtistStep] = useState(1);
   const [realArtists, setRealArtists] = useState<Artist[]>([]);
+  const [newTracks, setNewTracks] = useState<any[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     getArtists().then(r => setRealArtists(r.data)).catch(() => {});
+    getTracks({ new_this_month: "true", limit: "12" }).then(r => setNewTracks(r.data)).catch(() => {});
   }, []);
 
   if (!user) return null;
@@ -249,19 +251,85 @@ export default function ListenerDashboard() {
               <div>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "18px" }}>
                   <h2 className="bebas" style={{ fontSize: "24px", color: "var(--text)" }}>Nouveautés E-Bia</h2>
-                  <button style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", background: "none", border: "none", cursor: "pointer" }}>Tout afficher</button>
+                  <button onClick={() => setSection("decouvrir")} style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", background: "none", border: "none", cursor: "pointer" }}
+                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = "var(--text)"}
+                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = "var(--muted)"}
+                  >Tout afficher</button>
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "14px" }}>
-                  {MOCK_RECENT.slice(0, 4).map(track => (
-                    <button key={track.id} style={{ padding: "14px", borderRadius: "12px", textAlign: "left", background: "rgba(240,235,227,0.03)", border: "1px solid var(--border)", cursor: "pointer", transition: "all 0.15s" }}
-                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.06)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(232,96,26,0.2)"; }}
-                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.03)"; (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; }}>
-                      <img src={track.avatar} alt={track.title} style={{ width: "100%", aspectRatio: "1", borderRadius: "8px", objectFit: "cover", display: "block", marginBottom: "10px" }} />
-                      <p style={{ fontSize: "13px", fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{track.title}</p>
-                      <p style={{ fontSize: "11px", color: "var(--muted)", marginTop: "3px" }}>{track.artist}</p>
+                {newTracks.length === 0 ? (
+                  <p style={{ color: "var(--muted)", fontSize: "13px" }}>Aucune nouveauté ce mois-ci.</p>
+                ) : (
+                  <div style={{ display: "flex", gap: "14px", overflowX: "auto", paddingBottom: "8px", scrollbarWidth: "none" }}>
+                    {newTracks.map(track => (
+                      <button key={track.id} style={{ flexShrink: 0, width: "160px", padding: "14px", borderRadius: "12px", textAlign: "left", background: "rgba(240,235,227,0.03)", border: "1px solid var(--border)", cursor: "pointer", transition: "all 0.15s" }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.06)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(232,96,26,0.2)"; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.03)"; (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; }}>
+                        {track.album_cover_url || track.artist_avatar
+                          ? <img src={track.album_cover_url || track.artist_avatar} alt={track.title} style={{ width: "100%", aspectRatio: "1", borderRadius: "8px", objectFit: "cover", display: "block", marginBottom: "10px" }} />
+                          : <div style={{ width: "100%", aspectRatio: "1", borderRadius: "8px", background: "linear-gradient(135deg, var(--amber), var(--gold))", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "10px", fontSize: "28px" }}>🎵</div>
+                        }
+                        <p style={{ fontSize: "13px", fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{track.title}</p>
+                        <p style={{ fontSize: "11px", color: "var(--muted)", marginTop: "3px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{track.artist_name}</p>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ── DÉCOUVRIR ── */}
+          {section === "decouvrir" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "40px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <button onClick={() => setSection("accueil")} style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", fontWeight: 600 }}>← Retour</button>
+                <h1 className="bebas" style={{ fontSize: "36px", color: "var(--text)" }}>Découvrir</h1>
+              </div>
+
+              {/* Artistes les plus populaires ce mois */}
+              <div>
+                <h2 className="bebas" style={{ fontSize: "24px", color: "var(--text)", marginBottom: "18px" }}>🔥 Artistes les plus écoutés</h2>
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                  {[...realArtists].sort((a, b) => (b.plays_count || 0) - (a.plays_count || 0)).slice(0, 10).map((artist, i) => (
+                    <button key={artist.id} onClick={() => navigate(`/artist/${artist.slug}`)} style={{ display: "flex", alignItems: "center", gap: "16px", padding: "10px 14px", borderRadius: "10px", background: "transparent", border: "none", cursor: "pointer", textAlign: "left", transition: "background 0.15s" }}
+                      onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.04)"}
+                      onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}>
+                      <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--muted)", width: "20px", textAlign: "center" }}>{i + 1}</span>
+                      {artist.avatar_url
+                        ? <img src={artist.avatar_url} alt={artist.name} style={{ width: "44px", height: "44px", borderRadius: "50%", objectFit: "cover" }} />
+                        : <div style={{ width: "44px", height: "44px", borderRadius: "50%", background: "linear-gradient(135deg, var(--amber), var(--gold))", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, color: "#fff" }}>{artist.name[0]}</div>
+                      }
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontSize: "14px", fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{artist.name}</p>
+                        <p style={{ fontSize: "12px", color: "var(--muted)" }}>{artist.genre}</p>
+                      </div>
+                      <span style={{ fontSize: "12px", color: "var(--muted)" }}>{Number(artist.plays_count || 0).toLocaleString("fr-FR")} écoutes</span>
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* Nouveautés ce mois */}
+              <div>
+                <h2 className="bebas" style={{ fontSize: "24px", color: "var(--text)", marginBottom: "18px" }}>✨ Nouveautés du mois</h2>
+                {newTracks.length === 0 ? (
+                  <p style={{ color: "var(--muted)", fontSize: "13px" }}>Aucune nouveauté ce mois-ci.</p>
+                ) : (
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: "14px" }}>
+                    {newTracks.map(track => (
+                      <button key={track.id} style={{ padding: "14px", borderRadius: "12px", textAlign: "left", background: "rgba(240,235,227,0.03)", border: "1px solid var(--border)", cursor: "pointer", transition: "all 0.15s" }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.06)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(232,96,26,0.2)"; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.03)"; (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; }}>
+                        {track.album_cover_url || track.artist_avatar
+                          ? <img src={track.album_cover_url || track.artist_avatar} alt={track.title} style={{ width: "100%", aspectRatio: "1", borderRadius: "8px", objectFit: "cover", display: "block", marginBottom: "10px" }} />
+                          : <div style={{ width: "100%", aspectRatio: "1", borderRadius: "8px", background: "linear-gradient(135deg, var(--amber), var(--gold))", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "10px", fontSize: "28px" }}>🎵</div>
+                        }
+                        <p style={{ fontSize: "13px", fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{track.title}</p>
+                        <p style={{ fontSize: "11px", color: "var(--muted)", marginTop: "3px" }}>{track.artist_name}</p>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}

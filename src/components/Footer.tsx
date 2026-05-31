@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Music2 } from "lucide-react";
+import EbiaLogo from "./EbiaLogo";
 
 const LINKS = {
   "Compagnie": [{ label: "À propos", to: "/about" }, { label: "Presse", to: "/press" }, { label: "Investisseurs", to: "/investors" }],
@@ -25,14 +25,12 @@ export default function Footer() {
       <div style={{ maxWidth: "1360px", margin: "0 auto", padding: "64px 48px 0" }}>
 
         {/* Main grid */}
-        <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr 1fr 1fr 1fr", gap: "48px", marginBottom: "64px", alignItems: "start" }}>
+        <div className="footer-grid" style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr 1fr 1fr 1fr", gap: "48px", marginBottom: "64px", alignItems: "start" }}>
 
           {/* Brand */}
           <div>
             <Link to="/" style={{ display: "inline-flex", alignItems: "center", gap: "10px", textDecoration: "none", marginBottom: "16px" }}>
-              <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "var(--amber)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Music2 size={18} color="#fff" />
-              </div>
+              <EbiaLogo size={36} />
               <span className="bebas" style={{ fontSize: "20px", color: "var(--text)", letterSpacing: "0.1em" }}>E-BIA</span>
             </Link>
             <p style={{ fontSize: "13px", color: "var(--muted)", lineHeight: 1.7, maxWidth: "240px", marginBottom: "24px" }}>
