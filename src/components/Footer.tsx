@@ -13,7 +13,7 @@ const SOCIALS = [
     svg: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16 }}><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="0.8" fill="currentColor" stroke="none"/></svg> },
   { label: "X / Twitter", href: "https://x.com",
     svg: <svg viewBox="0 0 24 24" fill="currentColor" style={{ width: 14, height: 14 }}><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622L18.244 2.25z"/></svg> },
-  { label: "Facebook", href: "https://facebook.com",
+  { label: "Facebook", href: "https://www.fb.com/l/6lp1kJRRR",
     svg: <svg viewBox="0 0 24 24" fill="currentColor" style={{ width: 15, height: 15 }}><path d="M9.6 21.6V13.2H7.2V9.6h2.4V7.2C9.6 4.56 11.184 3 13.584 3c1.056 0 2.16.084 3.216.252v2.88h-1.8c-1.152 0-1.44.552-1.44 1.368V9.6H16.8l-.48 3.6H13.56V21.6H9.6Z"/></svg> },
   { label: "YouTube", href: "https://youtube.com",
     svg: <svg viewBox="0 0 24 24" fill="currentColor" style={{ width: 17, height: 17 }}><path d="M23.5 6.19a3.02 3.02 0 0 0-2.12-2.14C19.5 3.55 12 3.55 12 3.55s-7.5 0-9.38.5A3.02 3.02 0 0 0 .5 6.19C0 8.07 0 12 0 12s0 3.93.5 5.81a3.02 3.02 0 0 0 2.12 2.14C4.5 20.45 12 20.45 12 20.45s7.5 0 9.38-.5a3.02 3.02 0 0 0 2.12-2.14C24 15.93 24 12 24 12s0-3.93-.5-5.81zM9.55 15.57V8.43L15.82 12l-6.27 3.57z"/></svg> },
@@ -76,15 +76,7 @@ export default function Footer() {
           <p style={{ fontSize: "12px", color: "var(--muted)" }}>
             © 2026 <span style={{ color: "var(--amber)", fontWeight: 600 }}>E-Bia</span> — République Centrafricaine. Tous droits réservés.
           </p>
-          <select style={{
-            fontSize: "12px", color: "var(--muted)", background: "rgba(240,235,227,0.04)",
-            border: "1px solid rgba(240,235,227,0.1)", borderRadius: "8px",
-            padding: "6px 10px", outline: "none", cursor: "pointer",
-          }}>
-            <option>🇫🇷 Français</option>
-            <option>🇬🇧 English</option>
-            <option>🇸🇦 العربية</option>
-          </select>
+          <span style={{ fontSize: "12px", color: "var(--muted)", padding: "6px 10px", border: "1px solid rgba(240,235,227,0.1)", borderRadius: "8px" }}>🇫🇷 Français</span>
         </div>
       </div>
     </footer>

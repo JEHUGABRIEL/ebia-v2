@@ -154,7 +154,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     sessionStorage.removeItem("ebia_token");
     sessionStorage.removeItem("ebia_refresh");
     setUser(null);
-    keycloak.logout({ redirectUri: window.location.origin });
+    window.location.replace("/");
   };
   const register = (role: "listener" | "artist") =>
     keycloak.register({ locale: "fr", redirectUri: window.location.origin + (role === "artist" ? "/artist-dashboard" : "/me") });

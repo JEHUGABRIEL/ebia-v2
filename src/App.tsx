@@ -15,7 +15,7 @@ import Radio from "./pages/Radio";
 import Recognize from "./pages/Recognize";
 import ArtistDashboard from "./pages/ArtistDashboard";
 
-const NO_CHROME = ["/login", "/me", "/artist-dashboard"];
+const NO_CHROME = ["/login"];
 
 function AppContent() {
   const location = useLocation();

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import { useApp } from "../context/AppContext";
 import { Eye, EyeOff, ArrowLeft, Check, Upload, AlertCircle } from "lucide-react";
 import EbiaLogo from "../components/EbiaLogo";
@@ -97,17 +97,20 @@ const StepBar = ({ current, total }: { current: number; total: number }) => (
 export default function Login() {
   const { user, authReady, loginWithCredentials } = useApp();
   const navigate = useNavigate();
+  const location = useLocation();
 
-  const [isLogin, setIsLogin] = useState(true);
+  const [isLogin, setIsLogin] = useState((location.state as any)?.tab !== "register");
   const [role, setRole] = useState<"listener" | "artist">("listener");
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showPwd, setShowPwd] = useState(false);
+  const [showConfirmPwd, setShowConfirmPwd] = useState(false);
 
   /* Form commun */
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
 
@@ -141,7 +144,7 @@ export default function Login() {
   const TOTAL_STEPS = role === "listener" ? 3 : 3;
 
   /* Validations par étape */
-  const canNext1 = email && password.length >= 8 && firstName;
+  const canNext1 = email && password.length >= 8 && firstName && password === confirmPassword;
   const canNext2Artist = stageName && birthDate && idNumber && artistGenre && city;
   const canFinishListener = selArtists.length >= 1;
 
@@ -267,12 +270,6 @@ export default function Login() {
             Pas encore de compte ?{" "}
             <button onClick={() => { setIsLogin(false); setError(""); }} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--amber)", fontWeight: 700, fontSize: "12px" }}>S'inscrire</button>
           </p>
-          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <div style={{ flex: 1, height: "1px", background: "rgba(240,235,227,0.07)" }} />
-            <span style={{ color: "var(--muted)", fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.15em" }}>ou</span>
-            <div style={{ flex: 1, height: "1px", background: "rgba(240,235,227,0.07)" }} />
-          </div>
-          <Link to="/" style={{ textAlign: "center", color: "var(--muted)", fontSize: "13px", textDecoration: "none" }}>Continuer sans compte →</Link>
         </div>
       </>
     );
@@ -326,6 +323,18 @@ export default function Login() {
               {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
           </div>
+          <div style={{ position: "relative" }}>
+            <input type={showConfirmPwd ? "text" : "password"} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)}
+              placeholder="Confirmer le mot de passe *" autoComplete="new-password"
+              style={{ ...inp, paddingRight: "50px", borderColor: confirmPassword && confirmPassword !== password ? "#f08080" : undefined }}
+              onFocus={focusAmber} onBlur={blurDefault} />
+            <button onClick={() => setShowConfirmPwd(p => !p)} style={{ position: "absolute", right: "15px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--muted)", padding: 0 }}>
+              {showConfirmPwd ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
+          </div>
+          {confirmPassword && confirmPassword !== password && (
+            <p style={{ fontSize: "11px", color: "#f08080", marginTop: "-4px" }}>Les mots de passe ne correspondent pas</p>
+          )}
 
           <div style={{ display: "flex", gap: "8px" }}>
             <NextBtn onClick={() => { setError(""); setStep(2); }} disabled={!canNext1} />

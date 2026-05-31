@@ -1,8 +1,10 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useApp } from "../context/AppContext";
-import { useNavigate } from "react-router-dom";
-import { Home, Search, Library, Heart, Users, Settings, Plus, ChevronRight, Music2, LogOut, Camera, Mic2 } from "lucide-react";
+import { useNavigate, Link } from "react-router-dom";
+import { Home, Search, Library, Heart, Users, Settings, Plus, ChevronRight, LogOut, Camera, Mic2, Music2 } from "lucide-react";
 import LogoutModal from "../components/LogoutModal";
+import EbiaLogo from "../components/EbiaLogo";
+import { getArtists, type Artist } from "../lib/api";
 
 type Section = "accueil" | "recherche" | "bibliotheque" | "favoris" | "suivis" | "parametres";
 
@@ -43,7 +45,12 @@ export default function ListenerDashboard() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [artistModalOpen, setArtistModalOpen] = useState(false);
   const [artistStep, setArtistStep] = useState(1);
+  const [realArtists, setRealArtists] = useState<Artist[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    getArtists().then(r => setRealArtists(r.data)).catch(() => {});
+  }, []);
 
   if (!user) return null;
 
@@ -99,12 +106,12 @@ export default function ListenerDashboard() {
       {/* ── SIDEBAR ── */}
       <aside className="sidebar-dashboard" style={{ flexDirection: "column", gap: "8px", padding: "8px", background: "#000", overflow: "hidden" }}>
 
-        {/* Logo */}
+        {/* Logo + bouton home */}
         <div style={{ padding: "16px 12px 8px", display: "flex", alignItems: "center", gap: "8px" }}>
-          <div style={{ width: "28px", height: "28px", borderRadius: "7px", background: "var(--amber)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Music2 size={14} color="white" />
-          </div>
-          <span className="bebas" style={{ fontSize: "16px", color: "var(--text)", letterSpacing: "0.1em" }}>E-BIA</span>
+          <Link to="/" style={{ display: "flex", alignItems: "center", gap: "8px", textDecoration: "none" }}>
+            <EbiaLogo size={28} />
+            <span className="bebas" style={{ fontSize: "16px", color: "var(--text)", letterSpacing: "0.1em" }}>E-BIA</span>
+          </Link>
         </div>
 
         {/* Nav */}
@@ -170,7 +177,7 @@ export default function ListenerDashboard() {
 
       {/* ── MAIN ── */}
       <main style={{ flex: 1, overflowY: "auto", background: section === "accueil" ? "linear-gradient(180deg, #1C0C04 0%, var(--bg) 320px)" : "var(--bg)" }}>
-        <div style={{ padding: "32px", maxWidth: "1100px" }}>
+        <div className="dashboard-main" style={{ padding: "32px", maxWidth: "1100px" }}>
 
           {/* ── ACCUEIL ── */}
           {section === "accueil" && (
@@ -222,14 +229,17 @@ export default function ListenerDashboard() {
                     onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = "var(--muted)"}
                   >Tout afficher</button>
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "12px" }}>
-                  {MOCK_ARTISTS.map(artist => (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: "12px" }}>
+                  {(realArtists.length > 0 ? realArtists : []).slice(0, 10).map(artist => (
                     <button key={artist.id} onClick={() => navigate(`/artist/${artist.slug}`)} style={{ padding: "14px 10px", borderRadius: "12px", textAlign: "left", background: "transparent", border: "none", cursor: "pointer", transition: "background 0.15s" }}
                       onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.04)"}
                       onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}>
-                      <img src={artist.avatar} alt={artist.name} style={{ width: "100%", aspectRatio: "1", borderRadius: "50%", objectFit: "cover", display: "block", marginBottom: "10px" }} />
+                      {artist.avatar_url
+                        ? <img src={artist.avatar_url} alt={artist.name} style={{ width: "100%", aspectRatio: "1", borderRadius: "50%", objectFit: "cover", display: "block", marginBottom: "10px" }} />
+                        : <div style={{ width: "100%", aspectRatio: "1", borderRadius: "50%", background: "linear-gradient(135deg, var(--amber), var(--gold))", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "10px", fontSize: "28px", fontWeight: 800, color: "#fff" }}>{artist.name[0]}</div>
+                      }
                       <p style={{ fontSize: "12px", fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{artist.name}</p>
-                      <p style={{ fontSize: "11px", color: "var(--muted)", marginTop: "2px" }}>{artist.genre}</p>
+                      <p style={{ fontSize: "11px", color: "var(--muted)", marginTop: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{artist.genre}</p>
                     </button>
                   ))}
                 </div>

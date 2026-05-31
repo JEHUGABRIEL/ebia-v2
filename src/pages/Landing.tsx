@@ -1,13 +1,23 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useApp } from "../context/AppContext";
 import { ArrowRight, Play } from "lucide-react";
+import { useState, useEffect } from "react";
 
 const TICKER = ["Afro-Pop","Hip-Hop","Afro-Folk","Soukous","Gospel","Afro-Trap","Ndombolo","Bikutsi","Traditionnel","R&B","Afro-Beat","Soul"];
+const BASE = "https://api-gateway-production-1c84.up.railway.app";
 
 export default function Landing() {
   const { user } = useApp();
   const navigate = useNavigate();
   const full = [...TICKER,...TICKER,...TICKER,...TICKER];
+  const [stats, setStats] = useState({ artists: 0, tracks: 0, total_plays: 0, total_likes: 0 });
+
+  useEffect(() => {
+    fetch(`${BASE}/api/v1/stats`)
+      .then(r => r.json())
+      .then(d => setStats(d))
+      .catch(() => {});
+  }, []);
 
   return (
     <div className="grain" style={{ background: "var(--bg)", color: "var(--text)", overflowX: "hidden" }}>
@@ -169,9 +179,9 @@ export default function Landing() {
           border: "1px solid var(--border)", borderRadius: "20px", overflow: "hidden",
         }}>
           {[
-            { value: "19", label: "Artistes centrafricains", note: "et en croissance", c: "var(--amber)" },
-            { value: "54", label: "Titres disponibles", note: "écoute 100% libre", c: "var(--gold)" },
-            { value: "∞", label: "Musique à découvrir", note: "de la RCA au monde", c: "var(--text)" },
+            { value: stats.artists || "—", label: "Artistes centrafricains", note: "et en croissance", c: "var(--amber)" },
+            { value: stats.tracks || "—", label: "Titres disponibles", note: "écoute 100% libre", c: "var(--gold)" },
+            { value: stats.total_plays > 0 ? stats.total_plays.toLocaleString("fr-FR") : "∞", label: "Écoutes totales", note: "de la RCA au monde", c: "var(--text)" },
           ].map((s, i) => (
             <div key={i} style={{
               padding: "56px 48px", background: "var(--bg)",
