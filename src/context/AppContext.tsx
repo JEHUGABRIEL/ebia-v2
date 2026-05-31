@@ -43,7 +43,7 @@ function parseJwt(token: string): EbiaUser | null {
 }
 
 function getStoredToken(): string | null {
-  return sessionStorage.getItem("ebia_token");
+  return localStorage.getItem("ebia_token");
 }
 
 export function getAuthHeader(): Record<string, string> {
@@ -86,7 +86,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
         if (u) setUser(u);
       }
     };
-    keycloak.onAuthLogout = () => { setUser(null); sessionStorage.removeItem("ebia_token"); };
+    keycloak.onAuthLogout = () => { setUser(null); localStorage.removeItem("ebia_token"); };
     keycloak.onTokenExpired = () => keycloak.updateToken(60);
   }, []);
 
@@ -123,8 +123,8 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     const data = await res.json() as { access_token?: string; refresh_token?: string; error?: string };
     if (!res.ok) throw new Error(data.error || "Email ou mot de passe incorrect");
 
-    sessionStorage.setItem("ebia_token", data.access_token!);
-    if (data.refresh_token) sessionStorage.setItem("ebia_refresh", data.refresh_token);
+    localStorage.setItem("ebia_token", data.access_token!);
+    if (data.refresh_token) localStorage.setItem("ebia_refresh", data.refresh_token);
 
     const u = parseJwt(data.access_token!);
     if (u) setUser(u);
@@ -151,8 +151,8 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
 
   const login = () => keycloak.login({ locale: "fr" });
   const logout = () => {
-    sessionStorage.removeItem("ebia_token");
-    sessionStorage.removeItem("ebia_refresh");
+    localStorage.removeItem("ebia_token");
+    localStorage.removeItem("ebia_refresh");
     setUser(null);
     window.location.replace("/");
   };

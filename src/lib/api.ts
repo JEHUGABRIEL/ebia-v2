@@ -6,7 +6,7 @@ export const audioUrl = (filename: string) => `${MINIO}/${filename}`;
 
 /* ── Helpers HTTP ── */
 const authHeaders = (extra: Record<string, string> = {}): Record<string, string> => {
-  const token = sessionStorage.getItem("ebia_token") || keycloak.token;
+  const token = localStorage.getItem("ebia_token") || keycloak.token;
   return {
     "Content-Type": "application/json",
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -15,15 +15,30 @@ const authHeaders = (extra: Record<string, string> = {}): Record<string, string>
 };
 
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
-    ...init,
-    headers: { ...authHeaders(), ...(init?.headers as Record<string, string> ?? {}) },
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({})) as Record<string, string>;
-    throw Object.assign(new Error(err.error || `HTTP ${res.status}`), { status: res.status });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  try {
+    const res = await fetch(`${BASE}${path}`, {
+      ...init,
+      signal: controller.signal,
+      headers: { ...authHeaders(), ...(init?.headers as Record<string, string> ?? {}) },
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({})) as Record<string, string>;
+      throw Object.assign(new Error(err.error || `HTTP ${res.status}`), { status: res.status });
+    }
+    return res.json() as Promise<T>;
+  } catch (e) {
+    if (e instanceof Error && e.name === "AbortError") {
+      throw new Error("Le serveur met trop de temps à répondre. Vérifiez votre connexion.");
+    }
+    if (e instanceof TypeError && e.message === "Failed to fetch") {
+      throw new Error("Impossible de joindre le serveur. Vérifiez votre connexion internet.");
+    }
+    throw e;
+  } finally {
+    clearTimeout(timer);
   }
-  return res.json() as Promise<T>;
 }
 
 const get = <T>(path: string) => req<T>(path);

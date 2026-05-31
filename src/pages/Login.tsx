@@ -94,6 +94,23 @@ const StepBar = ({ current, total }: { current: number; total: number }) => (
   </div>
 );
 
+function normalizeError(e: unknown): string {
+  const msg = e instanceof Error ? e.message : String(e);
+  if (/already exists|duplicate|23505|unique.*constraint/i.test(msg))
+    return "Un compte existe déjà avec cet email.";
+  if (/invalid.*credential|incorrect.*password|wrong.*password|identifiants/i.test(msg))
+    return "Email ou mot de passe incorrect.";
+  if (/not found|introuvable/i.test(msg))
+    return "Compte introuvable.";
+  if (/network|fetch|connexion|ERR_/i.test(msg))
+    return "Impossible de joindre le serveur. Vérifiez votre connexion internet.";
+  if (/timeout|trop de temps/i.test(msg))
+    return "Le serveur met trop de temps à répondre. Réessayez.";
+  if (/token.*invalid|token.*expire/i.test(msg))
+    return "Session expirée. Reconnectez-vous.";
+  return msg || "Une erreur est survenue. Réessayez.";
+}
+
 export default function Login() {
   const { user, authReady, loginWithCredentials } = useApp();
   const navigate = useNavigate();
@@ -150,18 +167,17 @@ export default function Login() {
 
   /* Soumission */
   const handleLogin = async () => {
-    if (!email || !password) { setError("Remplissez tous les champs"); return; }
+    if (!email || !password) { setError("Veuillez renseigner votre email et mot de passe."); return; }
     setLoading(true); setError("");
     try {
       await loginWithCredentials(email, password);
-      // Redirection directe sans passer par Keycloak UI
-      const token = sessionStorage.getItem("ebia_token");
+      const token = localStorage.getItem("ebia_token");
       if (token) {
         const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
         const roles: string[] = payload.realm_access?.roles ?? [];
         navigate(roles.includes("artist") || roles.includes("admin") ? "/artist-dashboard" : "/me");
       }
-    } catch (e: unknown) { setError(e instanceof Error ? e.message : "Erreur réseau."); }
+    } catch (e: unknown) { setError(normalizeError(e)); }
     finally { setLoading(false); }
   };
 
@@ -169,10 +185,9 @@ export default function Login() {
     setLoading(true); setError("");
     try {
       await registerListener({ email, password, firstName, lastName, genres: selGenres, favoriteArtistIds: selArtists });
-      // Login automatique après inscription
       await loginWithCredentials(email, password);
       navigate("/me");
-    } catch (e: unknown) { setError(e instanceof Error ? e.message : "Erreur création compte."); }
+    } catch (e: unknown) { setError(normalizeError(e)); }
     finally { setLoading(false); }
   };
 
@@ -182,7 +197,7 @@ export default function Login() {
       await registerArtist({ email, password, firstName, lastName, stageName, birthDate, idType, idNumber, genre: artistGenre, city, bio, phone });
       await loginWithCredentials(email, password);
       navigate("/artist-dashboard");
-    } catch (e: unknown) { setError(e instanceof Error ? e.message : "Erreur création compte."); }
+    } catch (e: unknown) { setError(normalizeError(e)); }
     finally { setLoading(false); }
   };
 
