@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { getArtist, toggleLike, type Artist } from "../lib/api";
 import { useApp } from "../context/AppContext";
-import { Play, Heart, MapPin, ArrowLeft, CheckCircle, Headphones, Pause, ListPlus, Headphones as HeadphonesIcon } from "lucide-react";
+import { Play, Heart, MapPin, ArrowLeft, CheckCircle, Headphones, Pause, ListPlus } from "lucide-react";
 
 export default function ArtistProfile() {
   const { slug } = useParams<{ slug: string }>();
