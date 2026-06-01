@@ -2,7 +2,8 @@ import keycloak from "./keycloak";
 
 const BASE = "https://api-gateway-production-1c84.up.railway.app";
 const MINIO = "https://minio-production-d09f.up.railway.app/ebia-audio";
-export const audioUrl = (filename: string) => `${MINIO}/${filename}`;
+export const audioUrl = (filePath: string) =>
+  `${MINIO}/${filePath.split("/").map(encodeURIComponent).join("/")}`;
 
 /* ── Helpers HTTP ── */
 const authHeaders = (extra: Record<string, string> = {}): Record<string, string> => {

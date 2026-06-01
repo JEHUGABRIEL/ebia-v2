@@ -28,12 +28,12 @@ export default function ArtistProfile() {
     if (!track) return;
     const queue = artist.tracks.map(t => ({
       id: t.id, title: t.title, artist: artist.name,
-      audioUrl: (t as any).file_path ? `https://minio-production-d09f.up.railway.app/ebia-audio/${(t as any).file_path}` : audioUrl(t.id + ".mp3"),
+      audioUrl: audioUrl((t as any).file_path || t.id + ".mp3"),
       coverUrl: artist.avatar_url,
     }));
     playTrack({
       id: track.id, title: track.title, artist: artist.name,
-      audioUrl: (track as any).file_path ? `https://minio-production-d09f.up.railway.app/ebia-audio/${(track as any).file_path}` : audioUrl(track.id + ".mp3"),
+      audioUrl: audioUrl((track as any).file_path || track.id + ".mp3"),
       coverUrl: artist.avatar_url,
     }, queue);
   };
