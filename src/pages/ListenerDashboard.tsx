@@ -1,12 +1,13 @@
 import { useState, useRef, useEffect } from "react";
-import { useApp } from "../context/AppContext";
+import { useApp, type DownloadableTrack } from "../context/AppContext";
 import { useNavigate, Link } from "react-router-dom";
-import { Home, Search, Library, Heart, Users, Settings, Plus, ChevronRight, LogOut, Camera, Mic2, Music2, Loader, Menu, X as XIcon } from "lucide-react";
+import { Home, Search, Library, Heart, Users, Settings, Plus, ChevronRight, LogOut, Camera, Mic2, Music2, Loader, Menu, X as XIcon, Download, Trash2, WifiOff } from "lucide-react";
 import LogoutModal from "../components/LogoutModal";
 import EbiaLogo from "../components/EbiaLogo";
 import { getArtists, getTracks, getMyArtistProfile, updateProfile, uploadUserAvatar, becomeArtist, type Artist } from "../lib/api";
+import { daysLeft, type OfflineTrack } from "../lib/offline";
 
-type Section = "accueil" | "recherche" | "bibliotheque" | "favoris" | "suivis" | "parametres" | "decouvrir";
+type Section = "accueil" | "recherche" | "bibliotheque" | "favoris" | "suivis" | "parametres" | "decouvrir" | "telechargements";
 
 const MOCK_RECENT = [
   { id: "1", title: "On va se marier", artist: "Idylle Mamba", avatar: "https://images.unsplash.com/photo-1516585427167-9f4af9627e6c?w=80" },
@@ -37,7 +38,7 @@ const GENRES = [
 ];
 
 export default function ListenerDashboard() {
-  const { user, updateUser } = useApp();
+  const { user, updateUser, downloadedIds, downloadingIds, downloadProgress, downloadTrack, removeDownload, getDownloadedTracks, networkQuality, playTrack } = useApp();
   const navigate = useNavigate();
   const [section, setSection] = useState<Section>("accueil");
   const [logoutOpen, setLogoutOpen] = useState(false);
@@ -58,6 +59,7 @@ export default function ListenerDashboard() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [hasArtistProfile, setHasArtistProfile] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [offlineTracks, setOfflineTracks] = useState<OfflineTrack[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -65,6 +67,13 @@ export default function ListenerDashboard() {
     getTracks({ new_this_month: "true", limit: "12" }).then(r => setNewTracks(r.data)).catch(() => {});
     getMyArtistProfile().then(() => setHasArtistProfile(true)).catch(() => setHasArtistProfile(false));
   }, []);
+
+  /* Rafraîchir la liste hors-ligne quand on entre dans la section */
+  useEffect(() => {
+    if (section === "telechargements") {
+      getDownloadedTracks().then(setOfflineTracks).catch(() => {});
+    }
+  }, [section, downloadedIds]);
 
   if (!user) return null;
 
@@ -104,10 +113,11 @@ export default function ListenerDashboard() {
     }
   };
 
-  const navLinks: { id: Section; icon: typeof Home; label: string }[] = [
+  const navLinks: { id: Section; icon: typeof Home; label: string; badge?: number }[] = [
     { id: "accueil", icon: Home, label: "Accueil" },
     { id: "recherche", icon: Search, label: "Rechercher" },
     { id: "bibliotheque", icon: Library, label: "Bibliothèque" },
+    { id: "telechargements", icon: Download, label: "Téléchargements", badge: downloadedIds.size || undefined },
   ];
   const libLinks: { id: Section; icon: typeof Heart; label: string; color: string }[] = [
     { id: "favoris", icon: Heart, label: "Titres favoris", color: "var(--amber)" },
@@ -149,11 +159,26 @@ export default function ListenerDashboard() {
       </div>
       <div style={{ background: "var(--bg2)", borderRadius: "12px", padding: "8px" }}>
         {navLinks.map(l => (
-          <button key={l.id} onClick={() => { setSection(l.id); onNav?.(); }} style={{ width: "100%", display: "flex", alignItems: "center", gap: "12px", padding: "10px 12px", borderRadius: "8px", cursor: "pointer", background: section === l.id ? "rgba(232,96,26,0.1)" : "transparent", border: "none", color: section === l.id ? "var(--text)" : "var(--muted)", transition: "all 0.15s", textAlign: "left" }}>
+          <button key={l.id} onClick={() => { setSection(l.id as Section); onNav?.(); }} style={{ width: "100%", display: "flex", alignItems: "center", gap: "12px", padding: "10px 12px", borderRadius: "8px", cursor: "pointer", background: section === l.id ? "rgba(232,96,26,0.1)" : "transparent", border: "none", color: section === l.id ? "var(--text)" : "var(--muted)", transition: "all 0.15s", textAlign: "left" }}>
             <l.icon size={18} style={{ color: section === l.id ? "var(--amber)" : "inherit", flexShrink: 0 }} />
-            <span style={{ fontWeight: 600, fontSize: "13px" }}>{l.label}</span>
+            <span style={{ fontWeight: 600, fontSize: "13px", flex: 1 }}>{l.label}</span>
+            {l.badge ? (
+              <span style={{ fontSize: "10px", fontWeight: 700, padding: "1px 6px", borderRadius: "99px", background: "var(--amber)", color: "#fff" }}>{l.badge}</span>
+            ) : null}
           </button>
         ))}
+        {/* Indicateur réseau */}
+        {networkQuality !== "high" && (
+          <div style={{ display: "flex", alignItems: "center", gap: "6px", padding: "6px 12px", margin: "4px 0 0", borderRadius: "8px", background: networkQuality === "offline" ? "rgba(220,50,50,0.08)" : "rgba(201,147,10,0.08)" }}>
+            {networkQuality === "offline"
+              ? <WifiOff size={11} style={{ color: "#f08080", flexShrink: 0 }} />
+              : <WifiOff size={11} style={{ color: "var(--gold)", flexShrink: 0 }} />
+            }
+            <span style={{ fontSize: "10px", color: networkQuality === "offline" ? "#f08080" : "var(--gold)", fontWeight: 600 }}>
+              {networkQuality === "offline" ? "Hors connexion" : "Réseau lent"}
+            </span>
+          </div>
+        )}
       </div>
       <div style={{ background: "var(--bg2)", borderRadius: "12px", padding: "14px 12px", flex: 1, display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px", padding: "0 4px" }}>
@@ -301,18 +326,46 @@ export default function ListenerDashboard() {
                   <p style={{ color: "var(--muted)", fontSize: "13px" }}>Aucune nouveauté ce mois-ci.</p>
                 ) : (
                   <div style={{ display: "flex", gap: "10px", overflowX: "auto", paddingBottom: "8px", scrollbarWidth: "none" }}>
-                    {newTracks.map(track => (
-                      <button key={track.id} style={{ flexShrink: 0, width: "100px", padding: "8px", borderRadius: "10px", textAlign: "left", background: "rgba(240,235,227,0.03)", border: "1px solid var(--border)", cursor: "pointer", transition: "all 0.15s" }}
-                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.06)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(232,96,26,0.2)"; }}
-                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.03)"; (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; }}>
-                        {track.album_cover_url || track.artist_avatar
-                          ? <img src={track.album_cover_url || track.artist_avatar} alt={track.title} style={{ width: "100%", aspectRatio: "1", borderRadius: "6px", objectFit: "cover", display: "block", marginBottom: "6px" }} />
-                          : <div style={{ width: "100%", aspectRatio: "1", borderRadius: "6px", background: "linear-gradient(135deg, var(--amber), var(--gold))", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "6px", fontSize: "22px" }}>🎵</div>
-                        }
-                        <p style={{ fontSize: "10px", fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{track.title}</p>
-                        <p style={{ fontSize: "9px", color: "var(--muted)", marginTop: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{track.artist_name}</p>
-                      </button>
-                    ))}
+                    {newTracks.map(track => {
+                      const dl: DownloadableTrack = { id: track.id, title: track.title, artist: track.artist_name, genre: track.genre, duration_s: track.duration_s, coverUrl: track.album_cover_url || track.artist_avatar };
+                      const dlDone = downloadedIds.has(track.id);
+                      const dlProgress = downloadProgress[track.id];
+                      const dlLoading = downloadingIds.has(track.id);
+                      return (
+                        <div key={track.id} style={{ flexShrink: 0, width: "100px", padding: "8px", borderRadius: "10px", background: "rgba(240,235,227,0.03)", border: "1px solid var(--border)", transition: "all 0.15s", position: "relative" }}>
+                          <div onClick={() => playTrack({ id: track.id, title: track.title, artist: track.artist_name, audioUrl: track.file_path, coverUrl: track.album_cover_url || track.artist_avatar })} style={{ cursor: "pointer" }}>
+                            {track.album_cover_url || track.artist_avatar
+                              ? <img src={track.album_cover_url || track.artist_avatar} alt={track.title} style={{ width: "100%", aspectRatio: "1", borderRadius: "6px", objectFit: "cover", display: "block", marginBottom: "6px" }} />
+                              : <div style={{ width: "100%", aspectRatio: "1", borderRadius: "6px", background: "linear-gradient(135deg, var(--amber), var(--gold))", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "6px", fontSize: "22px" }}>🎵</div>
+                            }
+                            <p style={{ fontSize: "10px", fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{track.title}</p>
+                            <p style={{ fontSize: "9px", color: "var(--muted)", marginTop: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{track.artist_name}</p>
+                          </div>
+                          {/* Bouton téléchargement */}
+                          <div style={{ marginTop: "5px", display: "flex", justifyContent: "flex-end" }}>
+                            {dlLoading ? (
+                              <div style={{ fontSize: "8px", color: "var(--amber)", fontWeight: 700 }}>{dlProgress ?? 0}%</div>
+                            ) : dlDone ? (
+                              <span title="Téléchargé" style={{ display: "flex", alignItems: "center" }}>
+                                <Download size={11} style={{ color: "#4caf82" }} />
+                              </span>
+                            ) : (
+                              <button onClick={() => downloadTrack(dl)} title="Télécharger pour écouter hors-ligne" style={{ background: "none", border: "none", cursor: "pointer", padding: "2px", color: "var(--muted)", display: "flex", alignItems: "center" }}
+                                onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = "var(--amber)"}
+                                onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = "var(--muted)"}>
+                                <Download size={11} />
+                              </button>
+                            )}
+                          </div>
+                          {/* Barre de progression du téléchargement */}
+                          {dlLoading && dlProgress != null && (
+                            <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "3px", borderRadius: "0 0 10px 10px", background: "rgba(240,235,227,0.08)", overflow: "hidden" }}>
+                              <div style={{ height: "100%", width: `${dlProgress}%`, background: "var(--amber)", transition: "width 0.3s" }} />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -570,6 +623,81 @@ export default function ListenerDashboard() {
               </div>
             </div>
           )}
+          {/* ── TÉLÉCHARGEMENTS ── */}
+          {section === "telechargements" && (
+            <div>
+              <div style={{ marginBottom: "24px" }}>
+                <h1 className="bebas" style={{ fontSize: "36px", color: "var(--text)", lineHeight: 1 }}>Téléchargements</h1>
+                <p style={{ fontSize: "13px", color: "var(--muted)", marginTop: "4px" }}>Écoutez hors-ligne · expire après {7} jours</p>
+              </div>
+
+              {networkQuality === "offline" && (
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "12px 16px", borderRadius: "10px", background: "rgba(76,175,130,0.08)", border: "1px solid rgba(76,175,130,0.2)", marginBottom: "20px" }}>
+                  <WifiOff size={14} style={{ color: "#4caf82", flexShrink: 0 }} />
+                  <p style={{ fontSize: "12px", color: "#4caf82", fontWeight: 600 }}>Mode hors-ligne — lecture depuis les fichiers téléchargés</p>
+                </div>
+              )}
+
+              {offlineTracks.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "64px 0" }}>
+                  <div style={{ width: "72px", height: "72px", borderRadius: "20px", background: "rgba(240,235,227,0.05)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+                    <Download size={28} style={{ color: "var(--muted)" }} />
+                  </div>
+                  <p className="bebas" style={{ fontSize: "20px", color: "var(--muted)", marginBottom: "8px" }}>Aucun titre téléchargé</p>
+                  <p style={{ fontSize: "13px", color: "var(--muted)", maxWidth: "320px", margin: "0 auto", lineHeight: 1.6 }}>
+                    Téléchargez des titres depuis l'accueil pour les écouter sans connexion. Ils expirent après 7 jours.
+                  </p>
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "14px", padding: "0 14px 10px", fontSize: "10px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--muted)", borderBottom: "1px solid var(--border)" }}>
+                    <span style={{ flex: 1 }}>Titre</span>
+                    <span style={{ width: "80px", textAlign: "center" }}>Expire dans</span>
+                    <span style={{ width: "32px" }} />
+                  </div>
+                  {offlineTracks.map(track => {
+                    const days = daysLeft(track);
+                    return (
+                      <div key={track.id} style={{ display: "flex", alignItems: "center", gap: "14px", padding: "11px 14px", borderRadius: "10px", transition: "background 0.15s", cursor: "pointer" }}
+                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.04)"}
+                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}>
+                        <div style={{ width: "40px", height: "40px", borderRadius: "8px", flexShrink: 0, overflow: "hidden", background: "rgba(232,96,26,0.12)", display: "flex", alignItems: "center", justifyContent: "center" }}
+                          onClick={() => {
+                            const blobUrl = URL.createObjectURL(track.audioBlob);
+                            playTrack({ id: track.id, title: track.title, artist: track.artist, audioUrl: blobUrl, coverUrl: track.coverUrl });
+                          }}>
+                          {track.coverUrl
+                            ? <img src={track.coverUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                            : <Music2 size={14} style={{ color: "var(--amber)" }} />
+                          }
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }} onClick={() => {
+                          const blobUrl = URL.createObjectURL(track.audioBlob);
+                          playTrack({ id: track.id, title: track.title, artist: track.artist, audioUrl: blobUrl, coverUrl: track.coverUrl });
+                        }}>
+                          <p style={{ fontSize: "13px", fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{track.title}</p>
+                          <p style={{ fontSize: "11px", color: "var(--muted)", marginTop: "2px" }}>{track.artist} · {track.genre}</p>
+                        </div>
+                        <div style={{ width: "80px", textAlign: "center", flexShrink: 0 }}>
+                          <span style={{ fontSize: "11px", fontWeight: 700, color: days <= 1 ? "#f08080" : days <= 3 ? "var(--gold)" : "#4caf82" }}>
+                            {days === 0 ? "Aujourd'hui" : `${days}j`}
+                          </span>
+                        </div>
+                        <button onClick={() => removeDownload(track.id).then(() => setOfflineTracks(t => t.filter(x => x.id !== track.id)))}
+                          title="Supprimer le téléchargement"
+                          style={{ width: "32px", height: "32px", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", background: "none", border: "none", cursor: "pointer", color: "var(--muted)", transition: "all 0.15s", flexShrink: 0 }}
+                          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(220,50,50,0.1)"; (e.currentTarget as HTMLElement).style.color = "#f08080"; }}
+                          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "none"; (e.currentTarget as HTMLElement).style.color = "var(--muted)"; }}>
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
         </div>
       </main>
 

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import {
   Play, Pause, SkipBack, SkipForward, Volume2, VolumeX,
   Shuffle, Repeat, Repeat1, List, X, Music2, ChevronDown, ChevronUp,
+  Loader, WifiOff, Wifi, Download,
 } from "lucide-react";
 import { useApp } from "../context/AppContext";
 
@@ -10,6 +11,7 @@ export default function Player() {
     currentTrack, isPlaying, togglePlay, nextTrack, prevTrack,
     queue, queueIndex, isShuffle, toggleShuffle, repeatMode, toggleRepeat,
     playTrack, stopTrack, audioEl,
+    networkQuality, isBuffering, isOfflinePlaying,
   } = useApp();
 
   const [progress, setProgress]   = useState(0);
@@ -217,11 +219,35 @@ export default function Player() {
 
           {/* Infos du titre — clic pour ouvrir le plein écran */}
           <div onClick={() => setExpanded(true)} style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1, minWidth: 0, cursor: "pointer" }}>
-            <div style={{ width: "44px", height: "44px", borderRadius: "10px", overflow: "hidden", flexShrink: 0, background: "rgba(232,96,26,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ position: "relative", width: "44px", height: "44px", borderRadius: "10px", overflow: "hidden", flexShrink: 0, background: "rgba(232,96,26,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <Cover size={18} />
+              {/* Spinner de buffering */}
+              {isBuffering && (
+                <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <Loader size={16} style={{ color: "var(--amber)", animation: "spin 1s linear infinite" }} />
+                </div>
+              )}
             </div>
             <div style={{ minWidth: 0 }}>
-              <p style={{ fontSize: "13px", fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{currentTrack.title}</p>
+              <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+                <p style={{ fontSize: "13px", fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{currentTrack.title}</p>
+                {/* Badges réseau */}
+                {isOfflinePlaying && (
+                  <span title="Lecture hors-ligne" style={{ flexShrink: 0, display: "flex", alignItems: "center" }}>
+                    <Download size={10} style={{ color: "#4caf82" }} />
+                  </span>
+                )}
+                {!isOfflinePlaying && networkQuality === "offline" && (
+                  <span title="Pas de connexion" style={{ flexShrink: 0 }}>
+                    <WifiOff size={10} style={{ color: "#f08080" }} />
+                  </span>
+                )}
+                {!isOfflinePlaying && networkQuality === "low" && (
+                  <span title="Réseau faible" style={{ flexShrink: 0 }}>
+                    <Wifi size={10} style={{ color: "var(--gold)" }} />
+                  </span>
+                )}
+              </div>
               <p style={{ fontSize: "11px", color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{currentTrack.artist}</p>
             </div>
             <ChevronUp size={14} style={{ color: "var(--muted)", flexShrink: 0 }} />
@@ -237,7 +263,10 @@ export default function Player() {
               <SkipBack size={18} />
             </button>
             <button onClick={togglePlay} style={{ width: "44px", height: "44px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--amber)", border: "none", cursor: "pointer", flexShrink: 0 }}>
-              {isPlaying ? <Pause size={18} color="white" fill="white" /> : <Play size={18} color="white" fill="white" style={{ marginLeft: "2px" }} />}
+              {isBuffering
+                ? <Loader size={18} color="white" style={{ animation: "spin 1s linear infinite" }} />
+                : isPlaying ? <Pause size={18} color="white" fill="white" /> : <Play size={18} color="white" fill="white" style={{ marginLeft: "2px" }} />
+              }
             </button>
             <button onClick={nextTrack} style={{ width: "34px", height: "34px", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", background: "none", border: "none", cursor: "pointer", color: "var(--muted)" }}>
               <SkipForward size={18} />
