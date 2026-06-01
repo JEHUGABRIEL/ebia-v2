@@ -9,14 +9,6 @@ import { daysLeft, type OfflineTrack } from "../lib/offline";
 
 type Section = "accueil" | "recherche" | "bibliotheque" | "favoris" | "suivis" | "parametres" | "decouvrir" | "telechargements";
 
-const MOCK_RECENT = [
-  { id: "1", title: "On va se marier", artist: "Idylle Mamba", avatar: "https://images.unsplash.com/photo-1516585427167-9f4af9627e6c?w=80" },
-  { id: "2", title: "Bande de Bangui", artist: "Cool Fawa", avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80" },
-  { id: "3", title: "Mawa", artist: "Ley Kartel", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80" },
-  { id: "4", title: "Kondogbia", artist: "Mansdou", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80" },
-  { id: "5", title: "Calm Down", artist: "Ley Kartel", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80" },
-  { id: "6", title: "One Africa", artist: "Cool Fawa", avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80" },
-];
 const MOCK_ARTISTS = [
   { id: "1", name: "Idylle Mamba", genre: "Afro-Folk", slug: "idylle-mamba", avatar: "https://images.unsplash.com/photo-1516585427167-9f4af9627e6c?w=200" },
   { id: "2", name: "Cool Fawa", genre: "Hip-Hop", slug: "cool-fawa", avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200" },
@@ -60,10 +52,14 @@ export default function ListenerDashboard() {
   const [hasArtistProfile, setHasArtistProfile] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [offlineTracks, setOfflineTracks] = useState<OfflineTrack[]>([]);
+  const [popularTracks, setPopularTracks] = useState<any[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     getArtists().then(r => setRealArtists(r.data)).catch(() => {});
+    /* Titres les plus joués — grille d'accueil */
+    getTracks({ limit: "6" }).then(r => setPopularTracks(r.data)).catch(() => {});
+    /* Nouveautés du mois — scroll horizontal */
     getTracks({ new_this_month: "true", limit: "12" }).then(r => setNewTracks(r.data)).catch(() => {});
     getMyArtistProfile().then(() => setHasArtistProfile(true)).catch(() => setHasArtistProfile(false));
   }, []);
@@ -273,20 +269,30 @@ export default function ListenerDashboard() {
                 )}
               </div>
 
-              {/* Écoutes récentes */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px" }}>
-                {MOCK_RECENT.map(track => (
-                  <button key={track.id} style={{ display: "flex", alignItems: "center", borderRadius: "8px", overflow: "hidden", textAlign: "left", background: "rgba(240,235,227,0.06)", border: "none", cursor: "pointer", transition: "background 0.15s" }}
-                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.1)"}
-                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.06)"}>
-                    <img src={track.avatar} alt={track.title} style={{ width: "52px", height: "52px", objectFit: "cover", flexShrink: 0 }} />
-                    <div style={{ flex: 1, minWidth: 0, padding: "0 12px" }}>
-                      <p style={{ fontSize: "13px", fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{track.title}</p>
-                      <p style={{ fontSize: "11px", color: "var(--muted)", marginTop: "2px" }}>{track.artist}</p>
-                    </div>
-                  </button>
-                ))}
-              </div>
+              {/* Titres populaires (données réelles) */}
+              {popularTracks.length > 0 && (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px" }}>
+                  {popularTracks.map(track => {
+                    const cover = track.album_cover_url || track.artist_avatar;
+                    return (
+                      <button key={track.id}
+                        onClick={() => playTrack({ id: track.id, title: track.title, artist: track.artist_name, audioUrl: track.file_path, coverUrl: cover })}
+                        style={{ display: "flex", alignItems: "center", borderRadius: "8px", overflow: "hidden", textAlign: "left", background: "rgba(240,235,227,0.06)", border: "none", cursor: "pointer", transition: "background 0.15s" }}
+                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.1)"}
+                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.06)"}>
+                        {cover
+                          ? <img src={cover} alt={track.title} style={{ width: "52px", height: "52px", objectFit: "cover", flexShrink: 0 }} />
+                          : <div style={{ width: "52px", height: "52px", background: "linear-gradient(135deg, var(--amber), var(--gold))", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: "20px" }}>🎵</div>
+                        }
+                        <div style={{ flex: 1, minWidth: 0, padding: "0 12px" }}>
+                          <p style={{ fontSize: "13px", fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{track.title}</p>
+                          <p style={{ fontSize: "11px", color: "var(--muted)", marginTop: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{track.artist_name}</p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
 
               {/* Artistes */}
               <div>
@@ -327,42 +333,58 @@ export default function ListenerDashboard() {
                 ) : (
                   <div style={{ display: "flex", gap: "10px", overflowX: "auto", paddingBottom: "8px", scrollbarWidth: "none" }}>
                     {newTracks.map(track => {
-                      const dl: DownloadableTrack = { id: track.id, title: track.title, artist: track.artist_name, genre: track.genre, duration_s: track.duration_s, coverUrl: track.album_cover_url || track.artist_avatar };
+                      const cover = track.album_cover_url || track.artist_avatar;
+                      const dl: DownloadableTrack = { id: track.id, title: track.title, artist: track.artist_name, genre: track.genre, duration_s: track.duration_s, coverUrl: cover };
                       const dlDone = downloadedIds.has(track.id);
-                      const dlProgress = downloadProgress[track.id];
+                      const dlPct  = downloadProgress[track.id] ?? 0;
                       const dlLoading = downloadingIds.has(track.id);
                       return (
-                        <div key={track.id} style={{ flexShrink: 0, width: "100px", padding: "8px", borderRadius: "10px", background: "rgba(240,235,227,0.03)", border: "1px solid var(--border)", transition: "all 0.15s", position: "relative" }}>
-                          <div onClick={() => playTrack({ id: track.id, title: track.title, artist: track.artist_name, audioUrl: track.file_path, coverUrl: track.album_cover_url || track.artist_avatar })} style={{ cursor: "pointer" }}>
-                            {track.album_cover_url || track.artist_avatar
-                              ? <img src={track.album_cover_url || track.artist_avatar} alt={track.title} style={{ width: "100%", aspectRatio: "1", borderRadius: "6px", objectFit: "cover", display: "block", marginBottom: "6px" }} />
-                              : <div style={{ width: "100%", aspectRatio: "1", borderRadius: "6px", background: "linear-gradient(135deg, var(--amber), var(--gold))", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "6px", fontSize: "22px" }}>🎵</div>
-                            }
-                            <p style={{ fontSize: "10px", fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{track.title}</p>
-                            <p style={{ fontSize: "9px", color: "var(--muted)", marginTop: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{track.artist_name}</p>
-                          </div>
-                          {/* Bouton téléchargement */}
-                          <div style={{ marginTop: "5px", display: "flex", justifyContent: "flex-end" }}>
-                            {dlLoading ? (
-                              <div style={{ fontSize: "8px", color: "var(--amber)", fontWeight: 700 }}>{dlProgress ?? 0}%</div>
-                            ) : dlDone ? (
-                              <span title="Téléchargé" style={{ display: "flex", alignItems: "center" }}>
-                                <Download size={11} style={{ color: "#4caf82" }} />
-                              </span>
-                            ) : (
-                              <button onClick={() => downloadTrack(dl)} title="Télécharger pour écouter hors-ligne" style={{ background: "none", border: "none", cursor: "pointer", padding: "2px", color: "var(--muted)", display: "flex", alignItems: "center" }}
-                                onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = "var(--amber)"}
-                                onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = "var(--muted)"}>
-                                <Download size={11} />
-                              </button>
+                        <div key={track.id} style={{ flexShrink: 0, width: "120px", borderRadius: "12px", background: "rgba(240,235,227,0.03)", border: "1px solid var(--border)", overflow: "hidden" }}>
+
+                          {/* ── Pochette + overlay download ── */}
+                          <div style={{ position: "relative" }}>
+                            <div onClick={() => playTrack({ id: track.id, title: track.title, artist: track.artist_name, audioUrl: track.file_path, coverUrl: cover })} style={{ cursor: "pointer" }}>
+                              {cover
+                                ? <img src={cover} alt={track.title} style={{ width: "100%", aspectRatio: "1", objectFit: "cover", display: "block" }} />
+                                : <div style={{ width: "100%", aspectRatio: "1", background: "linear-gradient(135deg, var(--amber), var(--gold))", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "28px" }}>🎵</div>
+                              }
+                            </div>
+
+                            {/* Bouton download — overlay en bas à droite, taille tactile */}
+                            <button
+                              onClick={e => { e.stopPropagation(); if (!dlDone && !dlLoading) downloadTrack(dl); }}
+                              title={dlDone ? "Déjà téléchargé" : "Télécharger hors-ligne"}
+                              style={{
+                                position: "absolute", bottom: "6px", right: "6px",
+                                width: "36px", height: "36px", borderRadius: "50%",
+                                background: dlDone ? "rgba(76,175,130,0.85)" : "rgba(8,8,8,0.72)",
+                                backdropFilter: "blur(6px)",
+                                border: "none", cursor: dlDone ? "default" : "pointer",
+                                display: "flex", alignItems: "center", justifyContent: "center",
+                                transition: "transform 0.15s, background 0.15s",
+                              }}
+                              onMouseEnter={e => { if (!dlDone) (e.currentTarget as HTMLElement).style.transform = "scale(1.12)"; }}
+                              onMouseLeave={e => (e.currentTarget as HTMLElement).style.transform = "scale(1)"}
+                            >
+                              {dlLoading
+                                ? <Loader size={15} style={{ color: "var(--amber)", animation: "spin 1s linear infinite" }} />
+                                : <Download size={15} color={dlDone ? "#fff" : "var(--amber)"} />
+                              }
+                            </button>
+
+                            {/* Barre de progression (superposée en bas de la pochette) */}
+                            {dlLoading && (
+                              <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "3px", background: "rgba(0,0,0,0.4)" }}>
+                                <div style={{ height: "100%", width: `${dlPct}%`, background: "var(--amber)", transition: "width 0.3s" }} />
+                              </div>
                             )}
                           </div>
-                          {/* Barre de progression du téléchargement */}
-                          {dlLoading && dlProgress != null && (
-                            <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "3px", borderRadius: "0 0 10px 10px", background: "rgba(240,235,227,0.08)", overflow: "hidden" }}>
-                              <div style={{ height: "100%", width: `${dlProgress}%`, background: "var(--amber)", transition: "width 0.3s" }} />
-                            </div>
-                          )}
+
+                          {/* ── Texte ── */}
+                          <div onClick={() => playTrack({ id: track.id, title: track.title, artist: track.artist_name, audioUrl: track.file_path, coverUrl: cover })} style={{ padding: "8px 10px 10px", cursor: "pointer" }}>
+                            <p style={{ fontSize: "11px", fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{track.title}</p>
+                            <p style={{ fontSize: "10px", color: "var(--muted)", marginTop: "3px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{track.artist_name}</p>
+                          </div>
                         </div>
                       );
                     })}
