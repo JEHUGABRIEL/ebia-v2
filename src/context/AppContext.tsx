@@ -326,6 +326,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
 
   /* ── Téléchargement hors-ligne ── */
   const downloadTrack = async (track: DownloadableTrack) => {
+    if (!user) throw new Error("Connexion requise pour télécharger");
     if (downloadingIds.has(track.id)) return;
     setDownloadingIds(prev => new Set(prev).add(track.id));
     setDownloadProgress(prev => ({ ...prev, [track.id]: 0 }));
