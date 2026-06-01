@@ -104,18 +104,37 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     if (!currentTrack) return;
     if (!audioRef.current) audioRef.current = new Audio();
     const audio = audioRef.current;
+    const trackId = currentTrack.id;
+    const fallbackUrl = currentTrack.audioUrl;
+    let retrying = false;
 
-    fetch(`${BASE}/api/v1/tracks/${currentTrack.id}/stream`)
-      .then(r => r.json())
-      .then(data => {
-        audio.src = data.url || currentTrack.audioUrl;
-        return audio.play();
-      })
-      .then(() => setIsPlaying(true))
-      .catch(() => {
-        audio.src = currentTrack.audioUrl;
-        audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
-      });
+    const loadAndPlay = async (startTime = 0) => {
+      try {
+        const r = await fetch(`${BASE}/api/v1/tracks/${trackId}/stream`);
+        const data = await r.json() as { url?: string };
+        audio.src = data.url || fallbackUrl;
+      } catch {
+        audio.src = fallbackUrl;
+      }
+      if (startTime > 0) audio.currentTime = startTime;
+      await audio.play();
+      setIsPlaying(true);
+    };
+
+    loadAndPlay().catch(() => setIsPlaying(false));
+
+    /* Récupération automatique sur coupure réseau (ERR_NETWORK_CHANGED etc.) */
+    audio.onerror = () => {
+      const err = audio.error;
+      /* MEDIA_ERR_NETWORK (2) = coupure réseau, on retente une fois */
+      if (!retrying && err && err.code === MediaError.MEDIA_ERR_NETWORK) {
+        retrying = true;
+        const savedTime = audio.currentTime;
+        loadAndPlay(savedTime).catch(() => setIsPlaying(false));
+      } else {
+        setIsPlaying(false);
+      }
+    };
 
     audio.onended = () => {
       const mode = repeatRef.current;
@@ -125,6 +144,10 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       } else {
         nextTrackFn(queue, queueIndex, isShuffle, mode === "all");
       }
+    };
+
+    return () => {
+      audio.onerror = null;
     };
   }, [currentTrack]);
 
