@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect } from "react";
 import { useApp } from "../context/AppContext";
 import { useNavigate, Link } from "react-router-dom";
-import { Home, Search, Library, Heart, Users, Settings, Plus, ChevronRight, LogOut, Camera, Mic2, Music2, Loader } from "lucide-react";
+import { Home, Search, Library, Heart, Users, Settings, Plus, ChevronRight, LogOut, Camera, Mic2, Music2, Loader, Menu, X as XIcon } from "lucide-react";
 import LogoutModal from "../components/LogoutModal";
 import EbiaLogo from "../components/EbiaLogo";
-import { getArtists, getTracks, updateProfile, type Artist } from "../lib/api";
+import { getArtists, getTracks, getMyArtistProfile, updateProfile, uploadUserAvatar, becomeArtist, type Artist } from "../lib/api";
 
 type Section = "accueil" | "recherche" | "bibliotheque" | "favoris" | "suivis" | "parametres" | "decouvrir";
 
@@ -48,13 +48,22 @@ export default function ListenerDashboard() {
   const [profileMsg, setProfileMsg] = useState("");
   const [artistModalOpen, setArtistModalOpen] = useState(false);
   const [artistStep, setArtistStep] = useState(1);
+  const [artistStageName, setArtistStageName] = useState("");
+  const [artistGenre, setArtistGenre] = useState("");
+  const [artistCity, setArtistCity] = useState("");
+  const [artistCreating, setArtistCreating] = useState(false);
+  const [artistError, setArtistError] = useState("");
   const [realArtists, setRealArtists] = useState<Artist[]>([]);
   const [newTracks, setNewTracks] = useState<any[]>([]);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [hasArtistProfile, setHasArtistProfile] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     getArtists().then(r => setRealArtists(r.data)).catch(() => {});
     getTracks({ new_this_month: "true", limit: "12" }).then(r => setNewTracks(r.data)).catch(() => {});
+    getMyArtistProfile().then(() => setHasArtistProfile(true)).catch(() => setHasArtistProfile(false));
   }, []);
 
   if (!user) return null;
@@ -65,6 +74,7 @@ export default function ListenerDashboard() {
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setSelectedFile(file);
     const reader = new FileReader();
     reader.onload = ev => setAvatarUrl(ev.target?.result as string);
     reader.readAsDataURL(file);
@@ -74,14 +84,18 @@ export default function ListenerDashboard() {
     setProfileSaving(true);
     setProfileMsg("");
     try {
-      const payload: { display_name?: string; avatar_b64?: string } = {};
+      const payload: { display_name?: string; avatar_url?: string } = {};
       if (displayName.trim() && displayName !== user?.displayName) payload.display_name = displayName.trim();
-      if (avatarUrl && avatarUrl.startsWith("data:")) payload.avatar_b64 = avatarUrl;
+      if (selectedFile) {
+        const uploaded = await uploadUserAvatar(selectedFile);
+        payload.avatar_url = uploaded.url;
+      }
       if (!Object.keys(payload).length) { setProfileMsg("Aucune modification."); setProfileSaving(false); return; }
       const res = await updateProfile(payload);
       localStorage.setItem("ebia_token", res.access_token);
       updateUser({ displayName: res.user.display_name, avatarUrl: res.user.avatar_url ?? undefined });
       setAvatarUrl(res.user.avatar_url ?? null);
+      setSelectedFile(null);
       setProfileMsg("Profil mis à jour ✓");
     } catch {
       setProfileMsg("Erreur lors de la sauvegarde.");
@@ -125,83 +139,90 @@ export default function ListenerDashboard() {
     </div>
   );
 
-  return (
-    <div style={{ display: "flex", height: "100vh", background: "var(--bg)" }}>
-
-      {/* ── SIDEBAR ── */}
-      <aside className="sidebar-dashboard" style={{ flexDirection: "column", gap: "8px", padding: "8px", background: "#000", overflow: "hidden" }}>
-
-        {/* Logo + bouton home */}
-        <div style={{ padding: "16px 12px 8px", display: "flex", alignItems: "center", gap: "8px" }}>
-          <Link to="/" style={{ display: "flex", alignItems: "center", gap: "8px", textDecoration: "none" }}>
-            <EbiaLogo size={28} />
-            <span className="bebas" style={{ fontSize: "16px", color: "var(--text)", letterSpacing: "0.1em" }}>E-BIA</span>
-          </Link>
+  const sidebarContent = (onNav?: () => void) => (
+    <>
+      <div style={{ padding: "16px 12px 8px", display: "flex", alignItems: "center", gap: "8px" }}>
+        <Link to="/" style={{ display: "flex", alignItems: "center", gap: "8px", textDecoration: "none" }}>
+          <EbiaLogo size={28} />
+          <span className="bebas" style={{ fontSize: "16px", color: "var(--text)", letterSpacing: "0.1em" }}>E-BIA</span>
+        </Link>
+      </div>
+      <div style={{ background: "var(--bg2)", borderRadius: "12px", padding: "8px" }}>
+        {navLinks.map(l => (
+          <button key={l.id} onClick={() => { setSection(l.id); onNav?.(); }} style={{ width: "100%", display: "flex", alignItems: "center", gap: "12px", padding: "10px 12px", borderRadius: "8px", cursor: "pointer", background: section === l.id ? "rgba(232,96,26,0.1)" : "transparent", border: "none", color: section === l.id ? "var(--text)" : "var(--muted)", transition: "all 0.15s", textAlign: "left" }}>
+            <l.icon size={18} style={{ color: section === l.id ? "var(--amber)" : "inherit", flexShrink: 0 }} />
+            <span style={{ fontWeight: 600, fontSize: "13px" }}>{l.label}</span>
+          </button>
+        ))}
+      </div>
+      <div style={{ background: "var(--bg2)", borderRadius: "12px", padding: "14px 12px", flex: 1, display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px", padding: "0 4px" }}>
+          <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.1em" }}>Bibliothèque</span>
+          <Plus size={15} style={{ color: "var(--muted)", cursor: "pointer" }} />
         </div>
-
-        {/* Nav */}
-        <div style={{ background: "var(--bg2)", borderRadius: "12px", padding: "8px" }}>
-          {navLinks.map(l => (
-            <button key={l.id} onClick={() => setSection(l.id)} style={{
-              width: "100%", display: "flex", alignItems: "center", gap: "12px",
-              padding: "10px 12px", borderRadius: "8px", cursor: "pointer",
-              background: section === l.id ? "rgba(232,96,26,0.1)" : "transparent",
-              border: "none", color: section === l.id ? "var(--text)" : "var(--muted)", transition: "all 0.15s", textAlign: "left",
-            }}>
-              <l.icon size={18} style={{ color: section === l.id ? "var(--amber)" : "inherit", flexShrink: 0 }} />
-              <span style={{ fontWeight: 600, fontSize: "13px" }}>{l.label}</span>
+        <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+          {libLinks.map(l => (
+            <button key={l.id} onClick={() => { setSection(l.id); onNav?.(); }} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "8px 10px", borderRadius: "8px", cursor: "pointer", background: section === l.id ? "rgba(240,235,227,0.04)" : "transparent", border: "none", textAlign: "left", transition: "background 0.15s" }}>
+              <div style={{ width: "34px", height: "34px", borderRadius: "8px", flexShrink: 0, background: `${l.color}18`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <l.icon size={14} style={{ color: l.color }} />
+              </div>
+              <div>
+                <p style={{ fontSize: "12px", fontWeight: 700, color: "var(--text)" }}>{l.label}</p>
+                <p style={{ fontSize: "10px", color: "var(--muted)" }}>Playlist</p>
+              </div>
             </button>
           ))}
         </div>
-
-        {/* Bibliothèque */}
-        <div style={{ background: "var(--bg2)", borderRadius: "12px", padding: "14px 12px", flex: 1, display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px", padding: "0 4px" }}>
-            <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.1em" }}>Bibliothèque</span>
-            <Plus size={15} style={{ color: "var(--muted)", cursor: "pointer" }} />
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-            {libLinks.map(l => (
-              <button key={l.id} onClick={() => setSection(l.id)} style={{
-                display: "flex", alignItems: "center", gap: "10px",
-                padding: "8px 10px", borderRadius: "8px", cursor: "pointer",
-                background: section === l.id ? "rgba(240,235,227,0.04)" : "transparent",
-                border: "none", textAlign: "left", transition: "background 0.15s",
-              }}
-              onMouseEnter={e => { if (section !== l.id) (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.04)"; }}
-              onMouseLeave={e => { if (section !== l.id) (e.currentTarget as HTMLElement).style.background = "transparent"; }}
-              >
-                <div style={{ width: "34px", height: "34px", borderRadius: "8px", flexShrink: 0, background: `${l.color}18`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <l.icon size={14} style={{ color: l.color }} />
-                </div>
-                <div>
-                  <p style={{ fontSize: "12px", fontWeight: 700, color: "var(--text)" }}>{l.label}</p>
-                  <p style={{ fontSize: "10px", color: "var(--muted)" }}>Playlist</p>
-                </div>
-              </button>
-            ))}
-          </div>
-
-          {/* Profil sidebar */}
-          <div style={{ marginTop: "auto", paddingTop: "12px", borderTop: "1px solid var(--border)" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "4px 6px" }}>
-              <AvatarBlock size={30} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: "11px", fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user.displayName}</p>
-                <p style={{ fontSize: "10px", color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Auditeur</p>
-              </div>
-              <button onClick={() => setLogoutOpen(true)} style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer", padding: "4px", borderRadius: "6px", transition: "all 0.15s" }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "var(--text)"; (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.06)"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "var(--muted)"; (e.currentTarget as HTMLElement).style.background = "none"; }}>
-                <LogOut size={13} />
-              </button>
+        <div style={{ marginTop: "auto", paddingTop: "12px", borderTop: "1px solid var(--border)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "4px 6px" }}>
+            <AvatarBlock size={30} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ fontSize: "11px", fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user.displayName}</p>
+              <p style={{ fontSize: "10px", color: "var(--muted)" }}>Auditeur</p>
             </div>
+            <button onClick={() => setLogoutOpen(true)} style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer", padding: "4px", borderRadius: "6px" }}>
+              <LogOut size={13} />
+            </button>
           </div>
         </div>
+      </div>
+    </>
+  );
+
+  return (
+    <div style={{ display: "flex", height: "100vh", background: "var(--bg)" }}>
+
+      {/* ── SIDEBAR desktop ── */}
+      <aside className="sidebar-dashboard" style={{ flexDirection: "column", gap: "8px", padding: "8px", background: "#000", overflow: "hidden" }}>
+        {sidebarContent()}
       </aside>
+
+      {/* ── DRAWER mobile ── */}
+      {mobileMenuOpen && (
+        <div onClick={() => setMobileMenuOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 90, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }} />
+      )}
+      <div style={{ position: "fixed", top: 0, left: mobileMenuOpen ? 0 : "-260px", width: "260px", height: "100vh", zIndex: 91, background: "#000", display: "flex", flexDirection: "column", gap: "8px", padding: "8px", transition: "left 0.25s ease", overflow: "hidden" }}>
+        <div style={{ display: "flex", justifyContent: "flex-end", padding: "8px 4px 0" }}>
+          <button onClick={() => setMobileMenuOpen(false)} style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer", padding: "4px" }}>
+            <XIcon size={20} />
+          </button>
+        </div>
+        {sidebarContent(() => setMobileMenuOpen(false))}
+      </div>
 
       {/* ── MAIN ── */}
       <main style={{ flex: 1, overflowY: "auto", background: section === "accueil" ? "linear-gradient(180deg, #1C0C04 0%, var(--bg) 320px)" : "var(--bg)" }}>
+        {/* Barre mobile top avec hamburger */}
+        <div className="sidebar-dashboard-mobile-bar" style={{ alignItems: "center", justifyContent: "space-between", padding: "12px 16px", background: "#000", borderBottom: "1px solid var(--border)", position: "sticky", top: 0, zIndex: 10 }}>
+          <button onClick={() => setMobileMenuOpen(true)} style={{ background: "none", border: "none", color: "var(--text)", cursor: "pointer", padding: "4px", display: "flex" }}>
+            <Menu size={22} />
+          </button>
+          <Link to="/" style={{ display: "flex", alignItems: "center", gap: "6px", textDecoration: "none" }}>
+            <EbiaLogo size={22} />
+            <span className="bebas" style={{ fontSize: "14px", color: "var(--text)", letterSpacing: "0.1em" }}>E-BIA</span>
+          </Link>
+          <AvatarBlock size={28} />
+        </div>
         <div className="dashboard-main" style={{ padding: "32px", maxWidth: "1100px" }}>
 
           {/* ── ACCUEIL ── */}
@@ -215,19 +236,16 @@ export default function ListenerDashboard() {
                   </h1>
                   <p style={{ fontSize: "13px", color: "var(--muted)" }}>Que voulez-vous écouter aujourd'hui ?</p>
                 </div>
-                {/* Devenir artiste — CTA subtil */}
-                <button onClick={() => setArtistModalOpen(true)} style={{
-                  display: "flex", alignItems: "center", gap: "8px", flexShrink: 0,
-                  padding: "10px 18px", borderRadius: "99px", cursor: "pointer",
-                  border: "1px solid rgba(232,96,26,0.35)", background: "rgba(232,96,26,0.08)",
-                  color: "var(--amber)", fontSize: "12px", fontWeight: 700, letterSpacing: "0.06em",
-                  transition: "all 0.2s",
-                }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(232,96,26,0.16)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(232,96,26,0.6)"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(232,96,26,0.08)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(232,96,26,0.35)"; }}
-                >
-                  <Mic2 size={14} /> Devenir artiste
-                </button>
+                {/* CTA artiste */}
+                {(user.role === "artist" || hasArtistProfile) ? (
+                  <button onClick={() => navigate("/artist-dashboard")} style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0, padding: "10px 18px", borderRadius: "99px", cursor: "pointer", border: "1px solid rgba(232,96,26,0.35)", background: "rgba(232,96,26,0.08)", color: "var(--amber)", fontSize: "12px", fontWeight: 700, letterSpacing: "0.06em", transition: "all 0.2s" }}>
+                    <Mic2 size={14} /> Accéder au portail artiste
+                  </button>
+                ) : (
+                  <button onClick={() => setArtistModalOpen(true)} style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0, padding: "10px 18px", borderRadius: "99px", cursor: "pointer", border: "1px solid rgba(232,96,26,0.35)", background: "rgba(232,96,26,0.08)", color: "var(--amber)", fontSize: "12px", fontWeight: 700, letterSpacing: "0.06em", transition: "all 0.2s" }}>
+                    <Mic2 size={14} /> Devenir artiste
+                  </button>
+                )}
               </div>
 
               {/* Écoutes récentes */}
@@ -254,17 +272,17 @@ export default function ListenerDashboard() {
                     onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = "var(--muted)"}
                   >Tout afficher</button>
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: "12px" }}>
+                <div style={{ display: "flex", gap: "10px", overflowX: "auto", paddingBottom: "8px", scrollbarWidth: "none" }}>
                   {(realArtists.length > 0 ? realArtists : []).slice(0, 10).map(artist => (
-                    <button key={artist.id} onClick={() => navigate(`/artist/${artist.slug}`)} style={{ padding: "14px 10px", borderRadius: "12px", textAlign: "left", background: "transparent", border: "none", cursor: "pointer", transition: "background 0.15s" }}
+                    <button key={artist.id} onClick={() => navigate(`/artist/${artist.slug}`)} style={{ flexShrink: 0, width: "100px", padding: "10px 6px", borderRadius: "12px", textAlign: "center", background: "transparent", border: "none", cursor: "pointer", transition: "background 0.15s" }}
                       onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.04)"}
                       onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}>
                       {artist.avatar_url
-                        ? <img src={artist.avatar_url} alt={artist.name} style={{ width: "100%", aspectRatio: "1", borderRadius: "50%", objectFit: "cover", display: "block", marginBottom: "10px" }} />
-                        : <div style={{ width: "100%", aspectRatio: "1", borderRadius: "50%", background: "linear-gradient(135deg, var(--amber), var(--gold))", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "10px", fontSize: "28px", fontWeight: 800, color: "#fff" }}>{artist.name[0]}</div>
+                        ? <img src={artist.avatar_url} alt={artist.name} style={{ width: "100px", height: "100px", borderRadius: "50%", objectFit: "cover", display: "block", marginBottom: "8px" }} />
+                        : <div style={{ width: "100px", height: "100px", borderRadius: "50%", background: "linear-gradient(135deg, var(--amber), var(--gold))", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "8px", fontSize: "36px", fontWeight: 800, color: "#fff" }}>{artist.name[0]}</div>
                       }
-                      <p style={{ fontSize: "12px", fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{artist.name}</p>
-                      <p style={{ fontSize: "11px", color: "var(--muted)", marginTop: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{artist.genre}</p>
+                      <p style={{ fontSize: "11px", fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{artist.name}</p>
+                      <p style={{ fontSize: "10px", color: "var(--muted)", marginTop: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{artist.genre}</p>
                     </button>
                   ))}
                 </div>
@@ -282,17 +300,17 @@ export default function ListenerDashboard() {
                 {newTracks.length === 0 ? (
                   <p style={{ color: "var(--muted)", fontSize: "13px" }}>Aucune nouveauté ce mois-ci.</p>
                 ) : (
-                  <div style={{ display: "flex", gap: "14px", overflowX: "auto", paddingBottom: "8px", scrollbarWidth: "none" }}>
+                  <div style={{ display: "flex", gap: "10px", overflowX: "auto", paddingBottom: "8px", scrollbarWidth: "none" }}>
                     {newTracks.map(track => (
-                      <button key={track.id} style={{ flexShrink: 0, width: "160px", padding: "14px", borderRadius: "12px", textAlign: "left", background: "rgba(240,235,227,0.03)", border: "1px solid var(--border)", cursor: "pointer", transition: "all 0.15s" }}
+                      <button key={track.id} style={{ flexShrink: 0, width: "100px", padding: "8px", borderRadius: "10px", textAlign: "left", background: "rgba(240,235,227,0.03)", border: "1px solid var(--border)", cursor: "pointer", transition: "all 0.15s" }}
                         onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.06)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(232,96,26,0.2)"; }}
                         onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.03)"; (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; }}>
                         {track.album_cover_url || track.artist_avatar
-                          ? <img src={track.album_cover_url || track.artist_avatar} alt={track.title} style={{ width: "100%", aspectRatio: "1", borderRadius: "8px", objectFit: "cover", display: "block", marginBottom: "10px" }} />
-                          : <div style={{ width: "100%", aspectRatio: "1", borderRadius: "8px", background: "linear-gradient(135deg, var(--amber), var(--gold))", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "10px", fontSize: "28px" }}>🎵</div>
+                          ? <img src={track.album_cover_url || track.artist_avatar} alt={track.title} style={{ width: "100%", aspectRatio: "1", borderRadius: "6px", objectFit: "cover", display: "block", marginBottom: "6px" }} />
+                          : <div style={{ width: "100%", aspectRatio: "1", borderRadius: "6px", background: "linear-gradient(135deg, var(--amber), var(--gold))", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "6px", fontSize: "22px" }}>🎵</div>
                         }
-                        <p style={{ fontSize: "13px", fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{track.title}</p>
-                        <p style={{ fontSize: "11px", color: "var(--muted)", marginTop: "3px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{track.artist_name}</p>
+                        <p style={{ fontSize: "10px", fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{track.title}</p>
+                        <p style={{ fontSize: "9px", color: "var(--muted)", marginTop: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{track.artist_name}</p>
                       </button>
                     ))}
                   </div>
@@ -520,16 +538,26 @@ export default function ListenerDashboard() {
                   </div>
                 </div>
 
-                {/* Devenir artiste */}
+                {/* Devenir artiste / Portail */}
                 <div style={{ padding: "24px 28px", borderRadius: "16px", background: "rgba(232,96,26,0.06)", border: "1px solid rgba(232,96,26,0.2)" }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px" }}>
                     <div>
-                      <p style={{ fontSize: "14px", fontWeight: 700, color: "var(--text)", marginBottom: "4px" }}>Vous êtes artiste ?</p>
-                      <p style={{ fontSize: "12px", color: "var(--muted)" }}>Publiez votre musique et touchez des milliers d'auditeurs</p>
+                      <p style={{ fontSize: "14px", fontWeight: 700, color: "var(--text)", marginBottom: "4px" }}>
+                        {(user.role === "artist" || hasArtistProfile) ? "Votre espace artiste" : "Vous êtes artiste ?"}
+                      </p>
+                      <p style={{ fontSize: "12px", color: "var(--muted)" }}>
+                        {(user.role === "artist" || hasArtistProfile) ? "Gérez vos titres et consultez vos statistiques" : "Publiez votre musique et touchez des milliers d'auditeurs"}
+                      </p>
                     </div>
-                    <button onClick={() => setArtistModalOpen(true)} style={{ display: "flex", alignItems: "center", gap: "7px", padding: "10px 18px", borderRadius: "99px", background: "var(--amber)", border: "none", color: "#fff", fontSize: "12px", fontWeight: 700, cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap" }}>
-                      <Mic2 size={13} /> Devenir artiste
-                    </button>
+                    {(user.role === "artist" || hasArtistProfile) ? (
+                      <button onClick={() => navigate("/artist-dashboard")} style={{ display: "flex", alignItems: "center", gap: "7px", padding: "10px 18px", borderRadius: "99px", background: "var(--amber)", border: "none", color: "#fff", fontSize: "12px", fontWeight: 700, cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap" }}>
+                        <Mic2 size={13} /> Accéder au portail artiste
+                      </button>
+                    ) : (
+                      <button onClick={() => setArtistModalOpen(true)} style={{ display: "flex", alignItems: "center", gap: "7px", padding: "10px 18px", borderRadius: "99px", background: "var(--amber)", border: "none", color: "#fff", fontSize: "12px", fontWeight: 700, cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap" }}>
+                        <Mic2 size={13} /> Devenir artiste
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -593,22 +621,39 @@ export default function ListenerDashboard() {
                     <h2 className="bebas" style={{ fontSize: "20px", color: "var(--text)", lineHeight: 1 }}>Votre nom d'artiste</h2>
                     <p style={{ fontSize: "11px", color: "var(--muted)" }}>Étape 2 sur 2</p>
                   </div>
-                  <button onClick={() => { setArtistModalOpen(false); setArtistStep(1); }} style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer" }}>✕</button>
+                  <button onClick={() => { setArtistModalOpen(false); setArtistStep(1); setArtistError(""); }} style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer" }}>✕</button>
                 </div>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                  {[{ label: "Nom d'artiste", ph: "Ex: Idylle Mamba" }, { label: "Genre musical", ph: "Ex: Afro-Folk, Hip-Hop..." }, { label: "Ville", ph: "Ex: Bangui" }].map(f => (
+                  {artistError && <p style={{ fontSize: "12px", color: "#f08080", padding: "8px 12px", borderRadius: "8px", background: "rgba(240,80,80,0.08)", border: "1px solid rgba(240,80,80,0.2)" }}>{artistError}</p>}
+                  {[
+                    { label: "Nom d'artiste", ph: "Ex: Idylle Mamba", val: artistStageName, set: setArtistStageName },
+                    { label: "Genre musical", ph: "Ex: Afro-Folk, Hip-Hop...", val: artistGenre, set: setArtistGenre },
+                    { label: "Ville", ph: "Ex: Bangui", val: artistCity, set: setArtistCity },
+                  ].map(f => (
                     <div key={f.label}>
                       <label style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--muted)", display: "block", marginBottom: "6px" }}>{f.label}</label>
-                      <input placeholder={f.ph} style={{ width: "100%", padding: "12px 14px", borderRadius: "10px", background: "var(--bg3)", border: "1px solid var(--border)", color: "var(--text)", fontSize: "14px", outline: "none", boxSizing: "border-box" as const, transition: "border-color 0.2s" }}
+                      <input value={f.val} onChange={e => f.set(e.target.value)} placeholder={f.ph} style={{ width: "100%", padding: "12px 14px", borderRadius: "10px", background: "var(--bg3)", border: "1px solid var(--border)", color: "var(--text)", fontSize: "14px", outline: "none", boxSizing: "border-box" as const, transition: "border-color 0.2s" }}
                         onFocus={e => (e.target as HTMLInputElement).style.borderColor = "rgba(232,96,26,0.5)"}
                         onBlur={e => (e.target as HTMLInputElement).style.borderColor = "var(--border)"} />
                     </div>
                   ))}
                   <div style={{ display: "flex", gap: "8px", marginTop: "4px" }}>
                     <button onClick={() => setArtistStep(1)} style={{ padding: "13px 16px", borderRadius: "10px", background: "transparent", border: "1px solid var(--border)", color: "var(--muted)", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}>← Retour</button>
-                    <button onClick={() => { setArtistModalOpen(false); setArtistStep(1); navigate("/artist-dashboard"); }} style={{ flex: 1, padding: "13px", borderRadius: "10px", background: "var(--amber)", border: "none", color: "#fff", fontSize: "12px", fontWeight: 800, cursor: "pointer", letterSpacing: "0.06em", textTransform: "uppercase" }}>
-                      Créer mon profil artiste
+                    <button disabled={artistCreating || !artistStageName.trim()} onClick={async () => {
+                      setArtistCreating(true); setArtistError("");
+                      try {
+                        const res = await becomeArtist({ stage_name: artistStageName.trim(), genre: artistGenre.trim(), city: artistCity.trim() });
+                        localStorage.setItem("ebia_token", res.access_token);
+                        updateUser({ role: "artist" });
+                        setHasArtistProfile(true);
+                        setArtistModalOpen(false); setArtistStep(1);
+                        navigate("/artist-dashboard");
+                      } catch (e: unknown) {
+                        setArtistError(e instanceof Error ? e.message : "Erreur de création");
+                      } finally { setArtistCreating(false); }
+                    }} style={{ flex: 1, padding: "13px", borderRadius: "10px", background: artistCreating || !artistStageName.trim() ? "rgba(232,96,26,0.4)" : "var(--amber)", border: "none", color: "#fff", fontSize: "12px", fontWeight: 800, cursor: artistCreating || !artistStageName.trim() ? "not-allowed" : "pointer", letterSpacing: "0.06em", textTransform: "uppercase", opacity: artistCreating ? 0.7 : 1 }}>
+                      {artistCreating ? "Création…" : "Créer mon profil artiste"}
                     </button>
                   </div>
                 </div>

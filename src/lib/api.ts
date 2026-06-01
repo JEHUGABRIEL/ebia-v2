@@ -127,6 +127,9 @@ export const registerArtist = (data: ArtistRegData) =>
 export const getMyArtistProfile = () =>
   get<MyArtistProfile>("/api/v1/artists/me");
 
+export const becomeArtist = (data: { stage_name: string; genre: string; city: string }) =>
+  post<{ access_token: string; token_type: string }>("/api/v1/auth/become-artist", data);
+
 export const updateMyArtistProfile = (data: Partial<MyArtistProfile> & { bio?: string }) =>
   put<MyArtistProfile>("/api/v1/artists/me", data);
 
@@ -143,7 +146,7 @@ export const deleteMyTrack = (trackId: string) =>
 export const uploadTrack = (formData: FormData): Promise<MyTrack> =>
   fetch(`${BASE}/api/v1/artists/me/tracks`, {
     method: "POST",
-    headers: (sessionStorage.getItem('ebia_token') || keycloak.token) ? { Authorization: `Bearer ${sessionStorage.getItem('ebia_token') || keycloak.token!}` } : undefined,
+    headers: (localStorage.getItem('ebia_token') || keycloak.token) ? { Authorization: `Bearer ${localStorage.getItem('ebia_token') || keycloak.token!}` } : undefined,
     body: formData,
   }).then(async res => {
     if (!res.ok) {
@@ -160,7 +163,7 @@ export const uploadArtistImage = (field: "avatar" | "cover", file: File): Promis
   fd.append("file", file);
   return fetch(`${BASE}/api/v1/artists/me/images`, {
     method: "POST",
-    headers: (sessionStorage.getItem('ebia_token') || keycloak.token) ? { Authorization: `Bearer ${sessionStorage.getItem('ebia_token') || keycloak.token!}` } : undefined,
+    headers: (localStorage.getItem('ebia_token') || keycloak.token) ? { Authorization: `Bearer ${localStorage.getItem('ebia_token') || keycloak.token!}` } : undefined,
     body: fd,
   }).then(async res => {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -172,9 +175,10 @@ export const uploadArtistImage = (field: "avatar" | "cover", file: File): Promis
 export const uploadUserAvatar = (file: File): Promise<{ url: string }> => {
   const fd = new FormData();
   fd.append('file', file);
+  const token = localStorage.getItem('ebia_token') || keycloak.token;
   return fetch(`${BASE}/api/v1/auth/upload/avatar`, {
     method: 'POST',
-    headers: (sessionStorage.getItem('ebia_token') || keycloak.token) ? { Authorization: `Bearer ${sessionStorage.getItem('ebia_token') || keycloak.token!}` } : undefined,
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
     body: fd,
   }).then(async res => {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -187,7 +191,7 @@ export const uploadIdDoc = (file: File): Promise<{ message: string; key: string 
   fd.append('file', file);
   return fetch(`${BASE}/api/v1/auth/upload/id-doc`, {
     method: 'POST',
-    headers: (sessionStorage.getItem('ebia_token') || keycloak.token) ? { Authorization: `Bearer ${sessionStorage.getItem('ebia_token') || keycloak.token!}` } : undefined,
+    headers: (localStorage.getItem('ebia_token') || keycloak.token) ? { Authorization: `Bearer ${localStorage.getItem('ebia_token') || keycloak.token!}` } : undefined,
     body: fd,
   }).then(async res => {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -205,5 +209,5 @@ export const toggleLike = (trackId: string) =>
 export const toggleFollow = (artistId: string) =>
   post<{ followed: boolean; followers_count: number }>(`/api/v1/artists/${artistId}/follow`, {});
 
-export const updateProfile = (data: { display_name?: string; avatar_b64?: string }) =>
+export const updateProfile = (data: { display_name?: string; avatar_url?: string }) =>
   patch<{ access_token: string; user: Record<string, string> }>("/api/v1/auth/profile", data);

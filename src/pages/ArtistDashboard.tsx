@@ -286,11 +286,11 @@ export default function ArtistDashboard() {
       <main style={{ flex: 1, overflowY: "auto", background: section === "accueil" ? "linear-gradient(180deg, #1a0800 0%, var(--bg) 300px)" : "var(--bg)" }}>
         <div style={{ padding: "36px 40px", maxWidth: "1100px" }}>
 
-          {/* Bandeau backend non connecté */}
+          {/* Bandeau profil artiste non trouvé */}
           {!loadingProfile && !loadingTracks && !profile && (
             <div style={{ padding: "12px 18px", borderRadius: "12px", background: "rgba(201,147,10,0.07)", border: "1px solid rgba(201,147,10,0.2)", color: "rgba(240,235,227,0.6)", fontSize: "12px", marginBottom: "20px", display: "flex", alignItems: "center", gap: "8px" }}>
               <span style={{ color: "var(--gold)" }}>⚡</span>
-              Backend non connecté — données en attente. Le dashboard s'activera automatiquement quand l'API sera disponible.
+              Profil artiste introuvable — votre compte est en cours de configuration ou la connexion est instable.
               <button onClick={() => { loadProfile(); loadTracks(); loadStats(); }} style={{ marginLeft: "auto", background: "none", border: "1px solid rgba(201,147,10,0.3)", borderRadius: "6px", color: "var(--gold)", cursor: "pointer", fontWeight: 600, fontSize: "11px", padding: "3px 10px" }}>Réessayer</button>
             </div>
           )}

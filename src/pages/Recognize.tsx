@@ -22,9 +22,15 @@ export default function Recognize() {
 
   const mediaRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  const mimeTypeRef = useRef<string>("");
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animRef = useRef<number>(0);
+
+  const getSupportedMimeType = (): string => {
+    const types = ["audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus", "audio/mp4", "audio/3gpp"];
+    return types.find(t => { try { return MediaRecorder.isTypeSupported(t); } catch { return false; } }) ?? "";
+  };
 
   useEffect(() => {
     return () => {
@@ -40,6 +46,10 @@ export default function Recognize() {
     chunksRef.current = [];
 
     try {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        throw new Error("no_support");
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
 
       // Analyser le niveau audio pour les visualisations
@@ -59,7 +69,9 @@ export default function Recognize() {
       };
       updateLevel();
 
-      const recorder = new MediaRecorder(stream, { mimeType: "audio/webm;codecs=opus" });
+      const mimeType = getSupportedMimeType();
+      mimeTypeRef.current = mimeType;
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
       mediaRef.current = recorder;
 
       recorder.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data); };
@@ -83,15 +95,23 @@ export default function Recognize() {
         }
       }, 1000);
 
-    } catch (e) {
+    } catch (e: unknown) {
       setState("error");
-      setErrorMsg("Accès au microphone refusé. Autorisez l'accès dans les paramètres du navigateur.");
+      const msg = e instanceof Error ? e.message : "";
+      if (msg === "no_support") {
+        setErrorMsg("Votre appareil ne supporte pas l'enregistrement audio.");
+      } else if (msg.includes("NotAllowedError") || msg.includes("Permission") || msg.includes("denied")) {
+        setErrorMsg("Accès au microphone refusé. Autorisez-le dans les paramètres de l'application.");
+      } else {
+        setErrorMsg("Impossible d'accéder au microphone. Vérifiez les permissions.");
+      }
     }
   };
 
   const processAudio = async () => {
     setState("processing");
-    const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+    const blobType = mimeTypeRef.current || "audio/webm";
+    const blob = new Blob(chunksRef.current, { type: blobType });
     const fd = new FormData();
     fd.append("file", blob, "recognition.webm");
 
@@ -99,18 +119,25 @@ export default function Recognize() {
       const res = await fetch("https://api-gateway-production-1c84.up.railway.app/api/v1/recognize", {
         method: "POST", body: fd,
       });
-      const data = await res.json() as { found: boolean; track?: TrackResult; confidence?: number; message?: string };
+      const data = await res.json() as { found: boolean; track?: TrackResult; confidence?: number; message?: string; error?: string };
+
+      if (!res.ok) {
+        const msg = data.error || data.message || `Erreur serveur (${res.status})`;
+        setErrorMsg(res.status === 503 ? "Service de reconnaissance temporairement indisponible. Réessayez plus tard." : msg);
+        setState("error");
+        return;
+      }
 
       if (data.found && data.track) {
         setResult(data.track);
         setConfidence(data.confidence ?? 0);
         setState("found");
       } else {
-        setErrorMsg(data.message ?? "Titre non reconnu");
+        setErrorMsg(data.message ?? "Titre non reconnu dans notre base.");
         setState("not_found");
       }
     } catch {
-      setErrorMsg("Erreur de connexion au serveur de reconnaissance");
+      setErrorMsg("Impossible de joindre le serveur de reconnaissance. Vérifiez votre connexion.");
       setState("error");
     }
   };

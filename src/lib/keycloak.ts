@@ -6,13 +6,10 @@ const keycloak = new Keycloak({
   clientId: "ebia-web",
 });
 
-export const initKeycloak = () =>
-  keycloak.init({
-    onLoad: "check-sso",
-    silentCheckSsoRedirectUri: window.location.origin + "/silent-check-sso.html",
-    pkceMethod: "S256",
-    checkLoginIframe: false,
-  });
+export const initKeycloak = () => {
+  // L'app utilise son propre système JWT — on ne passe pas par Keycloak
+  return Promise.reject(new Error("skip-keycloak"));
+};
 
 export const getRole = (): "listener" | "artist" | "admin" | null => {
   if (!keycloak.tokenParsed) return null;
