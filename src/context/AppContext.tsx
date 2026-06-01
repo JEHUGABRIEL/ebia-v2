@@ -19,6 +19,7 @@ interface AppCtx {
   register: (role: "listener" | "artist") => void;
   currentTrack: Track | null; isPlaying: boolean; queue: Track[];
   queueIndex: number; isShuffle: boolean; toggleShuffle: () => void;
+  isRepeat: boolean; toggleRepeat: () => void;
   playTrack: (track: Track, queue?: Track[]) => void;
   togglePlay: () => void; nextTrack: () => void; prevTrack: () => void;
   stopTrack: () => void;
@@ -62,6 +63,8 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const [queue, setQueue] = useState<Track[]>([]);
   const [queueIndex, setQueueIndex] = useState(0);
   const [isShuffle, setIsShuffle] = useState(false);
+  const [isRepeat, setIsRepeat] = useState(false);
+  const isRepeatRef = useRef(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -110,7 +113,14 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
         audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
       });
 
-    audio.onended = () => nextTrackFn(queue, queueIndex, isShuffle);
+    audio.onended = () => {
+      if (isRepeatRef.current) {
+        audio.currentTime = 0;
+        audio.play().catch(() => {});
+      } else {
+        nextTrackFn(queue, queueIndex, isShuffle);
+      }
+    };
   }, [currentTrack]);
 
   useEffect(() => {
@@ -165,6 +175,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
 
   const togglePlay = () => setIsPlaying(p => !p);
   const toggleShuffle = () => setIsShuffle(s => !s);
+  const toggleRepeat = () => setIsRepeat(r => { isRepeatRef.current = !r; return !r; });
   const nextTrack = () => nextTrackFn(queue, queueIndex, isShuffle);
   const prevTrack = () => {
     if (!queue.length) return;
@@ -186,6 +197,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     <Ctx.Provider value={{
       user, authReady, login, logout, loginWithCredentials, register,
       currentTrack, isPlaying, queue, queueIndex, isShuffle, toggleShuffle,
+      isRepeat, toggleRepeat,
       playTrack, togglePlay, nextTrack, prevTrack, stopTrack,
       audioEl: audioRef,
       showLoginModal, setShowLoginModal,

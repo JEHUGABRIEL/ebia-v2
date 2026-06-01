@@ -18,7 +18,7 @@ import ArtistDashboard from "./pages/ArtistDashboard";
 import { App as CapApp } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
 
-const NO_CHROME = ["/login"];
+const NO_CHROME = ["/login", "/me", "/artist-dashboard"];
 const ROUTE_STORAGE_KEY = "ebia_last_route";
 
 function AppContent() {

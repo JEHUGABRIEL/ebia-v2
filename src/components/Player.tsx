@@ -1,15 +1,15 @@
 import { useState, useEffect } from "react";
 import {
   Play, Pause, SkipBack, SkipForward, Volume2, VolumeX,
-  Shuffle, List, X, Music2, ChevronDown, ChevronUp,
+  Shuffle, Repeat, Repeat1, List, X, Music2, ChevronDown, ChevronUp,
 } from "lucide-react";
 import { useApp } from "../context/AppContext";
 
 export default function Player() {
   const {
     currentTrack, isPlaying, togglePlay, nextTrack, prevTrack,
-    queue, queueIndex, isShuffle, toggleShuffle, playTrack,
-    stopTrack, audioEl,
+    queue, queueIndex, isShuffle, toggleShuffle, isRepeat, toggleRepeat,
+    playTrack, stopTrack, audioEl,
   } = useApp();
 
   const [progress, setProgress]   = useState(0);
@@ -29,6 +29,8 @@ export default function Player() {
     const onMeta = () => setDuration(audio.duration);
     audio.addEventListener("timeupdate", onTime);
     audio.addEventListener("loadedmetadata", onMeta);
+    // Si les métadonnées sont déjà chargées (ex: src déjà set), synchroniser immédiatement
+    if (audio.readyState >= 1 && audio.duration) setDuration(audio.duration);
     return () => {
       audio.removeEventListener("timeupdate", onTime);
       audio.removeEventListener("loadedmetadata", onMeta);
@@ -140,8 +142,9 @@ export default function Player() {
               {isPlaying ? <Pause size={26} color="white" fill="white" /> : <Play size={26} color="white" fill="white" style={{ marginLeft: "3px" }} />}
             </button>
             <button onClick={nextTrack} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text)" }}><SkipForward size={30} fill="currentColor" /></button>
-            <button onClick={() => setMuted(m => !m)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)" }}>
-              {muted ? <VolumeX size={22} /> : <Volume2 size={22} />}
+            <button onClick={toggleRepeat} style={{ background: "none", border: "none", cursor: "pointer", color: isRepeat ? "var(--amber)" : "var(--muted)", position: "relative" }}>
+              {isRepeat ? <Repeat1 size={22} /> : <Repeat size={22} />}
+              {isRepeat && <span style={{ position: "absolute", bottom: "-5px", left: "50%", transform: "translateX(-50%)", width: "4px", height: "4px", borderRadius: "50%", background: "var(--amber)" }} />}
             </button>
           </div>
 
@@ -238,6 +241,14 @@ export default function Player() {
             </button>
             <button onClick={nextTrack} style={{ width: "34px", height: "34px", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", background: "none", border: "none", cursor: "pointer", color: "var(--muted)" }}>
               <SkipForward size={18} />
+            </button>
+            {/* Repeat — caché sur mobile via CSS */}
+            <button className="player-shuffle" onClick={toggleRepeat} style={{ width: "34px", height: "34px", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", background: isRepeat ? "rgba(232,96,26,0.15)" : "transparent", border: "none", cursor: "pointer", color: isRepeat ? "var(--amber)" : "var(--muted)" }}>
+              {isRepeat ? <Repeat1 size={16} /> : <Repeat size={16} />}
+            </button>
+            {/* Close — visible sur mobile uniquement */}
+            <button onClick={stopTrack} className="md:hidden" style={{ width: "34px", height: "34px", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", background: "transparent", border: "none", cursor: "pointer", color: "var(--muted)" }}>
+              <X size={16} />
             </button>
           </div>
 
