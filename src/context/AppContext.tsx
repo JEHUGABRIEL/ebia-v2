@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 import keycloak, { initKeycloak } from "../lib/keycloak";
 
+const BASE = "https://api-gateway-production-1c84.up.railway.app";
+
 export type EbiaUser = {
   id: string; email: string; displayName: string;
   avatarUrl?: string; role: "listener" | "artist" | "admin" | null;
@@ -19,12 +21,13 @@ interface AppCtx {
   queueIndex: number; isShuffle: boolean; toggleShuffle: () => void;
   playTrack: (track: Track, queue?: Track[]) => void;
   togglePlay: () => void; nextTrack: () => void; prevTrack: () => void;
+  stopTrack: () => void;
+  audioEl: React.RefObject<HTMLAudioElement | null>;
   showLoginModal: boolean; setShowLoginModal: (v: boolean) => void;
 }
 
 const Ctx = createContext<AppCtx | null>(null);
 
-/* Parse JWT sans vérification de signature (côté client) */
 function parseJwt(token: string): EbiaUser | null {
   try {
     const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
@@ -63,13 +66,11 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    /* 1. Token stocké après login via notre formulaire */
     const stored = getStoredToken();
     if (stored) {
       const u = parseJwt(stored);
       if (u) { setUser(u); setAuthReady(true); return; }
     }
-    /* 2. Fallback Keycloak check-sso silencieux */
     initKeycloak()
       .then(() => {
         if (keycloak.token) {
@@ -90,12 +91,25 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     keycloak.onTokenExpired = () => keycloak.updateToken(60);
   }, []);
 
+  // Quand currentTrack change, récupère l'URL pré-signée et joue
   useEffect(() => {
     if (!currentTrack) return;
     if (!audioRef.current) audioRef.current = new Audio();
     const audio = audioRef.current;
-    audio.src = currentTrack.audioUrl;
-    audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+
+    fetch(`${BASE}/api/v1/tracks/${currentTrack.id}/stream`)
+      .then(r => r.json())
+      .then(data => {
+        audio.src = data.url || currentTrack.audioUrl;
+        return audio.play();
+      })
+      .then(() => setIsPlaying(true))
+      .catch(() => {
+        // Fallback sur l'URL stockée dans le track
+        audio.src = currentTrack.audioUrl;
+        audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+      });
+
     audio.onended = () => nextTrackFn(queue, queueIndex, isShuffle);
   }, [currentTrack]);
 
@@ -113,9 +127,8 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     setQueueIndex(next); setCurrentTrack(q[next]);
   };
 
-  /* Login via notre formulaire — pas de redirect Keycloak */
   const loginWithCredentials = async (email: string, password: string) => {
-    const res = await fetch("https://api-gateway-production-1c84.up.railway.app/api/v1/auth/login", {
+    const res = await fetch(`${BASE}/api/v1/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
@@ -133,11 +146,21 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
 
   const playTrack = (track: Track, q?: Track[]) => {
     if (q) { setQueue(q); setQueueIndex(q.findIndex(t => t.id === track.id)); }
-    setCurrentTrack(track);
-    fetch(`https://api-gateway-production-1c84.up.railway.app/api/v1/tracks/${track.id}/play`, {
+    setIsPlaying(true); // Afficher "en lecture" immédiatement
+    setCurrentTrack(track); // Déclenche le useEffect qui fetch /stream et joue
+
+    fetch(`${BASE}/api/v1/tracks/${track.id}/play`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ offline: false }),
     }).catch(() => {});
+  };
+
+  const stopTrack = () => {
+    audioRef.current?.pause();
+    setCurrentTrack(null);
+    setIsPlaying(false);
+    setQueue([]);
+    setQueueIndex(0);
   };
 
   const togglePlay = () => setIsPlaying(p => !p);
@@ -160,7 +183,13 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     keycloak.register({ locale: "fr", redirectUri: window.location.origin + (role === "artist" ? "/artist-dashboard" : "/me") });
 
   return (
-    <Ctx.Provider value={{ user, authReady, login, logout, loginWithCredentials, register, currentTrack, isPlaying, queue, queueIndex, isShuffle, toggleShuffle, playTrack, togglePlay, nextTrack, prevTrack, showLoginModal, setShowLoginModal }}>
+    <Ctx.Provider value={{
+      user, authReady, login, logout, loginWithCredentials, register,
+      currentTrack, isPlaying, queue, queueIndex, isShuffle, toggleShuffle,
+      playTrack, togglePlay, nextTrack, prevTrack, stopTrack,
+      audioEl: audioRef,
+      showLoginModal, setShowLoginModal,
+    }}>
       {children}
     </Ctx.Provider>
   );

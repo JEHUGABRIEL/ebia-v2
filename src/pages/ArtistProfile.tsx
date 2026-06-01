@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { getArtist, type Artist, audioUrl } from "../lib/api";
+import { getArtist, type Artist } from "../lib/api";
 import { useApp } from "../context/AppContext";
 import { Play, Heart, MapPin, ArrowLeft, CheckCircle, Headphones, Pause } from "lucide-react";
 
@@ -28,12 +28,12 @@ export default function ArtistProfile() {
     if (!track) return;
     const queue = artist.tracks.map(t => ({
       id: t.id, title: t.title, artist: artist.name,
-      audioUrl: audioUrl((t as any).file_path || t.id + ".mp3"),
+      audioUrl: "", // récupéré dynamiquement via /stream dans playTrack
       coverUrl: artist.avatar_url,
     }));
     playTrack({
       id: track.id, title: track.title, artist: artist.name,
-      audioUrl: audioUrl((track as any).file_path || track.id + ".mp3"),
+      audioUrl: "",
       coverUrl: artist.avatar_url,
     }, queue);
   };
