@@ -130,9 +130,14 @@ body {
   display: flex;
 }
 
+.sidebar-dashboard-mobile-bar {
+  display: none;
+}
+
 @media (max-width: 767px) {
   .sidebar-dashboard { display: none !important; }
   .dashboard-main { padding: 16px !important; max-width: 100vw !important; overflow-x: hidden; }
+  .sidebar-dashboard-mobile-bar { display: flex !important; }
 }
 
 /* ── Cards responsive ── */

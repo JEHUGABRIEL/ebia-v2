@@ -98,9 +98,13 @@ export default function Navbar() {
                 onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.1)"}
                 onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.06)"}
                 >
-                  <div style={{ width: "22px", height: "22px", borderRadius: "50%", background: "var(--amber)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10px", fontWeight: 800, color: "#fff" }}>
-                    {user.displayName?.[0]?.toUpperCase()}
-                  </div>
+                  {user.avatarUrl ? (
+                    <img src={user.avatarUrl} alt="" style={{ width: "22px", height: "22px", borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+                  ) : (
+                    <div style={{ width: "22px", height: "22px", borderRadius: "50%", background: "var(--amber)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10px", fontWeight: 800, color: "#fff", flexShrink: 0 }}>
+                      {user.displayName?.[0]?.toUpperCase()}
+                    </div>
+                  )}
                   <span style={{ color: "var(--text)", fontSize: "13px", fontWeight: 500 }} className="hidden sm:block">
                     {user.displayName?.split(" ")[0]}
                   </span>

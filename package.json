@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "deploy": "bash deploy.sh",
     "mobile:build": "npm run build && npx cap sync android",
     "mobile:apk": "npm run mobile:build && cd android && ./gradlew assembleDebug",
     "mobile:open": "npx cap open android"
