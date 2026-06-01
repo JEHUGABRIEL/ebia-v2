@@ -42,12 +42,14 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
   }
 }
 
-const get = <T>(path: string) => req<T>(path);
-const post = <T>(path: string, body: unknown) =>
+const get   = <T>(path: string) => req<T>(path);
+const post  = <T>(path: string, body: unknown) =>
   req<T>(path, { method: "POST", body: JSON.stringify(body) });
-const put = <T>(path: string, body: unknown) =>
+const patch = <T>(path: string, body: unknown) =>
+  req<T>(path, { method: "PATCH", body: JSON.stringify(body) });
+const put   = <T>(path: string, body: unknown) =>
   req<T>(path, { method: "PUT", body: JSON.stringify(body) });
-const del = <T>(path: string) => req<T>(path, { method: "DELETE" });
+const del   = <T>(path: string) => req<T>(path, { method: "DELETE" });
 
 /* ── Types publics ── */
 export type Artist = {
@@ -202,3 +204,6 @@ export const toggleLike = (trackId: string) =>
 
 export const toggleFollow = (artistId: string) =>
   post<{ followed: boolean; followers_count: number }>(`/api/v1/artists/${artistId}/follow`, {});
+
+export const updateProfile = (data: { display_name?: string; avatar_b64?: string }) =>
+  patch<{ access_token: string; user: Record<string, string> }>("/api/v1/auth/profile", data);

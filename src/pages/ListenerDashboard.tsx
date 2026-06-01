@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect } from "react";
 import { useApp } from "../context/AppContext";
 import { useNavigate, Link } from "react-router-dom";
-import { Home, Search, Library, Heart, Users, Settings, Plus, ChevronRight, LogOut, Camera, Mic2, Music2 } from "lucide-react";
+import { Home, Search, Library, Heart, Users, Settings, Plus, ChevronRight, LogOut, Camera, Mic2, Music2, Loader } from "lucide-react";
 import LogoutModal from "../components/LogoutModal";
 import EbiaLogo from "../components/EbiaLogo";
-import { getArtists, getTracks, type Artist } from "../lib/api";
+import { getArtists, getTracks, updateProfile, type Artist } from "../lib/api";
 
 type Section = "accueil" | "recherche" | "bibliotheque" | "favoris" | "suivis" | "parametres" | "decouvrir";
 
@@ -37,12 +37,15 @@ const GENRES = [
 ];
 
 export default function ListenerDashboard() {
-  const { user } = useApp();
+  const { user, updateUser } = useApp();
   const navigate = useNavigate();
   const [section, setSection] = useState<Section>("accueil");
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(user?.avatarUrl ?? null);
+  const [displayName, setDisplayName] = useState(user?.displayName ?? "");
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileMsg, setProfileMsg] = useState("");
   const [artistModalOpen, setArtistModalOpen] = useState(false);
   const [artistStep, setArtistStep] = useState(1);
   const [realArtists, setRealArtists] = useState<Artist[]>([]);
@@ -65,6 +68,26 @@ export default function ListenerDashboard() {
     const reader = new FileReader();
     reader.onload = ev => setAvatarUrl(ev.target?.result as string);
     reader.readAsDataURL(file);
+  };
+
+  const handleSaveProfile = async () => {
+    setProfileSaving(true);
+    setProfileMsg("");
+    try {
+      const payload: { display_name?: string; avatar_b64?: string } = {};
+      if (displayName.trim() && displayName !== user?.displayName) payload.display_name = displayName.trim();
+      if (avatarUrl && avatarUrl.startsWith("data:")) payload.avatar_b64 = avatarUrl;
+      if (!Object.keys(payload).length) { setProfileMsg("Aucune modification."); setProfileSaving(false); return; }
+      const res = await updateProfile(payload);
+      localStorage.setItem("ebia_token", res.access_token);
+      updateUser({ displayName: res.user.display_name, avatarUrl: res.user.avatar_url ?? undefined });
+      setAvatarUrl(res.user.avatar_url ?? null);
+      setProfileMsg("Profil mis à jour ✓");
+    } catch {
+      setProfileMsg("Erreur lors de la sauvegarde.");
+    } finally {
+      setProfileSaving(false);
+    }
   };
 
   const navLinks: { id: Section; icon: typeof Home; label: string }[] = [
@@ -462,13 +485,20 @@ export default function ListenerDashboard() {
                 <div style={{ padding: "28px", borderRadius: "16px", background: "rgba(240,235,227,0.03)", border: "1px solid var(--border)" }}>
                   <h2 className="bebas" style={{ fontSize: "20px", color: "var(--text)", marginBottom: "20px" }}>Compte</h2>
                   <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                    {[{ label: "Nom", value: user.displayName, disabled: false }, { label: "Email", value: user.email, disabled: true }].map(f => (
-                      <div key={f.label}>
-                        <label style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--muted)", display: "block", marginBottom: "6px" }}>{f.label}</label>
-                        <input defaultValue={f.value ?? ""} disabled={f.disabled} style={{ width: "100%", padding: "12px 14px", borderRadius: "10px", background: f.disabled ? "rgba(240,235,227,0.02)" : "var(--bg3)", border: "1px solid var(--border)", color: f.disabled ? "var(--muted)" : "var(--text)", fontSize: "14px", outline: "none", boxSizing: "border-box" as const }} />
-                      </div>
-                    ))}
-                    <button style={{ alignSelf: "flex-start", padding: "10px 20px", borderRadius: "99px", background: "var(--amber)", color: "#fff", border: "none", fontSize: "11px", fontWeight: 700, cursor: "pointer" }}>Sauvegarder</button>
+                    <div>
+                      <label style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--muted)", display: "block", marginBottom: "6px" }}>Nom</label>
+                      <input value={displayName} onChange={e => setDisplayName(e.target.value)} style={{ width: "100%", padding: "12px 14px", borderRadius: "10px", background: "var(--bg3)", border: "1px solid var(--border)", color: "var(--text)", fontSize: "14px", outline: "none", boxSizing: "border-box" as const }} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--muted)", display: "block", marginBottom: "6px" }}>Email</label>
+                      <input value={user.email} disabled style={{ width: "100%", padding: "12px 14px", borderRadius: "10px", background: "rgba(240,235,227,0.02)", border: "1px solid var(--border)", color: "var(--muted)", fontSize: "14px", outline: "none", boxSizing: "border-box" as const }} />
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                      <button onClick={handleSaveProfile} disabled={profileSaving} style={{ display: "flex", alignItems: "center", gap: "6px", padding: "10px 20px", borderRadius: "99px", background: "var(--amber)", color: "#fff", border: "none", fontSize: "11px", fontWeight: 700, cursor: profileSaving ? "default" : "pointer", opacity: profileSaving ? 0.7 : 1 }}>
+                        {profileSaving ? <><Loader size={12} style={{ animation: "spin 1s linear infinite" }} /> Enregistrement…</> : "Sauvegarder"}
+                      </button>
+                      {profileMsg && <span style={{ fontSize: "12px", color: profileMsg.includes("✓") ? "#4caf82" : "#f08080" }}>{profileMsg}</span>}
+                    </div>
                   </div>
                 </div>
 

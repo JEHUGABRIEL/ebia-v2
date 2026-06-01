@@ -8,7 +8,7 @@ import { useApp } from "../context/AppContext";
 export default function Player() {
   const {
     currentTrack, isPlaying, togglePlay, nextTrack, prevTrack,
-    queue, queueIndex, isShuffle, toggleShuffle, isRepeat, toggleRepeat,
+    queue, queueIndex, isShuffle, toggleShuffle, repeatMode, toggleRepeat,
     playTrack, stopTrack, audioEl,
   } = useApp();
 
@@ -142,9 +142,9 @@ export default function Player() {
               {isPlaying ? <Pause size={26} color="white" fill="white" /> : <Play size={26} color="white" fill="white" style={{ marginLeft: "3px" }} />}
             </button>
             <button onClick={nextTrack} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text)" }}><SkipForward size={30} fill="currentColor" /></button>
-            <button onClick={toggleRepeat} style={{ background: "none", border: "none", cursor: "pointer", color: isRepeat ? "var(--amber)" : "var(--muted)", position: "relative" }}>
-              {isRepeat ? <Repeat1 size={22} /> : <Repeat size={22} />}
-              {isRepeat && <span style={{ position: "absolute", bottom: "-5px", left: "50%", transform: "translateX(-50%)", width: "4px", height: "4px", borderRadius: "50%", background: "var(--amber)" }} />}
+            <button onClick={toggleRepeat} title={repeatMode === "none" ? "Tout répéter" : repeatMode === "all" ? "Répéter le titre" : "Désactiver la répétition"} style={{ background: "none", border: "none", cursor: "pointer", color: repeatMode !== "none" ? "var(--amber)" : "var(--muted)", position: "relative" }}>
+              {repeatMode === "one" ? <Repeat1 size={22} /> : <Repeat size={22} />}
+              {repeatMode !== "none" && <span style={{ position: "absolute", bottom: "-5px", left: "50%", transform: "translateX(-50%)", width: "4px", height: "4px", borderRadius: "50%", background: "var(--amber)" }} />}
             </button>
           </div>
 
@@ -242,32 +242,30 @@ export default function Player() {
             <button onClick={nextTrack} style={{ width: "34px", height: "34px", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", background: "none", border: "none", cursor: "pointer", color: "var(--muted)" }}>
               <SkipForward size={18} />
             </button>
-            {/* Repeat — caché sur mobile via CSS */}
-            <button className="player-shuffle" onClick={toggleRepeat} style={{ width: "34px", height: "34px", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", background: isRepeat ? "rgba(232,96,26,0.15)" : "transparent", border: "none", cursor: "pointer", color: isRepeat ? "var(--amber)" : "var(--muted)" }}>
-              {isRepeat ? <Repeat1 size={16} /> : <Repeat size={16} />}
-            </button>
-            {/* Close — visible sur mobile uniquement */}
-            <button onClick={stopTrack} className="md:hidden" style={{ width: "34px", height: "34px", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", background: "transparent", border: "none", cursor: "pointer", color: "var(--muted)" }}>
-              <X size={16} />
+            {/* Repeat — caché sur mobile */}
+            <button className="player-shuffle" onClick={toggleRepeat} title={repeatMode === "none" ? "Tout répéter" : repeatMode === "all" ? "Répéter le titre" : "Désactiver"} style={{ width: "34px", height: "34px", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", background: repeatMode !== "none" ? "rgba(232,96,26,0.15)" : "transparent", border: "none", cursor: "pointer", color: repeatMode !== "none" ? "var(--amber)" : "var(--muted)" }}>
+              {repeatMode === "one" ? <Repeat1 size={16} /> : <Repeat size={16} />}
             </button>
           </div>
 
-          {/* Droite — temps, volume, queue, fermer */}
-          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "8px" }} className="hidden md:flex">
-            <span style={{ fontSize: "11px", color: "var(--muted)", fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>
-              {fmt(currentTime)} / {fmt(duration)}
-            </span>
-            <button onClick={() => setMuted(m => !m)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)" }}>
-              {muted ? <VolumeX size={15} /> : <Volume2 size={15} />}
-            </button>
-            <input type="range" min="0" max="1" step="0.05" value={muted ? 0 : volume}
-              onChange={e => { setVolume(Number(e.target.value)); setMuted(false); }}
-              style={{ width: "72px", accentColor: "var(--amber)" }}
-            />
-            <button onClick={() => setShowQueue(q => !q)} style={{ width: "32px", height: "32px", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", background: showQueue ? "rgba(232,96,26,0.15)" : "transparent", border: `1px solid ${showQueue ? "rgba(232,96,26,0.3)" : "transparent"}`, cursor: "pointer", color: showQueue ? "var(--amber)" : "var(--muted)" }}>
-              <List size={15} />
-            </button>
-            <button onClick={stopTrack} title="Fermer" style={{ width: "32px", height: "32px", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", background: "transparent", border: "none", cursor: "pointer", color: "var(--muted)", transition: "color 0.15s" }}
+          {/* Droite — temps, volume, queue (desktop) + fermer (toujours visible) */}
+          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "8px" }}>
+            <div className="hidden md:flex" style={{ alignItems: "center", gap: "8px" }}>
+              <span style={{ fontSize: "11px", color: "var(--muted)", fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>
+                {fmt(currentTime)} / {fmt(duration)}
+              </span>
+              <button onClick={() => setMuted(m => !m)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)" }}>
+                {muted ? <VolumeX size={15} /> : <Volume2 size={15} />}
+              </button>
+              <input type="range" min="0" max="1" step="0.05" value={muted ? 0 : volume}
+                onChange={e => { setVolume(Number(e.target.value)); setMuted(false); }}
+                style={{ width: "72px", accentColor: "var(--amber)" }}
+              />
+              <button onClick={() => setShowQueue(q => !q)} style={{ width: "32px", height: "32px", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", background: showQueue ? "rgba(232,96,26,0.15)" : "transparent", border: `1px solid ${showQueue ? "rgba(232,96,26,0.3)" : "transparent"}`, cursor: "pointer", color: showQueue ? "var(--amber)" : "var(--muted)" }}>
+                <List size={15} />
+              </button>
+            </div>
+            <button onClick={stopTrack} title="Fermer" style={{ width: "32px", height: "32px", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", background: "transparent", border: "none", cursor: "pointer", color: "var(--muted)", transition: "color 0.15s", flexShrink: 0 }}
               onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = "#fff"}
               onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = "var(--muted)"}>
               <X size={15} />

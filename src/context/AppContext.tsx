@@ -10,17 +10,22 @@ export type EbiaUser = {
 export interface Track {
   id: string; title: string; artist: string; artistId?: string;
   audioUrl: string; coverUrl?: string; duration?: number;
+  playsCount?: number; likesCount?: number;
 }
+
+export type RepeatMode = "none" | "all" | "one";
 
 interface AppCtx {
   user: EbiaUser | null; authReady: boolean;
   login: () => void; logout: () => void;
   loginWithCredentials: (email: string, password: string) => Promise<void>;
   register: (role: "listener" | "artist") => void;
+  updateUser: (updates: Partial<EbiaUser>) => void;
   currentTrack: Track | null; isPlaying: boolean; queue: Track[];
   queueIndex: number; isShuffle: boolean; toggleShuffle: () => void;
-  isRepeat: boolean; toggleRepeat: () => void;
+  repeatMode: RepeatMode; toggleRepeat: () => void;
   playTrack: (track: Track, queue?: Track[]) => void;
+  addToQueue: (track: Track) => void;
   togglePlay: () => void; nextTrack: () => void; prevTrack: () => void;
   stopTrack: () => void;
   audioEl: React.RefObject<HTMLAudioElement | null>;
@@ -63,8 +68,8 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const [queue, setQueue] = useState<Track[]>([]);
   const [queueIndex, setQueueIndex] = useState(0);
   const [isShuffle, setIsShuffle] = useState(false);
-  const [isRepeat, setIsRepeat] = useState(false);
-  const isRepeatRef = useRef(false);
+  const [repeatMode, setRepeatMode] = useState<RepeatMode>("none");
+  const repeatRef = useRef<RepeatMode>("none");
   const [showLoginModal, setShowLoginModal] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -108,17 +113,17 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       })
       .then(() => setIsPlaying(true))
       .catch(() => {
-        // Fallback sur l'URL stockée dans le track
         audio.src = currentTrack.audioUrl;
         audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
       });
 
     audio.onended = () => {
-      if (isRepeatRef.current) {
+      const mode = repeatRef.current;
+      if (mode === "one") {
         audio.currentTime = 0;
         audio.play().catch(() => {});
       } else {
-        nextTrackFn(queue, queueIndex, isShuffle);
+        nextTrackFn(queue, queueIndex, isShuffle, mode === "all");
       }
     };
   }, [currentTrack]);
@@ -129,8 +134,12 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     if (isPlaying) audio.play().catch(() => {}); else audio.pause();
   }, [isPlaying]);
 
-  const nextTrackFn = (q: Track[], idx: number, shuffle: boolean) => {
+  const nextTrackFn = (q: Track[], idx: number, shuffle: boolean, wrap = true) => {
     if (!q.length) return;
+    if (!wrap && !shuffle && idx >= q.length - 1) {
+      setIsPlaying(false);
+      return;
+    }
     let next: number;
     if (shuffle) { do { next = Math.floor(Math.random() * q.length); } while (q.length > 1 && next === idx); }
     else next = (idx + 1) % q.length;
@@ -154,15 +163,25 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     else throw new Error("Token invalide");
   };
 
+  const updateUser = (updates: Partial<EbiaUser>) => setUser(u => u ? { ...u, ...updates } : u);
+
   const playTrack = (track: Track, q?: Track[]) => {
     if (q) { setQueue(q); setQueueIndex(q.findIndex(t => t.id === track.id)); }
-    setIsPlaying(true); // Afficher "en lecture" immédiatement
-    setCurrentTrack(track); // Déclenche le useEffect qui fetch /stream et joue
+    setIsPlaying(true);
+    setCurrentTrack(track);
 
     fetch(`${BASE}/api/v1/tracks/${track.id}/play`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ offline: false }),
     }).catch(() => {});
+  };
+
+  const addToQueue = (track: Track) => {
+    setQueue(q => {
+      const next = [...q];
+      next.splice(queueIndex + 1, 0, track);
+      return next;
+    });
   };
 
   const stopTrack = () => {
@@ -173,18 +192,22 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     setQueueIndex(0);
   };
 
-  const togglePlay = () => setIsPlaying(p => !p);
+  const togglePlay    = () => setIsPlaying(p => !p);
   const toggleShuffle = () => setIsShuffle(s => !s);
-  const toggleRepeat = () => setIsRepeat(r => { isRepeatRef.current = !r; return !r; });
-  const nextTrack = () => nextTrackFn(queue, queueIndex, isShuffle);
+  const toggleRepeat  = () => setRepeatMode(m => {
+    const next: RepeatMode = m === "none" ? "all" : m === "all" ? "one" : "none";
+    repeatRef.current = next;
+    return next;
+  });
+  const nextTrack = () => nextTrackFn(queue, queueIndex, isShuffle, repeatMode === "all");
   const prevTrack = () => {
     if (!queue.length) return;
     const prev = (queueIndex - 1 + queue.length) % queue.length;
     setQueueIndex(prev); setCurrentTrack(queue[prev]);
   };
 
-  const login = () => keycloak.login({ locale: "fr" });
-  const logout = () => {
+  const login    = () => keycloak.login({ locale: "fr" });
+  const logout   = () => {
     localStorage.removeItem("ebia_token");
     localStorage.removeItem("ebia_refresh");
     setUser(null);
@@ -195,10 +218,10 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <Ctx.Provider value={{
-      user, authReady, login, logout, loginWithCredentials, register,
+      user, authReady, login, logout, loginWithCredentials, register, updateUser,
       currentTrack, isPlaying, queue, queueIndex, isShuffle, toggleShuffle,
-      isRepeat, toggleRepeat,
-      playTrack, togglePlay, nextTrack, prevTrack, stopTrack,
+      repeatMode, toggleRepeat,
+      playTrack, addToQueue, togglePlay, nextTrack, prevTrack, stopTrack,
       audioEl: audioRef,
       showLoginModal, setShowLoginModal,
     }}>
