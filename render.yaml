@@ -7,6 +7,8 @@ services:
     envVars:
       - key: NODE_VERSION
         value: 20
+      - key: VITE_API_URL
+        value: https://api-gateway-production-1c84.up.railway.app
     routes:
       - type: rewrite
         source: /*

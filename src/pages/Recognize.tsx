@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Mic, Search, Music2, ArrowRight, RotateCcw, Loader } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { BASE } from "../lib/api";
 
 type RecognizeState = "idle" | "recording" | "processing" | "found" | "not_found" | "error";
 
@@ -116,7 +117,7 @@ export default function Recognize() {
     fd.append("file", blob, "recognition.webm");
 
     try {
-      const res = await fetch("https://api-gateway-production-1c84.up.railway.app/api/v1/recognize", {
+      const res = await fetch(`${BASE}/api/v1/recognize`, {
         method: "POST", body: fd,
       });
       const data = await res.json() as { found: boolean; track?: TrackResult; confidence?: number; message?: string; error?: string };

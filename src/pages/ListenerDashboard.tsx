@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useApp, type DownloadableTrack } from "../context/AppContext";
 import { useNavigate, Link } from "react-router-dom";
-import { Home, Search, Library, Heart, Users, Settings, Plus, ChevronRight, LogOut, Camera, Mic2, Music2, Loader, Menu, X as XIcon, Download, Trash2, WifiOff } from "lucide-react";
+import { Home, Search, Library, Heart, Users, Settings, Plus, ChevronRight, LogOut, Camera, Mic2, Music2, Loader, Menu, X as XIcon, Download, DownloadCloud, CheckCircle2, Trash2, WifiOff } from "lucide-react";
 import LogoutModal from "../components/LogoutModal";
 import EbiaLogo from "../components/EbiaLogo";
 import { getArtists, getTracks, getMyArtistProfile, updateProfile, uploadUserAvatar, becomeArtist, type Artist } from "../lib/api";
@@ -274,21 +274,48 @@ export default function ListenerDashboard() {
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px" }}>
                   {popularTracks.map(track => {
                     const cover = track.album_cover_url || track.artist_avatar;
+                    const dl: DownloadableTrack = { id: track.id, title: track.title, artist: track.artist_name, genre: track.genre || "", duration_s: track.duration_s || 0, coverUrl: cover };
+                    const dlDone = downloadedIds.has(track.id);
+                    const dlLoading = downloadingIds.has(track.id);
                     return (
-                      <button key={track.id}
-                        onClick={() => playTrack({ id: track.id, title: track.title, artist: track.artist_name, audioUrl: track.file_path, coverUrl: cover })}
+                      <div key={track.id}
                         style={{ display: "flex", alignItems: "center", borderRadius: "8px", overflow: "hidden", textAlign: "left", background: "rgba(240,235,227,0.06)", border: "none", cursor: "pointer", transition: "background 0.15s" }}
                         onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.1)"}
                         onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.06)"}>
-                        {cover
-                          ? <img src={cover} alt={track.title} style={{ width: "52px", height: "52px", objectFit: "cover", flexShrink: 0 }} />
-                          : <div style={{ width: "52px", height: "52px", background: "linear-gradient(135deg, var(--amber), var(--gold))", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: "20px" }}>🎵</div>
-                        }
-                        <div style={{ flex: 1, minWidth: 0, padding: "0 12px" }}>
-                          <p style={{ fontSize: "13px", fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{track.title}</p>
-                          <p style={{ fontSize: "11px", color: "var(--muted)", marginTop: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{track.artist_name}</p>
+                        <div onClick={() => playTrack({ id: track.id, title: track.title, artist: track.artist_name, audioUrl: track.file_path, coverUrl: cover })}
+                          style={{ display: "flex", alignItems: "center", flex: 1, minWidth: 0, cursor: "pointer" }}>
+                          {cover
+                            ? <img src={cover} alt={track.title} style={{ width: "52px", height: "52px", objectFit: "cover", flexShrink: 0 }} />
+                            : <div style={{ width: "52px", height: "52px", background: "linear-gradient(135deg, var(--amber), var(--gold))", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: "20px" }}>🎵</div>
+                          }
+                          <div style={{ flex: 1, minWidth: 0, padding: "0 12px" }}>
+                            <p style={{ fontSize: "13px", fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{track.title}</p>
+                            <p style={{ fontSize: "11px", color: "var(--muted)", marginTop: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{track.artist_name}</p>
+                          </div>
                         </div>
-                      </button>
+                        {/* Bouton download */}
+                        <button
+                          onClick={e => { e.stopPropagation(); if (!dlDone && !dlLoading) downloadTrack(dl); }}
+                          title={dlDone ? "Déjà téléchargé" : dlLoading ? "Téléchargement..." : "Télécharger hors-ligne"}
+                          style={{
+                            width: "32px", height: "32px", borderRadius: "8px", flexShrink: 0, marginRight: "6px",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            background: dlDone ? "rgba(76,175,130,0.12)" : dlLoading ? "rgba(232,96,26,0.12)" : "transparent",
+                            border: "none", cursor: dlDone ? "default" : "pointer",
+                            color: dlDone ? "#4caf82" : dlLoading ? "var(--amber)" : "var(--muted)",
+                            transition: "all 0.15s",
+                          }}
+                          onMouseEnter={e => { if (!dlDone && !dlLoading) (e.currentTarget as HTMLElement).style.color = "var(--amber)"; }}
+                          onMouseLeave={e => { if (!dlDone && !dlLoading) (e.currentTarget as HTMLElement).style.color = "var(--muted)"; }}
+                        >
+                          {dlLoading
+                            ? <Loader size={13} style={{ animation: "spin 1s linear infinite" }} />
+                            : dlDone
+                              ? <CheckCircle2 size={13} />
+                              : <DownloadCloud size={13} />
+                          }
+                        </button>
+                      </div>
                     );
                   })}
                 </div>

@@ -6,7 +6,7 @@ import {
   type OfflineTrack, type OfflineTrackInput,
 } from "../lib/offline";
 
-const BASE = "https://api-gateway-production-1c84.up.railway.app";
+const BASE = import.meta.env.VITE_API_URL ?? "https://api-gateway-production-1c84.up.railway.app";
 
 export type EbiaUser = {
   id: string; email: string; displayName: string;
@@ -55,6 +55,8 @@ interface AppCtx {
   downloadTrack: (track: DownloadableTrack) => Promise<void>;
   removeDownload: (trackId: string) => Promise<void>;
   getDownloadedTracks: () => Promise<OfflineTrack[]>;
+  downloadError: string | null;
+  clearDownloadError: () => void;
 }
 
 const Ctx = createContext<AppCtx | null>(null);
@@ -109,6 +111,9 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const [downloadedIds, setDownloadedIds] = useState<Set<string>>(new Set());
   const [downloadingIds, setDownloadingIds] = useState<Set<string>>(new Set());
   const [downloadProgress, setDownloadProgress] = useState<Record<string, number>>({});
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+  const downloadErrorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clearDownloadError = () => setDownloadError(null);
 
   /* ── Auth init ── */
   useEffect(() => {
@@ -325,21 +330,47 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   /* ── Téléchargement hors-ligne ── */
+  const setDownloadErrorTimed = (msg: string) => {
+    /* Évite le stacking des timeouts — clear le précédent */
+    if (downloadErrorTimerRef.current) clearTimeout(downloadErrorTimerRef.current);
+    setDownloadError(msg);
+    downloadErrorTimerRef.current = setTimeout(() => setDownloadError(null), 5000);
+  };
+
   const downloadTrack = async (track: DownloadableTrack) => {
-    if (!user) throw new Error("Connexion requise pour télécharger");
+    if (!user) {
+      setDownloadErrorTimed("Connectez-vous pour télécharger des titres.");
+      return;
+    }
     if (downloadingIds.has(track.id)) return;
     setDownloadingIds(prev => new Set(prev).add(track.id));
     setDownloadProgress(prev => ({ ...prev, [track.id]: 0 }));
 
     try {
-      /* Récupérer l'URL pré-signée */
-      const r = await fetch(`${BASE}/api/v1/tracks/${track.id}/stream`);
+      /* Récupérer l'URL pré-signée via le endpoint download (abonné requis) */
+      const r = await fetch(`${BASE}/api/v1/tracks/${track.id}/download`, {
+        headers: { ...getAuthHeader() },
+      });
+      if (!r.ok) {
+        const errData = await r.json().catch(() => ({})) as { error?: string; upgrade_required?: boolean };
+        const msg = errData.upgrade_required
+          ? "Abonnement requis pour télécharger en écoute hors-ligne."
+          : (errData.error || "Impossible de télécharger le titre");
+        setDownloadErrorTimed(msg);
+        return;
+      }
       const data = await r.json() as { url?: string };
-      if (!data.url) throw new Error("URL de stream introuvable");
+      if (!data.url) {
+        setDownloadErrorTimed("URL de téléchargement introuvable");
+        return;
+      }
 
       /* Télécharger le fichier audio avec suivi de progression */
       const resp = await fetch(data.url);
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      if (!resp.ok) {
+        setDownloadErrorTimed(`Erreur HTTP ${resp.status} lors du téléchargement`);
+        return;
+      }
 
       const contentLength = Number(resp.headers.get("Content-Length") || 0);
       const reader = resp.body!.getReader();
@@ -370,6 +401,9 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       };
       await saveOfflineTrack(input);
       setDownloadedIds(prev => new Set(prev).add(track.id));
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Erreur inattendue lors du téléchargement";
+      setDownloadErrorTimed(msg);
     } finally {
       setDownloadingIds(prev => { const s = new Set(prev); s.delete(track.id); return s; });
       setDownloadProgress(prev => { const p = { ...prev }; delete p[track.id]; return p; });
@@ -405,6 +439,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       networkQuality, isBuffering, isOfflinePlaying,
       downloadedIds, downloadingIds, downloadProgress,
       downloadTrack, removeDownload, getDownloadedTracks,
+      downloadError, clearDownloadError,
     }}>
       {children}
     </Ctx.Provider>

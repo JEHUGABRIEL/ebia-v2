@@ -2,9 +2,9 @@ import { useState, useEffect } from "react";
 import {
   Play, Pause, SkipBack, SkipForward, Volume2, VolumeX,
   Shuffle, Repeat, Repeat1, List, X, Music2, ChevronDown, ChevronUp,
-  Loader, WifiOff, Wifi, Download,
+  Loader, WifiOff, Wifi, Download, DownloadCloud, CheckCircle2,
 } from "lucide-react";
-import { useApp } from "../context/AppContext";
+import { useApp, type DownloadableTrack } from "../context/AppContext";
 
 export default function Player() {
   const {
@@ -12,7 +12,23 @@ export default function Player() {
     queue, queueIndex, isShuffle, toggleShuffle, repeatMode, toggleRepeat,
     playTrack, stopTrack, audioEl,
     networkQuality, isBuffering, isOfflinePlaying,
+    downloadedIds, downloadingIds, downloadProgress, downloadTrack,
+    downloadError, clearDownloadError,
   } = useApp();
+
+  // Convertir le titre courant en DownloadableTrack pour le download
+  const currentDownloadable: DownloadableTrack | null = currentTrack ? {
+    id: currentTrack.id,
+    title: currentTrack.title,
+    artist: currentTrack.artist,
+    genre: "",
+    duration_s: currentTrack.duration ?? 0,
+    coverUrl: currentTrack.coverUrl,
+  } : null;
+
+  const isTrackDownloaded = currentTrack ? downloadedIds.has(currentTrack.id) : false;
+  const isTrackDownloading = currentTrack ? downloadingIds.has(currentTrack.id) : false;
+  const trackDlProgress = currentTrack ? (downloadProgress[currentTrack.id] ?? 0) : 0;
 
   const [progress, setProgress]   = useState(0);
   const [duration, setDuration]   = useState(0);
@@ -57,7 +73,30 @@ export default function Player() {
     `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
   const currentTime = (progress * duration) / 100;
 
-  if (!currentTrack) return null;
+  const DownloadErrorToast = () =>
+    downloadError ? (
+      <div style={{
+        position: "fixed", bottom: currentTrack ? "80px" : "24px", left: "50%", transform: "translateX(-50%)", zIndex: 200,
+        display: "flex", alignItems: "center", gap: "10px",
+        padding: "12px 20px", borderRadius: "12px",
+        background: "rgba(28,8,8,0.96)", border: "1px solid rgba(220,50,50,0.35)",
+        boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
+        backdropFilter: "blur(12px)",
+        animation: "fadeUp 0.2s ease both",
+        maxWidth: "90vw",
+      }}>
+        <span style={{ fontSize: "16px", lineHeight: 1 }}>⚠️</span>
+        <span style={{ fontSize: "13px", color: "#f0d0c0", fontWeight: 600, lineHeight: 1.3 }}>{downloadError}</span>
+        <button onClick={clearDownloadError} style={{
+          background: "none", border: "none", color: "var(--muted)", cursor: "pointer",
+          padding: "4px", flexShrink: 0, display: "flex",
+        }}>
+          <X size={14} />
+        </button>
+      </div>
+    ) : null;
+
+  if (!currentTrack) return <DownloadErrorToast />;
 
   const Cover = ({ size }: { size: number }) =>
     currentTrack.coverUrl ? (
@@ -84,6 +123,7 @@ export default function Player() {
 
   return (
     <>
+      <DownloadErrorToast />
       {/* ── LECTEUR PLEIN ÉCRAN ── */}
       {expanded && (
         <div style={{
@@ -121,7 +161,42 @@ export default function Player() {
             <p style={{ fontSize: "20px", fontWeight: 700, color: "var(--text)", marginBottom: "4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {currentTrack.title}
             </p>
-            <p style={{ fontSize: "14px", color: "var(--muted)" }}>{currentTrack.artist}</p>
+            <p style={{ fontSize: "14px", color: "var(--muted)", marginBottom: "10px" }}>{currentTrack.artist}</p>
+            {/* Bouton download dans le lecteur plein écran */}
+            {currentDownloadable && (
+              <button
+                onClick={e => { e.stopPropagation(); if (!isTrackDownloaded && !isTrackDownloading) downloadTrack(currentDownloadable); }}
+                title={isTrackDownloaded ? "Déjà téléchargé" : isTrackDownloading ? `Téléchargement... ${trackDlProgress}%` : "Télécharger hors-ligne"}
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: "6px",
+                  padding: "8px 16px", borderRadius: "99px",
+                  background: isTrackDownloaded ? "rgba(76,175,130,0.15)" : "rgba(240,235,227,0.06)",
+                  border: `1px solid ${isTrackDownloaded ? "rgba(76,175,130,0.3)" : "rgba(240,235,227,0.12)"}`,
+                  color: isTrackDownloaded ? "#4caf82" : "var(--muted)",
+                  fontSize: "11px", fontWeight: 700, cursor: isTrackDownloaded ? "default" : "pointer",
+                  transition: "all 0.15s",
+                }}
+                onMouseEnter={e => { if (!isTrackDownloaded && !isTrackDownloading) { (e.currentTarget as HTMLElement).style.background = "rgba(232,96,26,0.12)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(232,96,26,0.25)"; (e.currentTarget as HTMLElement).style.color = "var(--amber)"; } }}
+                onMouseLeave={e => { if (!isTrackDownloaded && !isTrackDownloading) { (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.06)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(240,235,227,0.12)"; (e.currentTarget as HTMLElement).style.color = "var(--muted)"; } }}
+              >
+                {isTrackDownloading ? (
+                  <>
+                    <Loader size={12} style={{ animation: "spin 1s linear infinite" }} />
+                    {trackDlProgress}%
+                  </>
+                ) : isTrackDownloaded ? (
+                  <>
+                    <CheckCircle2 size={12} />
+                    Téléchargé
+                  </>
+                ) : (
+                  <>
+                    <DownloadCloud size={12} />
+                    Télécharger
+                  </>
+                )}
+              </button>
+            )}
           </div>
 
           {/* Barre de progression */}
@@ -294,6 +369,31 @@ export default function Player() {
                 <List size={15} />
               </button>
             </div>
+            {/* Bouton download dans le mini player */}
+            {currentDownloadable && (
+              <button
+                onClick={e => { e.stopPropagation(); if (!isTrackDownloaded && !isTrackDownloading) downloadTrack(currentDownloadable); }}
+                title={isTrackDownloaded ? "Déjà téléchargé" : isTrackDownloading ? `Téléchargement... ${trackDlProgress}%` : "Télécharger hors-ligne"}
+                style={{
+                  width: "32px", height: "32px", borderRadius: "8px", flexShrink: 0,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  background: isTrackDownloaded ? "rgba(76,175,130,0.12)" : isTrackDownloading ? "rgba(232,96,26,0.12)" : "transparent",
+                  border: "none", cursor: isTrackDownloaded ? "default" : "pointer",
+                  color: isTrackDownloaded ? "#4caf82" : isTrackDownloading ? "var(--amber)" : "var(--muted)",
+                  transition: "all 0.15s",
+                }}
+                onMouseEnter={e => { if (!isTrackDownloaded && !isTrackDownloading) (e.currentTarget as HTMLElement).style.color = "var(--amber)"; }}
+                onMouseLeave={e => { if (!isTrackDownloaded && !isTrackDownloading) (e.currentTarget as HTMLElement).style.color = "var(--muted)"; }}
+              >
+                {isTrackDownloading ? (
+                  <Loader size={13} style={{ animation: "spin 1s linear infinite" }} />
+                ) : isTrackDownloaded ? (
+                  <CheckCircle2 size={13} />
+                ) : (
+                  <DownloadCloud size={13} />
+                )}
+              </button>
+            )}
             <button onClick={stopTrack} title="Fermer" style={{ width: "32px", height: "32px", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", background: "transparent", border: "none", cursor: "pointer", color: "var(--muted)", transition: "color 0.15s", flexShrink: 0 }}
               onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = "#fff"}
               onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = "var(--muted)"}>
