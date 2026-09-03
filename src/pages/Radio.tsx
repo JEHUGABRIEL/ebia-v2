@@ -1,123 +1,41 @@
-import { useState, useRef, useEffect } from "react";
-import { Play, Pause, Volume2, VolumeX, Loader, WifiOff, ExternalLink } from "lucide-react";
-
-type Station = {
-  id: string;
-  name: string;
-  freq: string;
-  desc: string;
-  lang: string;
-  color: string;
-  logo: string;
-  homepage: string;
-  streamUrl: string;
-};
+import { useState, useRef, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  Play, Pause, Volume2, VolumeX, Loader, WifiOff, ExternalLink,
+  Radio as RadioIcon, Headphones, Globe, Zap, Heart,
+} from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { STATIC_STATIONS, CATEGORY_CONFIG, type StationCategory, type Station } from "../data/radios";
 
 type StationStatus = "idle" | "loading" | "playing" | "error";
 
-/* Stations fixes avec URLs vérifiées via radio-browser.info */
-const STATIC_STATIONS: Station[] = [
-  {
-    id: "ndeke-luka",
-    name: "Radio Ndeke Luka",
-    freq: "100.9 FM",
-    desc: "La radio la plus écoutée de RCA · Info, débats, musique · 24h/24",
-    lang: "Français / Sango",
-    color: "#E8601A",
-    logo: "🎙️",
-    homepage: "https://www.radiondekeluka.org",
-    streamUrl: "https://stream.zeno.fm/yn6k8u0dsq0uv",
-  },
-  {
-    id: "guira-fm",
-    name: "Guira FM",
-    freq: "93.3 FM",
-    desc: "Radio de la MINUSCA · Paix, réconciliation nationale et culture",
-    lang: "Français / Sango",
-    color: "#1565C0",
-    logo: "📻",
-    homepage: "https://minusca.unmissions.org/guira-fm",
-    streamUrl: "https://stream.zeno.fm/qdqc4u7fmrhvv",
-  },
-  {
-    id: "lengo-songo",
-    name: "Radio Lengo Songo",
-    freq: "98.9 FM",
-    desc: "Musique centrafricaine, programmes culturels et communautaires",
-    lang: "Sango / Français",
-    color: "#2E7D32",
-    logo: "🪘",
-    homepage: "https://lengosongo.cf",
-    streamUrl: "https://stream.zeno.fm/0r0xa792kwzuv",
-  },
-  {
-    id: "hit-radio",
-    name: "Hit Radio RCA",
-    freq: "96.1 FM",
-    desc: "Musique populaire et divertissement à Bangui",
-    lang: "Français",
-    color: "#C62828",
-    logo: "🎵",
-    homepage: "https://facebook.com/HitRadioRCA",
-    streamUrl: "https://stream.zeno.fm/ydkvmq8xdqzuv",
-  },
-  {
-    id: "rjdh",
-    name: "RJDH Bangui",
-    freq: "100.5 FM",
-    desc: "Radio Jeunesse pour la Démocratie et les Droits de l'Homme",
-    lang: "Français",
-    color: "#6A1B9A",
-    logo: "⚖️",
-    homepage: "https://www.rjdhrca.org",
-    streamUrl: "https://stream.zeno.fm/f1mxy5s68tzuv",
-  },
-  {
-    id: "radio-maria",
-    name: "Radio Maria RCA",
-    freq: "90.9 FM",
-    desc: "Radio catholique internationale · Programmes spirituels et culturels",
-    lang: "Français / Sango",
-    color: "#4527A0",
-    logo: "✝️",
-    homepage: "http://www.radiomariacentrafrique.org",
-    streamUrl: "https://cast3.asurahosting.com/proxy/dreamradio/stream.mp3",
-  },
-];
-
 export default function RadioPage() {
-  const [stations, setStations] = useState<Station[]>(STATIC_STATIONS);
+  const { t } = useTranslation();
+  const navigate = useNavigate();
   const [currentId, setCurrentId] = useState<string | null>(null);
   const [statuses, setStatuses] = useState<Record<string, StationStatus>>({});
   const [muted, setMuted] = useState(false);
   const [volume, setVolume] = useState(0.8);
+  const [activeCategory, setActiveCategory] = useState<StationCategory>("all");
+  const [likedStations, setLikedStations] = useState<Set<string>>(new Set());
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
+  const stations = STATIC_STATIONS;
+  const filteredStations = activeCategory === "all"
+    ? stations
+    : stations.filter(s => s.category === activeCategory);
+
+  const featured = stations.find(s => s.id === "ndeke-luka");
+  const currentStation = stations.find(s => s.id === currentId);
+
   useEffect(() => {
-    /* Enrichir avec les URLs vérifiées de radio-browser.info */
-    const names = ["Ndeke Luka", "Guira FM", "Lengo Songo", "Hit Radio Bangui", "RJDH"];
-    fetch(`https://de1.api.radio-browser.info/json/stations/bycountrycodeexact/CF?hidebroken=true&order=votes&reverse=true`, {
-      headers: { "User-Agent": "E-Bia/1.0" }
-    })
-      .then(r => r.json())
-      .then((data: { stationuuid: string; name: string; url_resolved: string }[]) => {
-        if (!Array.isArray(data) || !data.length) return;
-        setStations(prev => prev.map(s => {
-          const match = data.find(d =>
-            names.some(n => d.name.toLowerCase().includes(n.toLowerCase())) &&
-            d.name.toLowerCase().includes(s.name.split(" ")[1]?.toLowerCase() ?? "")
-          );
-          return match?.url_resolved ? { ...s, streamUrl: match.url_resolved } : s;
-        }));
-      })
-      .catch(() => { /* garder les URLs statiques */ });
     return () => { audioRef.current?.pause(); };
   }, []);
 
-  const setStatus = (id: string, s: StationStatus) =>
-    setStatuses(prev => ({ ...prev, [id]: s }));
+  const setStatus = useCallback((id: string, s: StationStatus) =>
+    setStatuses(prev => ({ ...prev, [id]: s })), []);
 
-  const playStation = async (station: Station) => {
+  const playStation = useCallback((station: Station) => {
     if (currentId === station.id && statuses[station.id] === "playing") {
       audioRef.current?.pause();
       setCurrentId(null);
@@ -134,147 +52,497 @@ export default function RadioPage() {
     audioRef.current = audio;
     audio.src = station.streamUrl;
 
-    try {
-      await audio.play();
-      setStatus(station.id, "playing");
-      audio.onerror = () => { setStatus(station.id, "error"); setCurrentId(null); };
-    } catch {
-      setStatus(station.id, "error");
-      setCurrentId(null);
-    }
+    audio.play()
+      .then(() => {
+        setStatus(station.id, "playing");
+        audio.onerror = () => { setStatus(station.id, "error"); setCurrentId(null); };
+      })
+      .catch(() => { setStatus(station.id, "error"); setCurrentId(null); });
 
     setTimeout(() => {
-      if (statuses[station.id] === "loading") {
-        setStatus(station.id, "error");
-        setCurrentId(null);
-      }
+      setStatuses(prev => {
+        if (prev[station.id] === "loading") {
+          setCurrentId(null);
+          return { ...prev, [station.id]: "error" };
+        }
+        return prev;
+      });
     }, 10000);
+  }, [currentId, statuses, muted, volume, setStatus]);
+
+  const toggleLike = (id: string) => {
+    setLikedStations(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
   };
 
-  const currentStation = stations.find(s => s.id === currentId);
-
   return (
-    <div style={{ minHeight: "100vh", background: "var(--bg)", paddingBottom: "120px" }}>
-      <div style={{ maxWidth: "1360px", margin: "0 auto", padding: "100px 24px 0" }}>
+    <div style={{ minHeight: "100vh", background: "var(--bg)", paddingBottom: currentStation ? "140px" : "120px" }}>
 
-        {/* Header */}
-        <div style={{ marginBottom: "40px" }}>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "5px 12px", borderRadius: "99px", border: "1px solid rgba(232,96,26,0.3)", marginBottom: "16px", fontSize: "11px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "var(--amber)" }}>
-            <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#4CAF50", animation: "pulse 1.5s infinite", display: "inline-block" }} />
-            En direct
+      {/* ── HERO ── */}
+      <section style={{
+        padding: "120px 24px 60px", maxWidth: "1360px", margin: "0 auto",
+        position: "relative", overflow: "hidden",
+      }}>
+        <div style={{
+          position: "absolute", top: "-20%", left: "-15%",
+          width: "600px", height: "600px", borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(16,185,129,0.08) 0%, transparent 65%)",
+          pointerEvents: "none",
+        }} />
+
+        <div style={{ position: "relative", zIndex: 1 }}>
+          <div style={{
+            display: "inline-flex", alignItems: "center", gap: "8px",
+            padding: "5px 14px", borderRadius: "99px",
+            border: "1px solid rgba(16,185,129,0.3)", marginBottom: "20px",
+            fontSize: "11px", fontWeight: 700, letterSpacing: "0.15em",
+            textTransform: "uppercase", color: "#4caf82",
+          }}>
+            <span style={{
+              width: "6px", height: "6px", borderRadius: "50%",
+              background: "#4CAF50", display: "inline-block",
+              animation: "radioPulse 1.5s infinite",
+            }} />
+            {t("radio.liveTag")}
           </div>
-          <h1 className="bebas" style={{ fontSize: "clamp(48px, 8vw, 96px)", color: "var(--text)", lineHeight: 0.92, marginBottom: "14px" }}>
-            Radios<br /><span style={{ color: "var(--amber)" }}>Centrafricaines</span>
-          </h1>
-          <p style={{ fontSize: "15px", color: "var(--muted)", maxWidth: "520px", lineHeight: 1.7 }}>
-            Écoutez les radios de la République Centrafricaine en direct, depuis partout dans le monde.
-          </p>
-        </div>
 
-        {/* Now playing */}
-        {currentStation && (
-          <div style={{ padding: "14px 20px", borderRadius: "12px", background: `${currentStation.color}12`, border: `1px solid ${currentStation.color}35`, marginBottom: "32px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px", flexWrap: "wrap" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              {statuses[currentId!] === "playing"
-                ? <div style={{ display: "flex", gap: "2px", alignItems: "flex-end", height: "18px" }}>
-                    {[5,9,6,11,7].map((h, i) => (
-                      <div key={i} style={{ width: "3px", height: `${h}px`, borderRadius: "99px", background: currentStation.color, animation: `pulse 0.5s ${i*0.1}s ease-in-out infinite alternate` }} />
-                    ))}
-                  </div>
-                : <Loader size={16} style={{ color: currentStation.color, animation: "spin 1s linear infinite" }} />
-              }
-              <div>
-                <p style={{ fontSize: "13px", fontWeight: 700, color: "var(--text)" }}>
-                  {statuses[currentId!] === "loading" ? "Connexion…" : currentStation.name}
-                </p>
-                <p style={{ fontSize: "11px", color: "var(--muted)" }}>{currentStation.freq}</p>
+          <h1 className="bebas" style={{
+            fontSize: "clamp(48px, 8vw, 96px)", color: "var(--text)",
+            lineHeight: 0.92, marginBottom: "16px",
+          }}>
+            {t("radio.title")}<br />
+            <span style={{ color: "#4caf82" }}>{t("radio.titleAccent")}</span>
+          </h1>
+
+          <p style={{
+            fontSize: "16px", color: "var(--muted)", maxWidth: "520px",
+            lineHeight: 1.7, marginBottom: "24px",
+          }}>
+            {t("radio.description")}
+          </p>
+
+          {/* Stats */}
+          <div style={{ display: "flex", gap: "32px", flexWrap: "wrap" }}>
+            {[
+              { value: stations.length, label: t("radio.statStations") },
+              { value: "24/7", label: t("radio.statLive") },
+              { value: "2", label: t("radio.statLang") },
+            ].map((stat, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "baseline", gap: "6px" }}>
+                <span style={{ fontSize: "24px", fontWeight: 800, color: "var(--text)" }}>{stat.value}</span>
+                <span style={{ fontSize: "12px", color: "var(--muted)", fontWeight: 500 }}>{stat.label}</span>
               </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <div style={{ maxWidth: "1360px", margin: "0 auto", padding: "0 24px" }}>
+
+        {/* ── FEATURED STATION ── */}
+        {featured && (
+          <div style={{ marginBottom: "48px" }}>
+            <div style={{
+              display: "flex", alignItems: "center", gap: "8px", marginBottom: "20px",
+              fontSize: "11px", fontWeight: 700, letterSpacing: "0.15em",
+              textTransform: "uppercase", color: featured.color,
+            }}>
+              <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: featured.color }} />
+              {t("radio.featured")}
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <button onClick={() => setMuted(m => { const n = !m; if (audioRef.current) audioRef.current.volume = n ? 0 : volume; return n; })} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)" }}>
-                {muted ? <VolumeX size={15} /> : <Volume2 size={15} />}
-              </button>
-              <input type="range" min="0" max="1" step="0.05" value={muted ? 0 : volume}
-                onChange={e => { const v = Number(e.target.value); setVolume(v); if (audioRef.current) audioRef.current.volume = v; setMuted(false); }}
-                style={{ width: "72px", accentColor: currentStation.color }} />
+
+            <div
+              onClick={() => playStation(featured)}
+              style={{
+                borderRadius: "20px", overflow: "hidden", cursor: "pointer",
+                background: `linear-gradient(135deg, ${featured.color}12, rgba(240,235,227,0.02))`,
+                border: `1px solid ${currentId === featured.id ? featured.color + "40" : featured.color + "25"}`,
+                transition: "border-color 0.3s, transform 0.2s",
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = `${featured.color}50`; (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = `${featured.color}25`; (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; }}
+            >
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", minHeight: "280px" }}>
+                {/* Left: Info */}
+                <div style={{ padding: "40px", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
+                    <div style={{
+                      width: "48px", height: "48px", borderRadius: "14px",
+                      background: `${featured.color}18`, display: "flex", alignItems: "center", justifyContent: "center",
+                    }}>
+                      <featured.Icon size={24} style={{ color: featured.color }} />
+                    </div>
+                    <div>
+                      <p style={{ fontSize: "18px", fontWeight: 800, color: "var(--text)" }}>{featured.name}</p>
+                      <p style={{ fontSize: "12px", color: featured.color, fontWeight: 600 }}>{featured.freq}</p>
+                    </div>
+                  </div>
+
+                  <p style={{ fontSize: "14px", color: "var(--muted)", lineHeight: 1.7, marginBottom: "20px" }}>
+                    {featured.desc}
+                  </p>
+
+                  <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "24px" }}>
+                    <span style={{ padding: "4px 12px", borderRadius: "99px", background: `${featured.color}14`, color: featured.color, fontSize: "11px", fontWeight: 700 }}>
+                      {featured.lang}
+                    </span>
+                    {featured.listeners && (
+                      <span style={{ padding: "4px 12px", borderRadius: "99px", background: "rgba(240,235,227,0.06)", color: "var(--muted)", fontSize: "11px", fontWeight: 600 }}>
+                        {featured.listeners.toLocaleString("fr-FR")} {t("radio.listeners")}
+                      </span>
+                    )}
+                    {statuses[featured.id] === "playing" && currentId === featured.id && (
+                      <span style={{ padding: "4px 12px", borderRadius: "99px", background: "rgba(76,175,130,0.12)", color: "#4caf82", fontSize: "11px", fontWeight: 700 }}>
+                        ● {t("radio.live")}
+                      </span>
+                    )}
+                  </div>
+
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                    <button style={{
+                      display: "inline-flex", alignItems: "center", gap: "8px",
+                      padding: "12px 24px", borderRadius: "99px",
+                      background: currentId === featured.id && statuses[featured.id] === "playing" ? featured.color : featured.color,
+                      color: "#fff", fontWeight: 700, fontSize: "13px",
+                      border: "none", cursor: "pointer", transition: "box-shadow 0.2s",
+                    }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = `0 8px 24px ${featured.color}40`; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}
+                    >
+                      {currentId === featured.id && statuses[featured.id] === "playing"
+                        ? <><Pause size={14} fill="white" /> {t("radio.pause")}</>
+                        : <><Play size={14} fill="white" /> {t("radio.listen")}</>
+                      }
+                    </button>
+                    <a href={featured.homepage} target="_blank" rel="noopener noreferrer"
+                      onClick={e => e.stopPropagation()}
+                      style={{
+                        display: "inline-flex", alignItems: "center", gap: "6px",
+                        padding: "12px 18px", borderRadius: "99px",
+                        background: "rgba(240,235,227,0.04)", border: "1px solid rgba(240,235,227,0.08)",
+                        color: "var(--muted)", fontWeight: 600, fontSize: "12px", textDecoration: "none",
+                      }}
+                    >
+                      <ExternalLink size={13} /> {t("radio.website")}
+                    </a>
+                  </div>
+                </div>
+
+                {/* Right: Visual */}
+                <div style={{
+                  background: `linear-gradient(135deg, ${featured.color}20, ${featured.color}08)`,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  position: "relative", overflow: "hidden",
+                }}>
+                  <div style={{ textAlign: "center", position: "relative", zIndex: 1 }}>
+                    {currentId === featured.id && statuses[featured.id] === "playing" ? (
+                      <div style={{ display: "flex", gap: "4px", alignItems: "flex-end", height: "48px", justifyContent: "center" }}>
+                        {[12, 24, 16, 32, 20, 28, 14].map((h, i) => (
+                          <div key={i} style={{
+                            width: "5px", height: `${h}px`, borderRadius: "99px",
+                            background: featured.color, animation: `radioBar 0.5s ${i * 0.08}s ease-in-out infinite alternate`,
+                          }} />
+                        ))}
+                      </div>
+                    ) : (
+                      <RadioIcon size={56} style={{ color: featured.color, opacity: 0.25 }} />
+                    )}
+                    <div className="bebas" style={{ fontSize: "64px", color: featured.color, opacity: 0.12, lineHeight: 1, marginTop: "12px" }}>
+                      {featured.freq}
+                    </div>
+                  </div>
+                  {[200, 140, 80].map((s, i) => (
+                    <div key={i} style={{
+                      position: "absolute", width: s, height: s, borderRadius: "50%",
+                      border: `1px solid ${featured.color}${12 + i * 4}`,
+                    }} />
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         )}
 
-        {/* Grid */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "14px" }}>
-          {stations.map(station => {
+        {/* ── CATEGORY FILTERS ── */}
+        <div style={{ marginBottom: "32px" }}>
+          <div style={{
+            display: "flex", gap: "8px", overflowX: "auto",
+            paddingBottom: "8px", scrollbarWidth: "none",
+          }}>
+            {Object.entries(CATEGORY_CONFIG).map(([key, config]) => {
+              const cat = key as StationCategory;
+              const isActive = activeCategory === cat;
+              const IconComp = config.icon;
+              return (
+                <button key={cat} onClick={() => setActiveCategory(cat)} style={{
+                  display: "inline-flex", alignItems: "center", gap: "8px",
+                  padding: "10px 18px", borderRadius: "99px",
+                  background: isActive ? "rgba(240,235,227,0.1)" : "rgba(240,235,227,0.03)",
+                  border: `1px solid ${isActive ? "rgba(240,235,227,0.15)" : "rgba(240,235,227,0.05)"}`,
+                  color: isActive ? "var(--text)" : "var(--muted)",
+                  fontSize: "13px", fontWeight: 600, cursor: "pointer",
+                  transition: "all 0.2s", whiteSpace: "nowrap", flexShrink: 0,
+                }}>
+                  <IconComp size={14} /> {config.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ── STATIONS GRID ── */}
+        <div style={{
+          display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
+          gap: "16px", marginBottom: "48px",
+        }}>
+          {filteredStations.map(station => {
             const status = statuses[station.id] ?? "idle";
             const isActive = currentId === station.id;
-            return (
-              <div key={station.id} style={{
-                padding: "20px", borderRadius: "14px", cursor: "pointer",
-                background: isActive ? `${station.color}0E` : "rgba(240,235,227,0.03)",
-                border: `1px solid ${isActive ? station.color + "35" : "var(--border)"}`,
-                transition: "all 0.2s",
-              }}
-              onMouseEnter={e => { if (!isActive) { (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.06)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(240,235,227,0.18)"; }}}
-              onMouseLeave={e => { if (!isActive) { (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.03)"; (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; }}}
-              onClick={() => playStation(station)}
-              >
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                    <div style={{ width: "44px", height: "44px", borderRadius: "10px", background: `${station.color}18`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "20px", flexShrink: 0 }}>
-                      {station.logo}
-                    </div>
-                    <div>
-                      <p style={{ fontSize: "14px", fontWeight: 700, color: "var(--text)", marginBottom: "1px" }}>{station.name}</p>
-                      <p style={{ fontSize: "11px", color: station.color, fontWeight: 600 }}>{station.freq}</p>
-                    </div>
-                  </div>
+            const isPlaying = isActive && status === "playing";
 
-                  <div style={{ width: "34px", height: "34px", borderRadius: "50%", background: isActive ? station.color : "rgba(240,235,227,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all 0.2s" }}>
+            return (
+              <div key={station.id}
+                onClick={() => navigate(`/radio/${station.id}`)}
+                style={{
+                  borderRadius: "18px", overflow: "hidden", cursor: "pointer",
+                  background: isPlaying ? `${station.color}0E` : "rgba(240,235,227,0.03)",
+                  border: `1px solid ${isPlaying ? station.color + "35" : "rgba(240,235,227,0.06)"}`,
+                  transition: "all 0.25s",
+                }}
+                onMouseEnter={e => {
+                  if (!isPlaying) {
+                    (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.06)";
+                    (e.currentTarget as HTMLElement).style.borderColor = "rgba(240,235,227,0.12)";
+                    (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)";
+                  }
+                }}
+                onMouseLeave={e => {
+                  if (!isPlaying) {
+                    (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.03)";
+                    (e.currentTarget as HTMLElement).style.borderColor = "rgba(240,235,227,0.06)";
+                    (e.currentTarget as HTMLElement).style.transform = "translateY(0)";
+                  }
+                }}
+              >
+                {/* Cover */}
+                <div style={{
+                  height: "120px", position: "relative",
+                  background: `linear-gradient(135deg, ${station.color}15, ${station.color}05)`,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}>
+                  {isPlaying ? (
+                    <div style={{ display: "flex", gap: "3px", alignItems: "flex-end", height: "32px" }}>
+                      {[8, 18, 12, 24, 14, 20, 10].map((h, i) => (
+                        <div key={i} style={{
+                          width: "4px", height: `${h}px`, borderRadius: "99px",
+                          background: station.color, animation: `radioBar 0.5s ${i * 0.08}s ease-in-out infinite alternate`,
+                        }} />
+                      ))}
+                    </div>
+                  ) : (
+                    <station.Icon size={36} style={{ color: station.color, opacity: 0.2 }} />
+                  )}
+
+                  {/* Frequency watermark */}
+                  <div className="bebas" style={{
+                    position: "absolute", bottom: "8px", right: "14px",
+                    fontSize: "42px", color: station.color, opacity: 0.1, lineHeight: 1,
+                  }}>{station.freq.split(" ")[0]}</div>
+
+                  {/* Play button overlay */}
+                  <div style={{
+                    position: "absolute", top: "12px", right: "12px",
+                    width: "36px", height: "36px", borderRadius: "50%",
+                    background: isPlaying ? station.color : "rgba(0,0,0,0.3)",
+                    backdropFilter: "blur(8px)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    transition: "all 0.2s",
+                  }}>
                     {status === "loading"
-                      ? <div style={{ animation: "spin 1s linear infinite", display: "flex" }}><Loader size={13} style={{ color: isActive ? "white" : "var(--muted)" }} /></div>
-                      : status === "playing"
-                      ? <Pause size={13} fill="white" color="white" />
+                      ? <Loader size={14} style={{ color: "white", animation: "spin 1s linear infinite" }} />
+                      : isPlaying
+                      ? <Pause size={14} fill="white" color="white" />
                       : status === "error"
-                      ? <WifiOff size={13} style={{ color: "var(--muted)" }} />
-                      : <Play size={13} fill={isActive ? "white" : "var(--muted)"} color={isActive ? "white" : "var(--muted)"} style={{ marginLeft: "1px" }} />
+                      ? <WifiOff size={14} style={{ color: "rgba(255,255,255,0.6)" }} />
+                      : <Play size={14} fill="white" color="white" style={{ marginLeft: "1px" }} />
                     }
                   </div>
+
+                  {/* Live badge */}
+                  {isPlaying && (
+                    <div style={{
+                      position: "absolute", top: "12px", left: "12px",
+                      display: "flex", alignItems: "center", gap: "5px",
+                      padding: "4px 10px", borderRadius: "99px",
+                      background: "rgba(76,175,130,0.2)", backdropFilter: "blur(8px)",
+                    }}>
+                      <span style={{ width: "5px", height: "5px", borderRadius: "50%", background: "#4CAF50", animation: "radioPulse 1.5s infinite" }} />
+                      <span style={{ fontSize: "10px", fontWeight: 700, color: "#4caf82" }}>{t("radio.live")}</span>
+                    </div>
+                  )}
                 </div>
 
-                <p style={{ fontSize: "12px", color: "var(--muted)", lineHeight: 1.6, marginBottom: "12px" }}>{station.desc}</p>
-
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                    <span style={{ fontSize: "10px", padding: "2px 8px", borderRadius: "99px", background: `${station.color}14`, color: station.color, fontWeight: 700 }}>
-                      {station.lang}
-                    </span>
-                    {status === "error" && (
-                      <span style={{ fontSize: "10px", padding: "2px 8px", borderRadius: "99px", background: "rgba(220,50,50,0.1)", color: "#f08080", fontWeight: 600 }}>
-                        Hors ligne
-                      </span>
-                    )}
-                    {isActive && status === "playing" && (
-                      <span style={{ fontSize: "10px", padding: "2px 8px", borderRadius: "99px", background: "rgba(76,175,130,0.12)", color: "#4caf82", fontWeight: 700 }}>
-                        ● Live
-                      </span>
-                    )}
+                {/* Info */}
+                <div style={{ padding: "18px" }}>
+                  <div style={{ display: "flex", alignItems: "start", justifyContent: "space-between", marginBottom: "8px" }}>
+                    <div>
+                      <p style={{ fontSize: "16px", fontWeight: 700, color: "var(--text)", marginBottom: "2px" }}>{station.name}</p>
+                      <p style={{ fontSize: "12px", color: station.color, fontWeight: 600 }}>{station.freq}</p>
+                    </div>
+                    <button onClick={e => { e.stopPropagation(); toggleLike(station.id); }} style={{
+                      background: "none", border: "none", cursor: "pointer",
+                      padding: "4px", color: likedStations.has(station.id) ? "var(--amber)" : "var(--muted)",
+                      transition: "color 0.2s",
+                    }}>
+                      <Heart size={16} fill={likedStations.has(station.id) ? "var(--amber)" : "none"} />
+                    </button>
                   </div>
-                  <a href={station.homepage} target="_blank" rel="noopener noreferrer"
-                    onClick={e => e.stopPropagation()}
-                    style={{ color: "var(--muted)", display: "flex", transition: "color 0.15s" }}
-                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = "var(--text)"}
-                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = "var(--muted)"}
-                  >
-                    <ExternalLink size={13} />
-                  </a>
+
+                  <p style={{ fontSize: "12px", color: "var(--muted)", lineHeight: 1.6, marginBottom: "14px" }}>
+                    {station.desc}
+                  </p>
+
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      <span style={{
+                        fontSize: "10px", padding: "3px 10px", borderRadius: "99px",
+                        background: `${station.color}14`, color: station.color, fontWeight: 700,
+                      }}>
+                        {station.lang}
+                      </span>
+                      {status === "error" && (
+                        <span style={{
+                          fontSize: "10px", padding: "3px 10px", borderRadius: "99px",
+                          background: "rgba(220,50,50,0.1)", color: "#f08080", fontWeight: 600,
+                        }}>
+                          {t("radio.offline")}
+                        </span>
+                      )}
+                    </div>
+                    <a href={station.homepage} target="_blank" rel="noopener noreferrer"
+                      onClick={e => e.stopPropagation()}
+                      style={{ color: "var(--muted)", display: "flex", transition: "color 0.15s" }}
+                      onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = "var(--text)"}
+                      onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = "var(--muted)"}
+                    >
+                      <ExternalLink size={13} />
+                    </a>
+                  </div>
                 </div>
               </div>
             );
           })}
         </div>
+
+        {/* ── HOW IT WORKS ── */}
+        <div style={{ marginBottom: "48px" }}>
+          <h2 style={{ fontSize: "22px", fontWeight: 800, color: "var(--text)", marginBottom: "24px" }}>
+            {t("radio.howItWorks")}
+          </h2>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: "16px" }}>
+            {[
+              { icon: Headphones, title: t("radio.step1Title"), desc: t("radio.step1Desc"), color: "#E8601A" },
+              { icon: Zap, title: t("radio.step2Title"), desc: t("radio.step2Desc"), color: "#8B5CF6" },
+              { icon: Globe, title: t("radio.step3Title"), desc: t("radio.step3Desc"), color: "#10B981" },
+            ].map((step, i) => (
+              <div key={i} style={{
+                padding: "24px", borderRadius: "16px",
+                background: "rgba(240,235,227,0.02)", border: "1px solid rgba(240,235,227,0.05)",
+              }}>
+                <div style={{
+                  width: "40px", height: "40px", borderRadius: "12px",
+                  background: `${step.color}12`, display: "flex", alignItems: "center", justifyContent: "center",
+                  marginBottom: "16px",
+                }}>
+                  <step.icon size={20} style={{ color: step.color }} />
+                </div>
+                <p style={{ fontSize: "15px", fontWeight: 700, color: "var(--text)", marginBottom: "6px" }}>{step.title}</p>
+                <p style={{ fontSize: "13px", color: "var(--muted)", lineHeight: 1.6 }}>{step.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
+
+      {/* ── NOW PLAYING BAR (sticky bottom) ── */}
+      {currentStation && (
+        <div style={{
+          position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 100,
+          background: "rgba(18,18,18,0.95)", backdropFilter: "blur(20px)",
+          borderTop: "1px solid rgba(240,235,227,0.08)",
+          padding: "12px 24px",
+        }}>
+          <div style={{ maxWidth: "1360px", margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px" }}>
+            {/* Left: Station info */}
+            <div style={{ display: "flex", alignItems: "center", gap: "12px", minWidth: 0 }}>
+              <div style={{
+                width: "44px", height: "44px", borderRadius: "10px", flexShrink: 0,
+                background: `${currentStation.color}18`, display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                {statuses[currentId!] === "playing" ? (
+                  <div style={{ display: "flex", gap: "2px", alignItems: "flex-end", height: "18px" }}>
+                    {[5, 10, 7, 14, 9].map((h, i) => (
+                      <div key={i} style={{
+                        width: "3px", height: `${h}px`, borderRadius: "99px",
+                        background: currentStation.color, animation: `radioBar 0.5s ${i * 0.1}s ease-in-out infinite alternate`,
+                      }} />
+                    ))}
+                  </div>
+                ) : (
+                  <currentStation.Icon size={20} style={{ color: currentStation.color }} />
+                )}
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <p style={{ fontSize: "13px", fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {statuses[currentId!] === "loading" ? t("radio.connecting") : currentStation.name}
+                </p>
+                <p style={{ fontSize: "11px", color: currentStation.color, fontWeight: 600 }}>{currentStation.freq}</p>
+              </div>
+            </div>
+
+            {/* Center: Controls */}
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <button onClick={() => playStation(currentStation)} style={{
+                width: "40px", height: "40px", borderRadius: "50%",
+                background: currentStation.color, border: "none", cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                transition: "box-shadow 0.2s",
+              }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = `0 4px 16px ${currentStation.color}50`; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}
+              >
+                {statuses[currentId!] === "loading"
+                  ? <Loader size={16} style={{ color: "white", animation: "spin 1s linear infinite" }} />
+                  : statuses[currentId!] === "playing"
+                  ? <Pause size={16} fill="white" color="white" />
+                  : <Play size={16} fill="white" color="white" style={{ marginLeft: "1px" }} />
+                }
+              </button>
+            </div>
+
+            {/* Right: Volume */}
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <button onClick={() => setMuted(m => { const n = !m; if (audioRef.current) audioRef.current.volume = n ? 0 : volume; return n; })} style={{
+                background: "none", border: "none", cursor: "pointer", color: "var(--muted)",
+              }}>
+                {muted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+              </button>
+              <input type="range" min="0" max="1" step="0.05" value={muted ? 0 : volume}
+                onChange={e => { const v = Number(e.target.value); setVolume(v); if (audioRef.current) audioRef.current.volume = v; setMuted(false); }}
+                style={{ width: "80px", accentColor: currentStation.color }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes pulse { from { opacity: 0.5; } to { opacity: 1; } }
+        @keyframes radioPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+        @keyframes radioBar { from { opacity: 0.6; } to { opacity: 1; } }
       `}</style>
     </div>
   );

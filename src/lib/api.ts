@@ -1,6 +1,6 @@
 import keycloak from "./keycloak";
 
-export const BASE = import.meta.env.VITE_API_URL ?? "https://api-gateway-production-1c84.up.railway.app";
+export const BASE = import.meta.env.VITE_API_URL || "";
 const MINIO = import.meta.env.VITE_MINIO_URL ?? "/ebia-audio";
 export const audioUrl = (filePath: string) =>
   `${MINIO}/${filePath.split("/").map(encodeURIComponent).join("/")}`;
@@ -55,6 +55,7 @@ const del   = <T>(path: string) => req<T>(path, { method: "DELETE" });
 export type Artist = {
   id: string; slug: string; name: string; bio: string; genre: string;
   city: string; avatar_url: string; cover_url: string; verified: boolean;
+  user_id?: string;
   followers_count: number; plays_count: number; tracks_count: number;
   tracks?: Track[];
 };
@@ -62,7 +63,9 @@ export type Artist = {
 export type Track = {
   id: string; title: string; duration_s: number; genre: string;
   plays_count: number; likes_count: number; artist_id?: string;
-  artist_name?: string; artist_avatar?: string;
+  artistId?: string; artist_name?: string; artistName?: string; artist_avatar?: string;
+  slug?: string;
+  createdAt?: string;
 };
 
 /* ── Types artiste dashboard ── */
@@ -71,6 +74,7 @@ export type MyTrack = {
   plays_count: number; likes_count: number;
   album_name?: string; album_cover_url?: string;
   status: "published" | "draft" | "pending"; published_at?: string;
+  release_date?: string;
   file_path: string;
 };
 
@@ -116,6 +120,10 @@ export const getTracks = (params?: Record<string, string>) => {
   return get<{ data: Track[] }>(`/api/v1/tracks${qs}`);
 };
 
+export const searchTracks = (q: string, limit = 10) =>
+  get<Track[]>(`/api/v1/tracks/search?q=${encodeURIComponent(q)}&limit=${limit}`);
+
+
 /* ── Inscription ── */
 export const registerListener = (data: ListenerRegData) =>
   post<{ id: string; message: string }>("/api/v1/auth/register", { ...data, role: "listener" });
@@ -128,7 +136,12 @@ export const getMyArtistProfile = () =>
   get<MyArtistProfile>("/api/v1/artists/me");
 
 export const becomeArtist = (data: { stage_name: string; genre: string; city: string }) =>
-  post<{ access_token: string; token_type: string }>("/api/v1/auth/become-artist", data);
+  post<{ access_token: string; token_type: string }>("/api/v1/auth/become-artist", {
+    stageName: data.stage_name,
+    name: data.stage_name,
+    genre: data.genre,
+    city: data.city,
+  });
 
 export const updateMyArtistProfile = (data: Partial<MyArtistProfile> & { bio?: string }) =>
   put<MyArtistProfile>("/api/v1/artists/me", data);
@@ -141,6 +154,13 @@ export const getMyStats = () =>
 
 export const deleteMyTrack = (trackId: string) =>
   del<{ message: string }>(`/api/v1/artists/me/tracks/${trackId}`);
+
+/* ── Titres tendances & rétro ── */
+export const getTrendingTracks = (limit = 20) =>
+  get<Track[]>(`/api/v1/tracks/trending?limit=${limit}`);
+
+export const getRetroTracks = (limit = 20) =>
+  get<Track[]>(`/api/v1/tracks/retro?limit=${limit}`);
 
 /* Upload multipart — audio + cover album optionnel */
 export const uploadTrack = (formData: FormData): Promise<MyTrack> =>
@@ -199,6 +219,91 @@ export const uploadIdDoc = (file: File): Promise<{ message: string; key: string 
   });
 };
 
+/* ── Messagerie artistes ── */
+export type ConversationMember = {
+  userId: string;
+  displayName: string;
+  avatarUrl: string;
+};
+
+export type Conversation = {
+  id: string;
+  type: "direct" | "group";
+  otherParticipantId: string | null;
+  otherParticipantName: string | null;
+  otherParticipantAvatar: string | null;
+  groupName: string | null;
+  members: ConversationMember[];
+  lastMessage: string | null;
+  lastMessageAt: string | null;
+  unreadCount: number;
+};
+
+export type MessageReaction = {
+  id: string;
+  userId: string;
+  emoji: string;
+};
+
+export type ChatMessage = {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  senderName: string;
+  senderAvatar: string;
+  content: string;
+  read: boolean;
+  createdAt: string;
+  reactions?: Record<string, MessageReaction[]>;
+};
+
+export const getConversations = () =>
+  get<Conversation[]>("/api/v1/messages");
+
+export const getMessages = (conversationId: string, page = 0, size = 50) =>
+  get<{ data: ChatMessage[]; page: number; size: number }>(
+    `/api/v1/messages/${conversationId}?page=${page}&size=${size}`
+  );
+
+export const sendMessage = (recipientId: string, content: string) =>
+  post<{ id: string; conversationId: string; content: string; createdAt: string }>(
+    "/api/v1/messages",
+    { recipientId, content }
+  );
+
+export const sendGroupMessage = (conversationId: string, content: string) =>
+  post<{ id: string; conversationId: string; content: string; createdAt: string }>(
+    `/api/v1/messages/${conversationId}`,
+    { content }
+  );
+
+export const createGroupConversation = (name: string, memberIds: string[]) =>
+  post<{ id: string; groupName: string; type: string }>(
+    "/api/v1/messages/group",
+    { name, memberIds }
+  );
+
+export const getArtistsForMessaging = () =>
+  get<{ data: Artist[] }>("/api/v1/artists");
+
+export const searchMessages = (query: string, limit = 20) =>
+  get<{ data: ChatMessage[]; query: string }>(
+    `/api/v1/messages/search?q=${encodeURIComponent(query)}&limit=${limit}`
+  );
+
+export const toggleReaction = (messageId: string, emoji: string) =>
+  post<{ added: boolean; emoji: string; reactions: MessageReaction[] }>(
+    `/api/v1/messages/${messageId}/reactions`,
+    { emoji }
+  );
+
+/* ── Mot de passe oublié ── */
+export const forgotPassword = (email: string) =>
+  post<{ message: string }>("/api/v1/auth/forgot-password", { email });
+
+export const resetPassword = (token: string, newPassword: string) =>
+  post<{ message: string }>("/api/v1/auth/reset-password", { token, newPassword });
+
 /* ── Social ── */
 export const recordPlay = (trackId: string) =>
   post<{ plays_count: number }>(`/api/v1/tracks/${trackId}/play`, {});
@@ -209,5 +314,35 @@ export const toggleLike = (trackId: string) =>
 export const toggleFollow = (artistId: string) =>
   post<{ followed: boolean; followers_count: number }>(`/api/v1/artists/${artistId}/follow`, {});
 
-export const updateProfile = (data: { display_name?: string; avatar_url?: string }) =>
+export const updateProfile = (data: { display_name?: string; avatar_url?: string; phone?: string; current_password?: string; new_password?: string }) =>
   patch<{ access_token: string; user: Record<string, string> }>("/api/v1/auth/profile", data);
+
+/* ── Notifications ── */
+export type Notification = {
+  id: string;
+  userId: string;
+  type: string;
+  title: string;
+  message: string;
+  actorName?: string;
+  actorAvatar?: string;
+  entityType?: string;
+  entityId?: string;
+  entitySlug?: string;
+  read: boolean;
+  createdAt: string;
+};
+
+export const getNotifications = (page = 0, size = 20) =>
+  get<{ data: Notification[]; unread_count: number; page: number; size: number }>(
+    `/api/v1/notifications?page=${page}&size=${size}`
+  );
+
+export const getUnreadNotificationCount = () =>
+  get<{ unread_count: number }>('/api/v1/notifications/unread-count');
+
+export const markNotificationAsRead = (id: string) =>
+  put<{ message: string }>(`/api/v1/notifications/${id}/read`, {});
+
+export const markAllNotificationsAsRead = () =>
+  put<{ message: string }>('/api/v1/notifications/read-all', {});

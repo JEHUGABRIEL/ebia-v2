@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from "react";
-import { Mic, Search, Music2, ArrowRight, RotateCcw, Loader } from "lucide-react";
+import { Mic, Search, Music2, ArrowRight, RotateCcw, Loader, XCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { BASE } from "../lib/api";
+import { useTranslation } from "react-i18next";
 
 type RecognizeState = "idle" | "recording" | "processing" | "found" | "not_found" | "error";
 
@@ -14,6 +15,7 @@ const RECORD_SECONDS = 10;
 
 export default function Recognize() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [state, setState] = useState<RecognizeState>("idle");
   const [countdown, setCountdown] = useState(RECORD_SECONDS);
   const [result, setResult] = useState<TrackResult | null>(null);
@@ -130,6 +132,21 @@ export default function Recognize() {
       }
 
       if (data.found && data.track) {
+        /* Utiliser directement les infos du track retournées par le backend */
+        const t = data.track;
+        setResult({
+          id: t.id || "",
+          title: t.title || "Titre inconnu",
+          genre: t.genre || "",
+          duration_s: t.duration_s || 0,
+          plays_count: t.plays_count || 0,
+          artist: t.artist || "Artiste inconnu",
+          artist_slug: t.artist_slug || "",
+          artist_avatar: t.artist_avatar,
+        });
+        setConfidence(data.confidence ?? 0);
+        setState("found");
+      } else if (data.found && data.track) {
         setResult(data.track);
         setConfidence(data.confidence ?? 0);
         setState("found");
@@ -154,18 +171,39 @@ export default function Recognize() {
   const progress = ((RECORD_SECONDS - countdown) / RECORD_SECONDS) * 100;
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--bg)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "100px 24px 120px" }}>
+    <div style={{ minHeight: "100vh", background: "var(--bg)", paddingBottom: "120px" }}>
+
+      {/* ── HERO ── */}
+      <section style={{
+        padding: "120px 24px 60px", maxWidth: "1360px", margin: "0 auto",
+        position: "relative", overflow: "hidden",
+        display: "flex", flexDirection: "column", alignItems: "center",
+      }}>
+        <div style={{
+          position: "absolute", top: "-20%", left: "-15%",
+          width: "600px", height: "600px", borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(232,96,26,0.08) 0%, transparent 65%)",
+          pointerEvents: "none",
+        }} />
+        {[200, 140, 80].map((s, i) => (
+          <div key={i} style={{
+            position: "absolute", top: `${10 + i * 12}%`, left: `${5 + i * 6}%`,
+            width: s, height: s, borderRadius: "50%",
+            border: `1px solid rgba(232,96,26,${6 + i * 3})`,
+            pointerEvents: "none",
+          }} />
+        ))}
 
       {/* Titre */}
-      <div style={{ textAlign: "center", marginBottom: "48px" }}>
+      <div style={{ textAlign: "center", marginBottom: "48px", position: "relative", zIndex: 1 }}>
         <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "6px 14px", borderRadius: "99px", border: "1px solid rgba(232,96,26,0.3)", marginBottom: "20px", fontSize: "11px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--amber)" }}>
-          <Search size={11} /> Reconnaissance musicale
+          <Search size={11} /> {t("recognize.tag")}
         </div>
         <h1 className="bebas" style={{ fontSize: "clamp(48px, 8vw, 80px)", color: "var(--text)", lineHeight: 1, marginBottom: "12px" }}>
-          Identifier<br /><span style={{ color: "var(--amber)" }}>une musique</span>
+          {t("recognize.title")}<br /><span style={{ color: "var(--amber)" }}>{t("recognize.titleAccent")}</span>
         </h1>
         <p style={{ fontSize: "15px", color: "var(--muted)", maxWidth: "440px", lineHeight: 1.7 }}>
-          Enregistrez 5 à 10 secondes d'une musique centrafricaine — depuis une radio, une cassette ou fredonnée — et E-Bia l'identifiera.
+          {t("recognize.description")}
         </p>
       </div>
 
@@ -188,8 +226,8 @@ export default function Recognize() {
             >
               <Mic size={52} color="white" />
             </button>
-            <p style={{ fontSize: "14px", fontWeight: 600, color: "var(--text)", marginBottom: "8px" }}>Appuyez pour écouter</p>
-            <p style={{ fontSize: "12px", color: "var(--muted)" }}>Enregistrement de {RECORD_SECONDS} secondes</p>
+            <p style={{ fontSize: "14px", fontWeight: 600, color: "var(--text)", marginBottom: "8px" }}>{t("recognize.tapToListen")}</p>
+            <p style={{ fontSize: "12px", color: "var(--muted)" }}>{t("recognize.recordDuration", { seconds: RECORD_SECONDS })}</p>
           </div>
         )}
 
@@ -216,7 +254,7 @@ export default function Recognize() {
             <div style={{ height: "4px", borderRadius: "99px", background: "rgba(240,235,227,0.08)", overflow: "hidden", marginBottom: "12px" }}>
               <div style={{ height: "100%", width: `${progress}%`, background: "var(--amber)", borderRadius: "99px", transition: "width 1s linear" }} />
             </div>
-            <p style={{ fontSize: "13px", color: "var(--muted)" }}>🎵 Écoute en cours… approchez la source sonore</p>
+            <p style={{ fontSize: "13px", color: "var(--muted)" }}><span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}><Music2 size={13} /> {t("recognize.listening")}</span></p>
           </div>
         )}
 
@@ -226,8 +264,8 @@ export default function Recognize() {
             <div style={{ width: "100px", height: "100px", borderRadius: "50%", background: "rgba(232,96,26,0.12)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
               <Loader size={40} style={{ color: "var(--amber)", animation: "spin 1s linear infinite" }} />
             </div>
-            <p style={{ fontSize: "15px", fontWeight: 700, color: "var(--text)", marginBottom: "8px" }}>Analyse en cours…</p>
-            <p style={{ fontSize: "13px", color: "var(--muted)" }}>Comparaison avec la base de données musicale</p>
+            <p style={{ fontSize: "15px", fontWeight: 700, color: "var(--text)", marginBottom: "8px" }}>{t("recognize.analyzing")}</p>
+            <p style={{ fontSize: "13px", color: "var(--muted)" }}>{t("recognize.analyzingHint")}</p>
           </div>
         )}
 
@@ -237,8 +275,8 @@ export default function Recognize() {
             <div style={{ padding: "28px", borderRadius: "20px", background: "rgba(76,175,130,0.06)", border: "1px solid rgba(76,175,130,0.2)", marginBottom: "16px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px" }}>
                 <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#4caf82" }} />
-                <span style={{ fontSize: "11px", fontWeight: 700, color: "#4caf82", textTransform: "uppercase", letterSpacing: "0.15em" }}>Titre identifié</span>
-                <span style={{ marginLeft: "auto", fontSize: "10px", color: "var(--muted)" }}>{confidence} correspondances</span>
+                <span style={{ fontSize: "11px", fontWeight: 700, color: "#4caf82", textTransform: "uppercase", letterSpacing: "0.15em" }}>{t("recognize.trackIdentified")}</span>
+                <span style={{ marginLeft: "auto", fontSize: "10px", color: "var(--muted)" }}>{t("recognize.matches", { count: confidence })}</span>
               </div>
 
               <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "20px" }}>
@@ -278,7 +316,7 @@ export default function Recognize() {
         {(state === "not_found" || state === "error") && (
           <div style={{ textAlign: "center" }}>
             <div style={{ width: "100px", height: "100px", borderRadius: "50%", background: "rgba(240,235,227,0.05)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", fontSize: "40px" }}>
-              {state === "error" ? "🚫" : "🔍"}
+              {state === "error" ? <XCircle size={40} style={{ color: "var(--muted)" }} /> : <Search size={40} style={{ color: "var(--muted)" }} />}
             </div>
             <p style={{ fontSize: "16px", fontWeight: 700, color: "var(--text)", marginBottom: "8px" }}>
               {state === "error" ? "Erreur" : "Titre non trouvé"}
@@ -297,10 +335,12 @@ export default function Recognize() {
       {state === "idle" && (
         <div style={{ marginTop: "48px", textAlign: "center", maxWidth: "400px" }}>
           <p style={{ fontSize: "12px", color: "var(--muted)", lineHeight: 1.7 }}>
-            💡 Fonctionne avec les musiques indexées dans E-Bia. Pour ajouter une musique ancienne à la base, <a href="/explore" style={{ color: "var(--amber)" }}>contactez les artistes</a> ou l'équipe E-Bia.
+Fonctionne avec les musiques indexées dans E-Bia. Pour ajouter une musique ancienne à la base, <a href="/explore" style={{ color: "var(--amber)" }}>contactez les artistes</a> ou l'équipe E-Bia.
           </p>
         </div>
       )}
+
+      </section>
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>

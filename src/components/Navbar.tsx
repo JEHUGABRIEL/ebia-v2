@@ -4,9 +4,13 @@ import EbiaLogo from "./EbiaLogo";
 import { useState, useEffect, useRef } from "react";
 import { useApp } from "../context/AppContext";
 import LogoutModal from "./LogoutModal";
+import LanguageSwitcher from "./LanguageSwitcher";
+import NotificationCenter from "./NotificationCenter";
+import { useTranslation } from "react-i18next";
 
 export default function Navbar() {
   const { user } = useApp();
+  const { t } = useTranslation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
@@ -34,10 +38,10 @@ export default function Navbar() {
   useEffect(() => { setMobileOpen(false); }, [location.pathname]);
 
   const navLinks = [
-    { to: "/explore", label: "Artistes" },
-    { to: "/concerts", label: "Concerts" },
-    { to: "/radio", label: "Radios", icon: Radio },
-    { to: "/recognize", label: "Identifier", icon: Mic },
+    { to: "/explore", label: t("nav.artists") },
+    { to: "/concerts", label: t("nav.concerts") },
+    { to: "/radio", label: t("nav.radios"), icon: Radio },
+    { to: "/recognize", label: t("nav.identify"), icon: Mic },
   ];
 
   const isActive = (to: string) => location.pathname.startsWith(to);
@@ -87,6 +91,8 @@ export default function Navbar() {
 
           {/* Right */}
           <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <LanguageSwitcher />
+            {user && <NotificationCenter />}
             {user ? (
               <div style={{ position: "relative" }} ref={dropdownRef}>
                 <button onClick={() => setDropdownOpen(d => !d)} style={{
@@ -125,11 +131,11 @@ export default function Navbar() {
                     <button onClick={() => { navigate(user.role === "artist" || user.role === "admin" ? "/artist-dashboard" : "/me"); setDropdownOpen(false); }} style={{ width: "100%", display: "flex", alignItems: "center", gap: "8px", padding: "10px 14px", fontSize: "12px", color: "var(--muted)", background: "none", border: "none", cursor: "pointer", textAlign: "left", transition: "all 0.1s" }}
                       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.04)"; (e.currentTarget as HTMLElement).style.color = "var(--text)"; }}
                       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--muted)"; }}
-                    ><LayoutDashboard size={13} /> Mon espace</button>
+                    ><LayoutDashboard size={13} /> {t("nav.mySpace")}</button>
                     <button onClick={() => { setDropdownOpen(false); setLogoutOpen(true); }} style={{ width: "100%", display: "flex", alignItems: "center", gap: "8px", padding: "10px 14px", fontSize: "12px", color: "var(--muted)", background: "none", border: "none", cursor: "pointer", textAlign: "left", transition: "all 0.1s" }}
                       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.04)"; (e.currentTarget as HTMLElement).style.color = "var(--text)"; }}
                       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--muted)"; }}
-                    ><LogOut size={13} /> Déconnexion</button>
+                    ><LogOut size={13} /> {t("nav.logout")}</button>
                   </div>
                 )}
               </div>
@@ -139,11 +145,11 @@ export default function Navbar() {
                 <Link to="/login" style={{ padding: "7px 14px", fontSize: "13px", fontWeight: 600, color: "var(--muted)", textDecoration: "none", borderRadius: "99px", transition: "color 0.15s" }}
                   onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = "var(--text)"}
                   onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = "var(--muted)"}
-                >Connexion</Link>
+                >{t("nav.login")}</Link>
                 <Link to="/login" state={{ tab: "register" }} style={{ padding: "7px 18px", borderRadius: "99px", background: "var(--amber)", color: "#fff", fontSize: "12px", fontWeight: 700, textDecoration: "none", transition: "box-shadow 0.15s" }}
                   onMouseEnter={e => (e.currentTarget as HTMLElement).style.boxShadow = "0 6px 20px rgba(232,96,26,0.4)"}
                   onMouseLeave={e => (e.currentTarget as HTMLElement).style.boxShadow = "none"}
-                >S'inscrire</Link>
+                >{t("nav.register")}</Link>
               </div>
             )}
 
@@ -158,52 +164,131 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* Mobile menu — remplace tout le nav sur mobile */}
+        {/* Mobile menu — slide-in panel */}
         {mobileOpen && (
-          <div className="nav-mobile-menu" style={{ borderTop: "1px solid var(--border)", background: "rgba(8,8,8,0.98)" }}>
-            <div style={{ padding: "12px 16px", display: "flex", flexDirection: "column", gap: "4px" }}>
-              {navLinks.map(link => {
-                const active = isActive(link.to);
-                const Icon = link.icon;
-                return (
-                  <Link key={link.to} to={link.to} style={{
-                    display: "flex", alignItems: "center", gap: "10px",
-                    padding: "11px 14px", borderRadius: "10px",
-                    color: active ? "var(--amber)" : "var(--muted)",
-                    background: active ? "rgba(232,96,26,0.08)" : "transparent",
-                    fontWeight: 600, fontSize: "14px", textDecoration: "none",
-                  }}>
-                    {Icon ? <Icon size={16} /> : null}
-                    {link.label}
-                  </Link>
-                );
-              })}
+          <>
+            {/* Overlay */}
+            <div
+              onClick={() => setMobileOpen(false)}
+              style={{
+                position: "fixed", inset: 0, top: "60px", zIndex: 40,
+                background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)",
+                WebkitBackdropFilter: "blur(4px)",
+              }}
+            />
+            {/* Panel */}
+            <div className="nav-mobile-panel" style={{
+              position: "fixed", top: "60px", right: 0, bottom: 0, zIndex: 45,
+              width: "min(320px, 85vw)",
+              background: "rgba(12,12,12,0.98)",
+              borderLeft: "1px solid rgba(240,235,227,0.06)",
+              display: "flex", flexDirection: "column",
+              animation: "slideInRight 0.25s ease-out",
+              boxShadow: "-8px 0 32px rgba(0,0,0,0.5)",
+            }}>
+              {/* User profile header */}
+              {user && (
+                <div style={{ padding: "24px 20px 16px", borderBottom: "1px solid rgba(240,235,227,0.06)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+                    {user.avatarUrl ? (
+                      <img src={user.avatarUrl} alt="" style={{ width: "44px", height: "44px", borderRadius: "50%", objectFit: "cover", border: "2px solid rgba(232,96,26,0.3)" }} />
+                    ) : (
+                      <div style={{
+                        width: "44px", height: "44px", borderRadius: "50%",
+                        background: "linear-gradient(135deg, var(--amber), var(--gold))",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        fontSize: "16px", fontWeight: 800, color: "#fff",
+                      }}>{user.displayName?.[0]?.toUpperCase()}</div>
+                    )}
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <p style={{ fontSize: "15px", fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user.displayName}</p>
+                      <p style={{ fontSize: "12px", color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user.email}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
-              <div style={{ borderTop: "1px solid var(--border)", marginTop: "8px", paddingTop: "8px" }}>
+              {/* Navigation links */}
+              <div style={{ flex: 1, padding: "12px 12px", display: "flex", flexDirection: "column", gap: "2px" }}>
+                {navLinks.map(link => {
+                  const active = isActive(link.to);
+                  const Icon = link.icon;
+                  return (
+                    <Link key={link.to} to={link.to} style={{
+                      display: "flex", alignItems: "center", gap: "14px",
+                      padding: "13px 14px", borderRadius: "10px",
+                      color: active ? "var(--amber)" : "var(--muted)",
+                      background: active ? "rgba(232,96,26,0.08)" : "transparent",
+                      fontWeight: 600, fontSize: "15px", textDecoration: "none",
+                      transition: "background 0.15s, color 0.15s",
+                    }}
+                      onMouseEnter={e => { if (!active) { (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.04)"; (e.currentTarget as HTMLElement).style.color = "var(--text)"; } }}
+                      onMouseLeave={e => { if (!active) { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--muted)"; } }}
+                    >
+                      {Icon && <Icon size={18} strokeWidth={active ? 2.2 : 1.8} />}
+                      {link.label}
+                    </Link>
+                  );
+                })}
+
+                {/* Separator */}
+                <div style={{ height: "1px", background: "rgba(240,235,227,0.06)", margin: "10px 0" }} />
+
                 {user ? (
                   <>
-                    <button onClick={() => navigate(user.role === "artist" || user.role === "admin" ? "/artist-dashboard" : "/me")}
-                      style={{ width: "100%", display: "flex", alignItems: "center", gap: "10px", padding: "11px 14px", borderRadius: "10px", background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontWeight: 600, fontSize: "14px", textAlign: "left" }}>
-                      <LayoutDashboard size={16} /> Mon espace
-                    </button>
-                    <button onClick={() => setLogoutOpen(true)}
-                      style={{ width: "100%", display: "flex", alignItems: "center", gap: "10px", padding: "11px 14px", borderRadius: "10px", background: "none", border: "none", cursor: "pointer", color: "#f08080", fontWeight: 600, fontSize: "14px", textAlign: "left" }}>
-                      <LogOut size={16} /> Déconnexion
-                    </button>
+                    <button onClick={() => { navigate(user.role === "artist" || user.role === "admin" ? "/artist-dashboard" : "/me"); setMobileOpen(false); }} style={{
+                      width: "100%", display: "flex", alignItems: "center", gap: "14px",
+                      padding: "13px 14px", borderRadius: "10px", background: "none",
+                      border: "none", cursor: "pointer", color: "var(--muted)",
+                      fontWeight: 600, fontSize: "15px", textAlign: "left",
+                      transition: "background 0.15s, color 0.15s",
+                    }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.04)"; (e.currentTarget as HTMLElement).style.color = "var(--text)"; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--muted)"; }}
+                    ><LayoutDashboard size={18} strokeWidth={1.8} /> {t("nav.mySpace")}</button>
+                    <button onClick={() => { setLogoutOpen(true); setMobileOpen(false); }} style={{
+                      width: "100%", display: "flex", alignItems: "center", gap: "14px",
+                      padding: "13px 14px", borderRadius: "10px", background: "none",
+                      border: "none", cursor: "pointer", color: "#f08080",
+                      fontWeight: 600, fontSize: "15px", textAlign: "left",
+                      transition: "background 0.15s",
+                    }}
+                      onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "rgba(240,128,128,0.06)"}
+                      onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}
+                    ><LogOut size={18} strokeWidth={1.8} /> {t("nav.logout")}</button>
                   </>
                 ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                    <Link to="/login" style={{ padding: "12px 16px", borderRadius: "10px", background: "rgba(240,235,227,0.05)", border: "1px solid var(--border)", color: "var(--text)", fontWeight: 600, fontSize: "14px", textDecoration: "none", textAlign: "center" }}>
-                      Connexion
-                    </Link>
-                    <Link to="/login" state={{ tab: "register" }} style={{ padding: "12px 16px", borderRadius: "10px", background: "var(--amber)", color: "#fff", fontWeight: 700, fontSize: "14px", textDecoration: "none", textAlign: "center" }}>
-                      S'inscrire
-                    </Link>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "4px" }}>
+                    <Link to="/login" onClick={() => setMobileOpen(false)} style={{
+                      padding: "13px 16px", borderRadius: "10px",
+                      background: "rgba(240,235,227,0.05)", border: "1px solid rgba(240,235,227,0.08)",
+                      color: "var(--text)", fontWeight: 600, fontSize: "15px",
+                      textDecoration: "none", textAlign: "center",
+                      transition: "background 0.15s, border-color 0.15s",
+                    }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.08)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(240,235,227,0.15)"; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.05)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(240,235,227,0.08)"; }}
+                    >{t("nav.login")}</Link>
+                    <Link to="/login" state={{ tab: "register" }} onClick={() => setMobileOpen(false)} style={{
+                      padding: "13px 16px", borderRadius: "10px",
+                      background: "var(--amber)", color: "#fff",
+                      fontWeight: 700, fontSize: "15px", textDecoration: "none",
+                      textAlign: "center", transition: "box-shadow 0.2s",
+                    }}
+                      onMouseEnter={e => (e.currentTarget as HTMLElement).style.boxShadow = "0 6px 24px rgba(232,96,26,0.4)"}
+                      onMouseLeave={e => (e.currentTarget as HTMLElement).style.boxShadow = "none"}
+                    >{t("nav.register")}</Link>
                   </div>
                 )}
               </div>
+
+              {/* Footer */}
+              <div style={{ padding: "16px 20px", borderTop: "1px solid rgba(240,235,227,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <LanguageSwitcher />
+                <span style={{ fontSize: "11px", color: "rgba(240,235,227,0.2)", letterSpacing: "0.05em" }}>v1.0</span>
+              </div>
             </div>
-          </div>
+          </>
         )}
       </nav>
 

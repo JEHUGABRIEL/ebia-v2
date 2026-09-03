@@ -6,7 +6,7 @@ import {
   type OfflineTrack, type OfflineTrackInput,
 } from "../lib/offline";
 
-const BASE = import.meta.env.VITE_API_URL ?? "https://api-gateway-production-1c84.up.railway.app";
+const BASE = import.meta.env.VITE_API_URL || "";
 
 export type EbiaUser = {
   id: string; email: string; displayName: string;
@@ -64,6 +64,12 @@ const Ctx = createContext<AppCtx | null>(null);
 function parseJwt(token: string): EbiaUser | null {
   try {
     const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+    // Check token expiry
+    if (payload.exp && payload.exp * 1000 < Date.now()) {
+      localStorage.removeItem("ebia_token");
+      localStorage.removeItem("ebia_refresh");
+      return null;
+    }
     const roles: string[] = payload.realm_access?.roles ?? [];
     const role = roles.includes("admin") ? "admin"
                : roles.includes("artist") ? "artist"
@@ -205,9 +211,9 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
         /* 2. Récupérer l'URL pré-signée depuis le backend */
         try {
           const r = await fetch(`${BASE}/api/v1/tracks/${trackId}/stream`);
-          const data = await r.json() as { url?: string };
+          const data = await r.json() as { streamUrl?: string; url?: string };
           if (cancelled) return;
-          audio.src = data.url || fallbackUrl;
+          audio.src = data.streamUrl || data.url || fallbackUrl;
         } catch {
           if (cancelled) return;
           audio.src = fallbackUrl;
@@ -280,11 +286,14 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
     });
-    const data = await res.json() as { access_token?: string; refresh_token?: string; error?: string };
+    const data = await res.json() as { access_token?: string; accessToken?: string; refresh_token?: string; refreshToken?: string; error?: string };
     if (!res.ok) throw new Error(data.error || "Email ou mot de passe incorrect");
-    localStorage.setItem("ebia_token", data.access_token!);
-    if (data.refresh_token) localStorage.setItem("ebia_refresh", data.refresh_token);
-    const u = parseJwt(data.access_token!);
+    const token = data.accessToken || data.access_token;
+    const refresh = data.refreshToken || data.refresh_token;
+    if (!token) throw new Error("Token manquant dans la réponse");
+    localStorage.setItem("ebia_token", token);
+    if (refresh) localStorage.setItem("ebia_refresh", refresh);
+    const u = parseJwt(token);
     if (u) setUser(u); else throw new Error("Token invalide");
   };
 
@@ -349,6 +358,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       /* Récupérer l'URL pré-signée via le endpoint download (abonné requis) */
       const r = await fetch(`${BASE}/api/v1/tracks/${track.id}/download`, {
+        method: "POST",
         headers: { ...getAuthHeader() },
       });
       if (!r.ok) {

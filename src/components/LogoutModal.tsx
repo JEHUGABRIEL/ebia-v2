@@ -1,10 +1,12 @@
 import { useApp } from "../context/AppContext";
 import { LogOut, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface Props { open: boolean; onClose: () => void; }
 
 export default function LogoutModal({ open, onClose }: Props) {
   const { logout } = useApp();
+  const { t } = useTranslation();
   if (!open) return null;
 
   return (
@@ -29,8 +31,8 @@ export default function LogoutModal({ open, onClose }: Props) {
               <LogOut size={17} style={{ color: "var(--amber)" }} />
             </div>
             <div>
-              <h2 className="bebas" style={{ fontSize: "22px", color: "var(--text)", letterSpacing: "0.05em", lineHeight: 1 }}>Déconnexion</h2>
-              <p style={{ fontSize: "11px", color: "var(--muted)", marginTop: "3px" }}>E-Bia · Votre compte</p>
+              <h2 className="bebas" style={{ fontSize: "22px", color: "var(--text)", letterSpacing: "0.05em", lineHeight: 1 }}>{t("logoutModal.title")}</h2>
+              <p style={{ fontSize: "11px", color: "var(--muted)", marginTop: "3px" }}>{t("logoutModal.subtitle")}</p>
             </div>
           </div>
           <button onClick={onClose} style={{ width: "28px", height: "28px", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", background: "none", border: "none", cursor: "pointer", color: "var(--muted)", transition: "background 0.15s, color 0.15s", flexShrink: 0 }}
@@ -42,7 +44,7 @@ export default function LogoutModal({ open, onClose }: Props) {
         {/* Body */}
         <div style={{ padding: "20px 24px 24px" }}>
           <p style={{ fontSize: "14px", color: "var(--muted)", lineHeight: 1.65, marginBottom: "24px" }}>
-            Vous allez quitter votre espace. Vos données restent sauvegardées et vous pourrez vous reconnecter à tout moment.
+            {t("logoutModal.description")}
           </p>
 
           <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
@@ -54,7 +56,7 @@ export default function LogoutModal({ open, onClose }: Props) {
             }}
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 32px rgba(232,96,26,0.45)"; (e.currentTarget as HTMLElement).style.transform = "scale(1.02)"; }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = "none"; (e.currentTarget as HTMLElement).style.transform = "scale(1)"; }}
-            >Se déconnecter</button>
+            >{t("logoutModal.logout")}</button>
 
             <button onClick={onClose} style={{
               width: "100%", padding: "14px", borderRadius: "12px", cursor: "pointer",
@@ -64,7 +66,7 @@ export default function LogoutModal({ open, onClose }: Props) {
             }}
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.05)"; (e.currentTarget as HTMLElement).style.color = "var(--text)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(240,235,227,0.25)"; }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--muted)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(240,235,227,0.1)"; }}
-            >Annuler</button>
+            >{t("logoutModal.cancel")}</button>
           </div>
         </div>
       </div>

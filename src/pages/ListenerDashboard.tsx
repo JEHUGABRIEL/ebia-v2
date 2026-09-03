@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useApp, type DownloadableTrack } from "../context/AppContext";
 import { useNavigate, Link } from "react-router-dom";
-import { Home, Search, Library, Heart, Users, Settings, Plus, ChevronRight, LogOut, Camera, Mic2, Music2, Loader, Menu, X as XIcon, Download, DownloadCloud, CheckCircle2, Trash2, WifiOff } from "lucide-react";
+import { Home, Search, Library, Heart, Users, Settings, Plus, ChevronRight, LogOut, Camera, Mic2, Music2, Loader, Menu, X as XIcon, Download, DownloadCloud, CheckCircle2, Trash2, WifiOff, Star, Upload, BarChart2, Mic, DollarSign, TrendingUp } from "lucide-react";
 import LogoutModal from "../components/LogoutModal";
 import EbiaLogo from "../components/EbiaLogo";
 import { getArtists, getTracks, getMyArtistProfile, updateProfile, uploadUserAvatar, becomeArtist, type Artist } from "../lib/api";
@@ -37,6 +37,7 @@ export default function ListenerDashboard() {
   const [search, setSearch] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(user?.avatarUrl ?? null);
   const [displayName, setDisplayName] = useState(user?.displayName ?? "");
+  const [phone, setPhone] = useState((user as Record<string, unknown> & { phone?: string })?.phone ?? "");
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileMsg, setProfileMsg] = useState("");
   const [artistModalOpen, setArtistModalOpen] = useState(false);
@@ -89,8 +90,9 @@ export default function ListenerDashboard() {
     setProfileSaving(true);
     setProfileMsg("");
     try {
-      const payload: { display_name?: string; avatar_url?: string } = {};
+      const payload: { display_name?: string; avatar_url?: string; phone?: string } = {};
       if (displayName.trim() && displayName !== user?.displayName) payload.display_name = displayName.trim();
+      if (phone.trim()) payload.phone = phone.trim();
       if (selectedFile) {
         const uploaded = await uploadUserAvatar(selectedFile);
         payload.avatar_url = uploaded.url;
@@ -244,7 +246,7 @@ export default function ListenerDashboard() {
           </Link>
           <AvatarBlock size={28} />
         </div>
-        <div className="dashboard-main" style={{ padding: "32px", maxWidth: "1100px" }}>
+        <div className="dashboard-main" style={{ padding: "32px 48px", maxWidth: "1680px", margin: "0 auto" }}>
 
           {/* ── ACCUEIL ── */}
           {section === "accueil" && (
@@ -286,7 +288,7 @@ export default function ListenerDashboard() {
                           style={{ display: "flex", alignItems: "center", flex: 1, minWidth: 0, cursor: "pointer" }}>
                           {cover
                             ? <img src={cover} alt={track.title} style={{ width: "52px", height: "52px", objectFit: "cover", flexShrink: 0 }} />
-                            : <div style={{ width: "52px", height: "52px", background: "linear-gradient(135deg, var(--amber), var(--gold))", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: "20px" }}>🎵</div>
+                            : <div style={{ width: "52px", height: "52px", background: "linear-gradient(135deg, var(--amber), var(--gold))", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Music2 size={20} color="white" /></div>
                           }
                           <div style={{ flex: 1, minWidth: 0, padding: "0 12px" }}>
                             <p style={{ fontSize: "13px", fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{track.title}</p>
@@ -373,7 +375,7 @@ export default function ListenerDashboard() {
                             <div onClick={() => playTrack({ id: track.id, title: track.title, artist: track.artist_name, audioUrl: track.file_path, coverUrl: cover })} style={{ cursor: "pointer" }}>
                               {cover
                                 ? <img src={cover} alt={track.title} style={{ width: "100%", aspectRatio: "1", objectFit: "cover", display: "block" }} />
-                                : <div style={{ width: "100%", aspectRatio: "1", background: "linear-gradient(135deg, var(--amber), var(--gold))", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "28px" }}>🎵</div>
+                                : <div style={{ width: "100%", aspectRatio: "1", background: "linear-gradient(135deg, var(--amber), var(--gold))", display: "flex", alignItems: "center", justifyContent: "center" }}><Music2 size={28} color="white" /></div>
                               }
                             </div>
 
@@ -431,7 +433,7 @@ export default function ListenerDashboard() {
 
               {/* Artistes les plus populaires ce mois */}
               <div>
-                <h2 className="bebas" style={{ fontSize: "24px", color: "var(--text)", marginBottom: "18px" }}>🔥 Artistes les plus écoutés</h2>
+                <h2 className="bebas" style={{ fontSize: "24px", color: "var(--text)", marginBottom: "18px" }}><span style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}><TrendingUp size={18} style={{ color: "var(--amber)" }} /> Artistes les plus écoutés</span></h2>
                 <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                   {[...realArtists].sort((a, b) => (b.plays_count || 0) - (a.plays_count || 0)).slice(0, 10).map((artist, i) => (
                     <button key={artist.id} onClick={() => navigate(`/artist/${artist.slug}`)} style={{ display: "flex", alignItems: "center", gap: "16px", padding: "10px 14px", borderRadius: "10px", background: "transparent", border: "none", cursor: "pointer", textAlign: "left", transition: "background 0.15s" }}
@@ -454,7 +456,7 @@ export default function ListenerDashboard() {
 
               {/* Nouveautés ce mois */}
               <div>
-                <h2 className="bebas" style={{ fontSize: "24px", color: "var(--text)", marginBottom: "18px" }}>✨ Nouveautés du mois</h2>
+                <h2 className="bebas" style={{ fontSize: "24px", color: "var(--text)", marginBottom: "18px" }}><span style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}><Star size={18} style={{ color: "var(--amber)" }} /> Nouveautés du mois</span></h2>
                 {newTracks.length === 0 ? (
                   <p style={{ color: "var(--muted)", fontSize: "13px" }}>Aucune nouveauté ce mois-ci.</p>
                 ) : (
@@ -465,7 +467,7 @@ export default function ListenerDashboard() {
                         onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.03)"; (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; }}>
                         {track.album_cover_url || track.artist_avatar
                           ? <img src={track.album_cover_url || track.artist_avatar} alt={track.title} style={{ width: "100%", aspectRatio: "1", borderRadius: "8px", objectFit: "cover", display: "block", marginBottom: "10px" }} />
-                          : <div style={{ width: "100%", aspectRatio: "1", borderRadius: "8px", background: "linear-gradient(135deg, var(--amber), var(--gold))", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "10px", fontSize: "28px" }}>🎵</div>
+                          : <div style={{ width: "100%", aspectRatio: "1", borderRadius: "8px", background: "linear-gradient(135deg, var(--amber), var(--gold))", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "10px" }}><Music2 size={28} color="white" /></div>
                         }
                         <p style={{ fontSize: "13px", fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{track.title}</p>
                         <p style={{ fontSize: "11px", color: "var(--muted)", marginTop: "3px" }}>{track.artist_name}</p>
@@ -578,98 +580,107 @@ export default function ListenerDashboard() {
 
           {/* ── PARAMÈTRES ── */}
           {section === "parametres" && (
-            <div style={{ maxWidth: "560px" }}>
-              <h1 className="bebas" style={{ fontSize: "36px", color: "var(--text)", marginBottom: "28px" }}>Paramètres</h1>
-              <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+            <div style={{ maxWidth: "1100px" }}>
+              <h1 className="bebas" style={{ fontSize: "48px", color: "var(--text)", marginBottom: "36px" }}>Paramètres</h1>
 
-                {/* Photo de profil */}
-                <div style={{ padding: "28px", borderRadius: "16px", background: "rgba(240,235,227,0.03)", border: "1px solid var(--border)" }}>
-                  <h2 className="bebas" style={{ fontSize: "20px", color: "var(--text)", marginBottom: "20px" }}>Photo de profil</h2>
-                  <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
-                    <AvatarBlock size={80} withEdit={true} />
-                    <div>
-                      <p style={{ fontSize: "13px", fontWeight: 600, color: "var(--text)", marginBottom: "4px" }}>
-                        {avatarUrl ? "Photo mise à jour ✓" : "Ajouter une photo"}
-                      </p>
-                      <p style={{ fontSize: "12px", color: "var(--muted)", marginBottom: "12px" }}>JPG, PNG ou GIF · max 5 Mo</p>
-                      <button onClick={() => fileInputRef.current?.click()} style={{ padding: "8px 16px", borderRadius: "8px", background: "rgba(240,235,227,0.07)", border: "1px solid var(--border)", color: "var(--text)", fontSize: "12px", fontWeight: 600, cursor: "pointer", transition: "background 0.15s" }}
-                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.12)"}
-                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.07)"}>
-                        {avatarUrl ? "Changer la photo" : "Choisir une photo"}
-                      </button>
+              {/* Row 1: Photo + Compte | Préférences */}
+              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "20px", marginBottom: "20px" }}>
+                {/* Left: Photo + Compte stacked */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+
+                  {/* Photo de profil */}
+                  <div style={{ padding: "36px", borderRadius: "18px", background: "rgba(240,235,227,0.03)", border: "1px solid var(--border)" }}>
+                    <h2 className="bebas" style={{ fontSize: "26px", color: "var(--text)", marginBottom: "24px" }}>Photo de profil</h2>
+                    <div style={{ display: "flex", alignItems: "center", gap: "24px" }}>
+                      <AvatarBlock size={90} withEdit={true} />
+                      <div>
+                        <p style={{ fontSize: "15px", fontWeight: 600, color: "var(--text)", marginBottom: "4px" }}>
+                          {avatarUrl ? "Photo mise à jour ✓" : "Ajouter une photo"}
+                        </p>
+                        <p style={{ fontSize: "13px", color: "var(--muted)", marginBottom: "14px" }}>JPG, PNG ou GIF · max 5 Mo</p>
+                        <button onClick={() => fileInputRef.current?.click()} style={{ padding: "10px 20px", borderRadius: "10px", background: "rgba(240,235,227,0.07)", border: "1px solid var(--border)", color: "var(--text)", fontSize: "13px", fontWeight: 600, cursor: "pointer", transition: "background 0.15s" }}
+                          onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.12)"}
+                          onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.07)"}>
+                          {avatarUrl ? "Changer la photo" : "Choisir une photo"}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Compte */}
+                  <div style={{ padding: "36px", borderRadius: "18px", background: "rgba(240,235,227,0.03)", border: "1px solid var(--border)" }}>
+                    <h2 className="bebas" style={{ fontSize: "26px", color: "var(--text)", marginBottom: "24px" }}>Compte</h2>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                      <div>
+                        <label style={{ fontSize: "12px", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", display: "block", marginBottom: "8px" }}>Nom</label>
+                        <input value={displayName} onChange={e => setDisplayName(e.target.value)} style={{ width: "100%", padding: "14px 18px", borderRadius: "12px", background: "var(--bg3)", border: "1px solid var(--border)", color: "var(--text)", fontSize: "15px", outline: "none", boxSizing: "border-box" as const }} />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: "12px", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", display: "block", marginBottom: "8px" }}>Email</label>
+                        <input value={user.email} disabled style={{ width: "100%", padding: "14px 18px", borderRadius: "12px", background: "rgba(240,235,227,0.02)", border: "1px solid var(--border)", color: "var(--muted)", fontSize: "15px", outline: "none", boxSizing: "border-box" as const }} />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: "12px", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", display: "block", marginBottom: "8px" }}>Téléphone</label>
+                        <input value={phone} onChange={e => setPhone(e.target.value)} placeholder={"+236 70 12 34 56"} style={{ width: "100%", padding: "14px 18px", borderRadius: "12px", background: "var(--bg3)", border: "1px solid var(--border)", color: "var(--text)", fontSize: "15px", outline: "none", boxSizing: "border-box" as const }} />
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+                        <button onClick={handleSaveProfile} disabled={profileSaving} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "12px 28px", borderRadius: "99px", background: "var(--amber)", color: "#fff", border: "none", fontSize: "14px", fontWeight: 700, cursor: profileSaving ? "default" : "pointer", opacity: profileSaving ? 0.7 : 1 }}>
+                          {profileSaving ? <><Loader size={14} style={{ animation: "spin 1s linear infinite" }} /> Enregistrement…</> : "Sauvegarder"}
+                        </button>
+                        {profileMsg && <span style={{ fontSize: "13px", color: profileMsg.includes("✓") ? "#4caf82" : "#f08080" }}>{profileMsg}</span>}
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Compte */}
-                <div style={{ padding: "28px", borderRadius: "16px", background: "rgba(240,235,227,0.03)", border: "1px solid var(--border)" }}>
-                  <h2 className="bebas" style={{ fontSize: "20px", color: "var(--text)", marginBottom: "20px" }}>Compte</h2>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                    <div>
-                      <label style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--muted)", display: "block", marginBottom: "6px" }}>Nom</label>
-                      <input value={displayName} onChange={e => setDisplayName(e.target.value)} style={{ width: "100%", padding: "12px 14px", borderRadius: "10px", background: "var(--bg3)", border: "1px solid var(--border)", color: "var(--text)", fontSize: "14px", outline: "none", boxSizing: "border-box" as const }} />
-                    </div>
-                    <div>
-                      <label style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--muted)", display: "block", marginBottom: "6px" }}>Email</label>
-                      <input value={user.email} disabled style={{ width: "100%", padding: "12px 14px", borderRadius: "10px", background: "rgba(240,235,227,0.02)", border: "1px solid var(--border)", color: "var(--muted)", fontSize: "14px", outline: "none", boxSizing: "border-box" as const }} />
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                      <button onClick={handleSaveProfile} disabled={profileSaving} style={{ display: "flex", alignItems: "center", gap: "6px", padding: "10px 20px", borderRadius: "99px", background: "var(--amber)", color: "#fff", border: "none", fontSize: "11px", fontWeight: 700, cursor: profileSaving ? "default" : "pointer", opacity: profileSaving ? 0.7 : 1 }}>
-                        {profileSaving ? <><Loader size={12} style={{ animation: "spin 1s linear infinite" }} /> Enregistrement…</> : "Sauvegarder"}
-                      </button>
-                      {profileMsg && <span style={{ fontSize: "12px", color: profileMsg.includes("✓") ? "#4caf82" : "#f08080" }}>{profileMsg}</span>}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Préférences */}
-                <div style={{ padding: "28px", borderRadius: "16px", background: "rgba(240,235,227,0.03)", border: "1px solid var(--border)" }}>
-                  <h2 className="bebas" style={{ fontSize: "20px", color: "var(--text)", marginBottom: "18px" }}>Préférences</h2>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                {/* Right: Préférences (compact) */}
+                <div style={{ padding: "28px", borderRadius: "18px", background: "rgba(240,235,227,0.03)", border: "1px solid var(--border)", alignSelf: "start", position: "sticky", top: "20px" }}>
+                  <h2 className="bebas" style={{ fontSize: "22px", color: "var(--text)", marginBottom: "24px" }}>Préférences</h2>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
                     {[{ label: "Notifications", desc: "Nouvelles sorties des artistes suivis", on: true }, { label: "Qualité audio haute", desc: "Utilise plus de données mobiles", on: false }, { label: "Lecture automatique", desc: "Continuer avec des titres similaires", on: false }].map(s => (
-                      <div key={s.label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                        <div>
-                          <p style={{ fontSize: "13px", fontWeight: 600, color: "var(--text)" }}>{s.label}</p>
-                          <p style={{ fontSize: "11px", color: "var(--muted)", marginTop: "2px" }}>{s.desc}</p>
+                      <div key={s.label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
+                        <div style={{ minWidth: 0 }}>
+                          <p style={{ fontSize: "14px", fontWeight: 600, color: "var(--text)" }}>{s.label}</p>
+                          <p style={{ fontSize: "12px", color: "var(--muted)", marginTop: "3px" }}>{s.desc}</p>
                         </div>
-                        <div style={{ width: "38px", height: "21px", borderRadius: "99px", cursor: "pointer", background: s.on ? "var(--amber)" : "var(--bg3)", border: "1px solid var(--border)", display: "flex", alignItems: "center", padding: "2px", justifyContent: s.on ? "flex-end" : "flex-start", transition: "background 0.2s", flexShrink: 0 }}>
-                          <div style={{ width: "15px", height: "15px", borderRadius: "50%", background: "#fff" }} />
+                        <div style={{ width: "40px", height: "22px", borderRadius: "99px", cursor: "pointer", background: s.on ? "var(--amber)" : "var(--bg3)", border: "1px solid var(--border)", display: "flex", alignItems: "center", padding: "2px", justifyContent: s.on ? "flex-end" : "flex-start", transition: "background 0.2s", flexShrink: 0 }}>
+                          <div style={{ width: "16px", height: "16px", borderRadius: "50%", background: "#fff" }} />
                         </div>
                       </div>
                     ))}
                   </div>
                 </div>
-
-                {/* Devenir artiste / Portail */}
-                <div style={{ padding: "24px 28px", borderRadius: "16px", background: "rgba(232,96,26,0.06)", border: "1px solid rgba(232,96,26,0.2)" }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px" }}>
-                    <div>
-                      <p style={{ fontSize: "14px", fontWeight: 700, color: "var(--text)", marginBottom: "4px" }}>
-                        {(user.role === "artist" || hasArtistProfile) ? "Votre espace artiste" : "Vous êtes artiste ?"}
-                      </p>
-                      <p style={{ fontSize: "12px", color: "var(--muted)" }}>
-                        {(user.role === "artist" || hasArtistProfile) ? "Gérez vos titres et consultez vos statistiques" : "Publiez votre musique et touchez des milliers d'auditeurs"}
-                      </p>
-                    </div>
-                    {(user.role === "artist" || hasArtistProfile) ? (
-                      <button onClick={() => navigate("/artist-dashboard")} style={{ display: "flex", alignItems: "center", gap: "7px", padding: "10px 18px", borderRadius: "99px", background: "var(--amber)", border: "none", color: "#fff", fontSize: "12px", fontWeight: 700, cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap" }}>
-                        <Mic2 size={13} /> Accéder au portail artiste
-                      </button>
-                    ) : (
-                      <button onClick={() => setArtistModalOpen(true)} style={{ display: "flex", alignItems: "center", gap: "7px", padding: "10px 18px", borderRadius: "99px", background: "var(--amber)", border: "none", color: "#fff", fontSize: "12px", fontWeight: 700, cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap" }}>
-                        <Mic2 size={13} /> Devenir artiste
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Déconnexion */}
-                <button onClick={() => setLogoutOpen(true)} style={{ width: "100%", padding: "15px", borderRadius: "12px", background: "rgba(220,50,50,0.06)", border: "1px solid rgba(220,50,50,0.2)", color: "#f08080", fontWeight: 700, fontSize: "12px", cursor: "pointer", transition: "background 0.15s", textTransform: "uppercase", letterSpacing: "0.08em" }}
-                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "rgba(220,50,50,0.12)"}
-                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "rgba(220,50,50,0.06)"}>
-                  Se déconnecter
-                </button>
               </div>
+
+              {/* Devenir artiste / Portail */}
+              <div style={{ padding: "28px 36px", borderRadius: "18px", background: "rgba(232,96,26,0.06)", border: "1px solid rgba(232,96,26,0.2)", marginBottom: "20px" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px" }}>
+                  <div>
+                    <p style={{ fontSize: "16px", fontWeight: 700, color: "var(--text)", marginBottom: "4px" }}>
+                      {(user.role === "artist" || hasArtistProfile) ? "Votre espace artiste" : "Vous êtes artiste ?"}
+                    </p>
+                    <p style={{ fontSize: "14px", color: "var(--muted)" }}>
+                      {(user.role === "artist" || hasArtistProfile) ? "Gérez vos titres et consultez vos statistiques" : "Publiez votre musique et touchez des milliers d'auditeurs"}
+                    </p>
+                  </div>
+                  {(user.role === "artist" || hasArtistProfile) ? (
+                    <button onClick={() => navigate("/artist-dashboard")} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "12px 24px", borderRadius: "99px", background: "var(--amber)", border: "none", color: "#fff", fontSize: "14px", fontWeight: 700, cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap" }}>
+                      <Mic2 size={15} /> Accéder au portail artiste
+                    </button>
+                  ) : (
+                    <button onClick={() => setArtistModalOpen(true)} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "12px 24px", borderRadius: "99px", background: "var(--amber)", border: "none", color: "#fff", fontSize: "14px", fontWeight: 700, cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap" }}>
+                      <Mic2 size={15} /> Devenir artiste
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Déconnexion */}
+              <button onClick={() => setLogoutOpen(true)} style={{ width: "100%", padding: "18px", borderRadius: "14px", background: "rgba(220,50,50,0.06)", border: "1px solid rgba(220,50,50,0.2)", color: "#f08080", fontWeight: 700, fontSize: "14px", cursor: "pointer", transition: "background 0.15s", textTransform: "uppercase", letterSpacing: "0.08em" }}
+                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "rgba(220,50,50,0.12)"}
+                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "rgba(220,50,50,0.06)"}>
+                Se déconnecter
+              </button>
             </div>
           )}
           {/* ── TÉLÉCHARGEMENTS ── */}
@@ -775,8 +786,8 @@ export default function ListenerDashboard() {
 
                 <div style={{ padding: "20px", borderRadius: "12px", background: "rgba(232,96,26,0.06)", border: "1px solid rgba(232,96,26,0.15)", marginBottom: "20px" }}>
                   <p style={{ fontSize: "13px", color: "var(--text)", fontWeight: 600, marginBottom: "8px" }}>Avec un compte artiste, vous pouvez :</p>
-                  {["📤 Publier vos titres et albums", "📊 Accéder à vos statistiques d'écoute", "🎤 Créer votre profil artiste officiel", "💰 Recevoir vos revenus de streaming"].map(b => (
-                    <p key={b} style={{ fontSize: "13px", color: "var(--muted)", marginTop: "6px" }}>{b}</p>
+                  {[{text: "Publier vos titres et albums", icon: Upload}, {text: "Accéder à vos statistiques d'écoute", icon: BarChart2}, {text: "Créer votre profil artiste officiel", icon: Mic}, {text: "Recevoir vos revenus de streaming", icon: DollarSign}].map((b, i) => (
+                    <p key={i} style={{ fontSize: "13px", color: "var(--muted)", marginTop: "6px", display: "flex", alignItems: "center", gap: "8px" }}><b.icon size={13} style={{ color: "var(--amber)" }} /> {b.text}</p>
                   ))}
                 </div>
 
@@ -809,7 +820,7 @@ export default function ListenerDashboard() {
                     { label: "Ville", ph: "Ex: Bangui", val: artistCity, set: setArtistCity },
                   ].map(f => (
                     <div key={f.label}>
-                      <label style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--muted)", display: "block", marginBottom: "6px" }}>{f.label}</label>
+                      <label style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--muted)", display: "block", marginBottom: "8px" }}>{f.label}</label>
                       <input value={f.val} onChange={e => f.set(e.target.value)} placeholder={f.ph} style={{ width: "100%", padding: "12px 14px", borderRadius: "10px", background: "var(--bg3)", border: "1px solid var(--border)", color: "var(--text)", fontSize: "14px", outline: "none", boxSizing: "border-box" as const, transition: "border-color 0.2s" }}
                         onFocus={e => (e.target as HTMLInputElement).style.borderColor = "rgba(232,96,26,0.5)"}
                         onBlur={e => (e.target as HTMLInputElement).style.borderColor = "var(--border)"} />

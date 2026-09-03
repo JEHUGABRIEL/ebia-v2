@@ -1,10 +1,12 @@
 import { useNavigate } from "react-router-dom";
 import { Music2, X, ArrowRight, Mic2 } from "lucide-react";
 import { useApp } from "../context/AppContext";
+import { useTranslation } from "react-i18next";
 
 export default function LoginModal() {
   const { showLoginModal, setShowLoginModal } = useApp();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   if (!showLoginModal) return null;
 
@@ -27,10 +29,10 @@ export default function LoginModal() {
           </div>
 
           <h2 className="bebas" style={{ fontSize: "24px", color: "var(--text)", marginBottom: "6px", letterSpacing: "0.05em" }}>
-            Rejoindre E-Bia
+            {t("loginModal.title")}
           </h2>
           <p style={{ fontSize: "13px", color: "var(--muted)", marginBottom: "24px", lineHeight: 1.6 }}>
-            Connectez-vous pour profiter de toutes les fonctionnalités — suivre des artistes, liker des titres et plus encore.
+            {t("loginModal.description")}
           </p>
 
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
@@ -44,7 +46,7 @@ export default function LoginModal() {
             onMouseEnter={e => (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 32px rgba(232,96,26,0.45)"}
             onMouseLeave={e => (e.currentTarget as HTMLElement).style.boxShadow = "none"}
             >
-              Se connecter <ArrowRight size={14} />
+              {t("loginModal.login")} <ArrowRight size={14} />
             </button>
 
             <button onClick={() => go("/login?tab=register&role=listener")} style={{
@@ -56,7 +58,7 @@ export default function LoginModal() {
             onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.06)"}
             onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}
             >
-              Créer un compte auditeur
+              {t("loginModal.registerListener")}
             </button>
 
             <button onClick={() => go("/login?tab=register&role=artist")} style={{
@@ -69,7 +71,7 @@ export default function LoginModal() {
             onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "rgba(232,96,26,0.08)"}
             onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}
             >
-              <Mic2 size={13} /> Je suis un artiste
+              <Mic2 size={13} /> {t("loginModal.registerArtist")}
             </button>
           </div>
         </div>

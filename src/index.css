@@ -112,6 +112,11 @@ body {
 .carousel-up { animation: scrollUp 28s linear infinite; }
 .carousel-down { animation: scrollDown 36s linear infinite; }
 
+@keyframes slideInRight {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
 /* ── Navbar responsive ── */
 .nav-desktop { display: flex !important; }
 .nav-mobile-btn { display: none !important; }

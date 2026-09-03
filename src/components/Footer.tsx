@@ -1,12 +1,17 @@
 import { Link } from "react-router-dom";
 import EbiaLogo from "./EbiaLogo";
+import { useTranslation } from "react-i18next";
+import LanguageSwitcher from "./LanguageSwitcher";
 
-const LINKS = {
-  "Compagnie": [{ label: "À propos", to: "/about" }, { label: "Presse", to: "/press" }, { label: "Investisseurs", to: "/investors" }],
-  "Communauté": [{ label: "Artistes", to: "/explore" }, { label: "Concerts", to: "/concerts" }, { label: "Blog", to: "/blog" }],
-  "Aide": [{ label: "Centre d'aide", to: "/help" }, { label: "Contact", to: "/contact" }, { label: "Confidentialité", to: "/privacy" }],
-  "Légal": [{ label: "Conditions", to: "/terms" }, { label: "Vie privée", to: "/privacy" }, { label: "Cookies", to: "/cookies" }],
-};
+function useFooterLinks() {
+  const { t } = useTranslation();
+  return {
+    [t("footer.company")]: [{ label: t("footer.about"), to: "/about" }, { label: t("footer.press"), to: "/press" }, { label: t("footer.investors"), to: "/investors" }],
+    [t("footer.community")]: [{ label: t("nav.artists"), to: "/explore" }, { label: t("nav.concerts"), to: "/concerts" }, { label: t("footer.blog"), to: "/blog" }],
+    [t("footer.help")]: [{ label: t("footer.helpCenter"), to: "/help" }, { label: t("footer.contact"), to: "/contact" }, { label: t("footer.privacy"), to: "/privacy" }],
+    [t("footer.legal")]: [{ label: t("footer.terms"), to: "/terms" }, { label: t("footer.privateLife"), to: "/privacy" }, { label: t("footer.cookies"), to: "/cookies" }],
+  };
+}
 
 const SOCIALS = [
   { label: "Instagram", href: "https://instagram.com",
@@ -20,6 +25,8 @@ const SOCIALS = [
 ];
 
 export default function Footer() {
+  const { t } = useTranslation();
+  const LINKS = useFooterLinks();
   return (
     <footer style={{ background: "var(--bg)", borderTop: "1px solid rgba(240,235,227,0.07)" }} className="pb-24">
       <div style={{ maxWidth: "1360px", margin: "0 auto", padding: "64px 48px 0" }}>
@@ -34,7 +41,7 @@ export default function Footer() {
               <span className="bebas" style={{ fontSize: "20px", color: "var(--text)", letterSpacing: "0.1em" }}>E-BIA</span>
             </Link>
             <p style={{ fontSize: "13px", color: "var(--muted)", lineHeight: 1.7, maxWidth: "240px", marginBottom: "24px" }}>
-              La plateforme de streaming dédiée à la musique centrafricaine. Écoute libre, artistes locaux, culture RCA.
+              {t("footer.description")}
             </p>
             <div style={{ display: "flex", gap: "8px" }}>
               {SOCIALS.map(s => (
@@ -72,9 +79,9 @@ export default function Footer() {
         {/* Bottom bar */}
         <div style={{ borderTop: "1px solid rgba(240,235,227,0.07)", padding: "24px 0 32px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px" }}>
           <p style={{ fontSize: "12px", color: "var(--muted)" }}>
-            © 2026 <span style={{ color: "var(--amber)", fontWeight: 600 }}>E-Bia</span> — République Centrafricaine. Tous droits réservés.
+            © 2026 <span style={{ color: "var(--amber)", fontWeight: 600 }}>E-Bia</span> — {t("footer.copyright")}
           </p>
-          <span style={{ fontSize: "12px", color: "var(--muted)", padding: "6px 10px", border: "1px solid rgba(240,235,227,0.1)", borderRadius: "8px" }}>🇫🇷 Français</span>
+          <LanguageSwitcher />
         </div>
       </div>
     </footer>
