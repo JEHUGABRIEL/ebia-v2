@@ -156,7 +156,7 @@ export default function AdminDashboard() {
 
       <div style={{ maxWidth: "1360px", margin: "0 auto", padding: "0 24px" }}>
         {/* Navigation tabs */}
-        <div style={{ display: "flex", gap: "8px", marginBottom: "32px" }}>
+        <div className="admin-tabs" style={{ display: "flex", gap: "8px", marginBottom: "32px" }}>
           {([
             { key: "stats" as AdminSection, label: "Statistiques", icon: TrendingUp },
             { key: "users" as AdminSection, label: "Utilisateurs", icon: Users },
@@ -314,10 +314,8 @@ export default function AdminDashboard() {
             >
               {/* Table Header */}
               <div
+                className="admin-user-row admin-table-header"
                 style={{
-                  display: "grid",
-                  gridTemplateColumns: "2fr 2fr 1fr 1fr 1fr",
-                  gap: "16px",
                   padding: "14px 20px",
                   borderBottom: "1px solid rgba(240,235,227,0.06)",
                   fontSize: "11px",
@@ -338,10 +336,8 @@ export default function AdminDashboard() {
               {users.map((user) => (
                 <div
                   key={user.id}
+                  className="admin-user-row"
                   style={{
-                    display: "grid",
-                    gridTemplateColumns: "2fr 2fr 1fr 1fr 1fr",
-                    gap: "16px",
                     padding: "14px 20px",
                     borderBottom: "1px solid rgba(240,235,227,0.03)",
                     alignItems: "center",

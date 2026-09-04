@@ -168,6 +168,24 @@ body {
   .dash-track-row { gap: 10px; }
 }
 
+/* ── Dashboard admin : onglets + tableau utilisateurs ── */
+.admin-tabs { flex-wrap: wrap; }
+
+.admin-user-row {
+  display: grid;
+  grid-template-columns: 2fr 2fr 1fr 1fr 1fr;
+  gap: 16px;
+}
+@media (max-width: 700px) {
+  /* Un seul en-tête générique remplace les 5 colonnes empilées — chaque
+     ligne redevient une mini-carte auto-descriptive (select de rôle,
+     badge de statut, bouton d'action) plutôt que de forcer un scroll
+     horizontal sur une grille à 5 colonnes trop étroite pour un écran. */
+  .admin-user-row { grid-template-columns: 1fr; gap: 6px; padding-top: 14px !important; padding-bottom: 14px !important; }
+  .admin-table-header { display: none !important; }
+  .admin-user-row > *:last-child { text-align: left !important; margin-top: 4px; }
+}
+
 /* ── Cards responsive ── */
 @media (max-width: 600px) {
   .grid-artists { grid-template-columns: repeat(2, 1fr) !important; }
