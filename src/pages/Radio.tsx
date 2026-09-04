@@ -2,25 +2,42 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Play, Pause, Volume2, VolumeX, Loader, WifiOff, ExternalLink,
-  Radio as RadioIcon, Headphones, Globe, Zap, Heart,
+  Radio as RadioIcon, Headphones, Globe, Zap, Heart, ListMusic,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { STATIC_STATIONS, CATEGORY_CONFIG, type StationCategory, type Station } from "../data/radios";
+import { getListenerPreferredGenres, getTracks, type Track } from "../lib/api";
+import { orderByPreferredGenres } from "../lib/preferences";
+import { useApp } from "../context/AppContext";
+import RadioQueuePanel from "../components/RadioQueuePanel";
 
 type StationStatus = "idle" | "loading" | "playing" | "error";
 
 export default function RadioPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { user } = useApp();
+  const [preferredGenres, setPreferredGenres] = useState<string[]>([]);
   const [currentId, setCurrentId] = useState<string | null>(null);
   const [statuses, setStatuses] = useState<Record<string, StationStatus>>({});
   const [muted, setMuted] = useState(false);
   const [volume, setVolume] = useState(0.8);
   const [activeCategory, setActiveCategory] = useState<StationCategory>("all");
   const [likedStations, setLikedStations] = useState<Set<string>>(new Set());
+  const [radioQueue, setRadioQueue] = useState<Track[]>([]);
+  const [showRadioQueue, setShowRadioQueue] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const stations = STATIC_STATIONS;
+  // Stations dont le programme (tags) correspond aux genres de l'auditeur → en tête.
+  useEffect(() => {
+    if (!user || user.role === "artist" || user.role === "admin") return;
+    getListenerPreferredGenres(user.role).then(setPreferredGenres).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
+  const stations = preferredGenres.length > 0
+    ? orderByPreferredGenres(STATIC_STATIONS, preferredGenres)
+    : STATIC_STATIONS;
   const filteredStations = activeCategory === "all"
     ? stations
     : stations.filter(s => s.category === activeCategory);
@@ -34,6 +51,23 @@ export default function RadioPage() {
 
   const setStatus = useCallback((id: string, s: StationStatus) =>
     setStatuses(prev => ({ ...prev, [id]: s })), []);
+
+  // Fetch tracks from same genre when station changes
+  useEffect(() => {
+    if (!currentStation || statuses[currentStation.id] !== "playing") return;
+
+    const genreMap: Record<string, string> = {
+      music: "Afro-Pop",
+      gospel: "Gospel",
+      info: "Hip-Hop",
+      community: "R&B",
+    };
+
+    const genre = genreMap[currentStation.category] || "Afro-Pop";
+    getTracks({ genre, limit: "15" })
+      .then(r => setRadioQueue(r.data || []))
+      .catch(() => setRadioQueue([]));
+  }, [currentStation?.id, statuses[currentStation?.id || ""]]);
 
   const playStation = useCallback((station: Station) => {
     if (currentId === station.id && statuses[station.id] === "playing") {
@@ -523,8 +557,24 @@ export default function RadioPage() {
               </button>
             </div>
 
-            {/* Right: Volume */}
+            {/* Right: Queue + Volume */}
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              {/* Queue button */}
+              <button
+                onClick={() => setShowRadioQueue(true)}
+                style={{
+                  display: "flex", alignItems: "center", gap: "6px",
+                  padding: "6px 12px", borderRadius: "99px",
+                  background: radioQueue.length > 0 ? "rgba(76,175,130,0.12)" : "transparent",
+                  border: `1px solid ${radioQueue.length > 0 ? "rgba(76,175,130,0.3)" : "rgba(240,235,227,0.1)"}`,
+                  color: radioQueue.length > 0 ? "#4caf82" : "var(--muted)",
+                  fontSize: "11px", fontWeight: 600, cursor: "pointer",
+                  transition: "all 0.15s",
+                }}
+              >
+                <ListMusic size={13} />
+                {radioQueue.length > 0 ? `${radioQueue.length} titres` : "File"}
+              </button>
               <button onClick={() => setMuted(m => { const n = !m; if (audioRef.current) audioRef.current.volume = n ? 0 : volume; return n; })} style={{
                 background: "none", border: "none", cursor: "pointer", color: "var(--muted)",
               }}>
@@ -544,6 +594,16 @@ export default function RadioPage() {
         @keyframes radioPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
         @keyframes radioBar { from { opacity: 0.6; } to { opacity: 1; } }
       `}</style>
+
+      {/* Radio Queue Panel */}
+      <RadioQueuePanel
+        isOpen={showRadioQueue}
+        onClose={() => setShowRadioQueue(false)}
+        queueTracks={radioQueue}
+        onRemoveTrack={(trackId) => setRadioQueue(prev => prev.filter(t => t.id !== trackId))}
+        onClearQueue={() => setRadioQueue([])}
+        stationName={currentStation?.name || "Radio"}
+      />
     </div>
   );
 }
