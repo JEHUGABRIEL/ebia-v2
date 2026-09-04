@@ -614,6 +614,31 @@ export const updateUserSettings = (data: Partial<UserSettings>) =>
 export const changePassword = (data: { currentPassword: string; newPassword: string }) =>
   put<{ message: string }>('/api/settings/password', data);
 
+/* ── Lyrics ── */
+export type LyricLine = {
+  startTime: number;
+  endTime: number;
+  text: string;
+};
+
+export type TrackLyrics = {
+  id: string;
+  trackId: string;
+  language: string;
+  plainText: string | null;
+  timedLines: LyricLine[];
+  updatedAt: string;
+};
+
+export const getTrackLyrics = (trackId: string) =>
+  get<TrackLyrics>(`/api/tracks/${trackId}/lyrics`);
+
+export const saveTrackLyrics = (trackId: string, data: { language: string; plainText?: string; timedLines?: LyricLine[] }) =>
+  post<TrackLyrics>(`/api/tracks/${trackId}/lyrics`, data);
+
+export const deleteTrackLyrics = (trackId: string) =>
+  del<{ message: string }>(`/api/tracks/${trackId}/lyrics`);
+
 export const deleteAccount = (password: string) =>
   fetch(`${BASE}/api/settings`, {
     method: 'DELETE',

@@ -2,9 +2,10 @@ import { useState, useEffect } from "react";
 import {
   Play, Pause, SkipBack, SkipForward, Volume2, VolumeX,
   Shuffle, Repeat, Repeat1, List, X, Music2, ChevronDown, ChevronUp,
-  Loader, WifiOff, Wifi, Download, DownloadCloud, CheckCircle2,
+  Loader, WifiOff, Wifi, Download, DownloadCloud, CheckCircle2, Mic,
 } from "lucide-react";
 import { useApp, type DownloadableTrack } from "../context/AppContext";
+import LyricsPanel from "./LyricsPanel";
 
 export default function Player() {
   const {
@@ -36,6 +37,8 @@ export default function Player() {
   const [muted, setMuted]         = useState(false);
   const [showQueue, setShowQueue] = useState(false);
   const [expanded, setExpanded]   = useState(false);
+  const [showLyrics, setShowLyrics] = useState(false);
+  const [currentTimeSeconds, setCurrentTimeSeconds] = useState(0);
 
   // Écouter les événements de l'élément audio du contexte
   useEffect(() => {
@@ -43,7 +46,10 @@ export default function Player() {
     if (!audio) return;
     setProgress(0);
     setDuration(0);
-    const onTime = () => setProgress((audio.currentTime / (audio.duration || 1)) * 100);
+    const onTime = () => {
+      setProgress((audio.currentTime / (audio.duration || 1)) * 100);
+      setCurrentTimeSeconds(audio.currentTime);
+    };
     const onMeta = () => setDuration(audio.duration);
     audio.addEventListener("timeupdate", onTime);
     audio.addEventListener("loadedmetadata", onMeta);
@@ -208,8 +214,28 @@ export default function Player() {
             </div>
           </div>
 
+          {/* Bouton Paroles */}
+          <button
+            onClick={() => setShowLyrics(true)}
+            style={{
+              display: "inline-flex", alignItems: "center", gap: "6px",
+              padding: "8px 16px", borderRadius: "99px",
+              background: "rgba(240,235,227,0.06)",
+              border: "1px solid rgba(240,235,227,0.12)",
+              color: "var(--muted)",
+              fontSize: "11px", fontWeight: 700, cursor: "pointer",
+              marginBottom: "16px",
+              transition: "all 0.15s",
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(232,96,26,0.12)"; (e.currentTarget as HTMLElement).style.color = "var(--amber)"; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.06)"; (e.currentTarget as HTMLElement).style.color = "var(--muted)"; }}
+          >
+            <Mic size={12} />
+            Paroles
+          </button>
+
           {/* Contrôles */}
-          <div style={{ display: "flex", alignItems: "center", gap: "20px", margin: "20px 0" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "20px", margin: "0 0 20px" }}>
             <button onClick={toggleShuffle} style={{ background: "none", border: "none", cursor: "pointer", color: isShuffle ? "var(--amber)" : "var(--muted)", position: "relative" }}>
               <Shuffle size={22} />
               {isShuffle && <span style={{ position: "absolute", bottom: "-5px", left: "50%", transform: "translateX(-50%)", width: "4px", height: "4px", borderRadius: "50%", background: "var(--amber)" }} />}
@@ -369,6 +395,22 @@ export default function Player() {
                 <List size={15} />
               </button>
             </div>
+            {/* Bouton paroles */}
+            <button
+              onClick={() => setShowLyrics(true)}
+              title="Afficher les paroles"
+              className="player-shuffle"
+              style={{
+                width: "32px", height: "32px", borderRadius: "8px",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                background: "transparent", border: "none", cursor: "pointer",
+                color: "var(--muted)", transition: "color 0.15s",
+              }}
+              onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = "var(--amber)"}
+              onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = "var(--muted)"}
+            >
+              <Mic size={15} />
+            </button>
             {/* Bouton download dans le mini player */}
             {currentDownloadable && (
               <button
@@ -402,6 +444,15 @@ export default function Player() {
           </div>
         </div>
       </div>
+
+      {/* ── PANNEAU PAROLES ── */}
+      <LyricsPanel
+        isOpen={showLyrics}
+        onClose={() => setShowLyrics(false)}
+        trackId={currentTrack?.id ?? null}
+        trackTitle={currentTrack?.title ?? ""}
+        currentTime={currentTimeSeconds}
+      />
     </>
   );
 }
