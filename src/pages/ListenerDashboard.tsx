@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useApp, type DownloadableTrack } from "../context/AppContext";
 import { useNavigate, Link } from "react-router-dom";
-import { Home, Search, Library, Heart, Users, Settings, Plus, ChevronRight, LogOut, Camera, Mic2, Music2, Loader, Menu, X as XIcon, Download, DownloadCloud, CheckCircle2, Trash2, WifiOff, Star, Upload, BarChart2, Mic, DollarSign, TrendingUp, ListMusic, History, Rss } from "lucide-react";
+import { Home, Search, Library, Heart, Users, Settings, Plus, ChevronRight, LogOut, Camera, Mic2, Music2, Loader, Menu, X as XIcon, Download, DownloadCloud, CheckCircle2, Trash2, WifiOff, Star, Upload, BarChart2, Mic, DollarSign, TrendingUp, ListMusic, History, Rss, BarChart3 } from "lucide-react";
 import LogoutModal from "../components/LogoutModal";
 import EbiaLogo from "../components/EbiaLogo";
 import { getArtists, getTracks, getMyArtistProfile, updateProfile, uploadUserAvatar, becomeArtist, getDiscoverArtists, type Artist, type DiscoverArtist } from "../lib/api";
@@ -135,6 +135,7 @@ export default function ListenerDashboard() {
     { to: "/playlists", label: "Playlists", icon: ListMusic, color: "var(--amber)" },
     { to: "/play-history", label: "Historique", icon: History, color: "var(--gold)" },
     { to: "/activity", label: "Actualités", icon: Rss, color: "var(--green, #10b981)" },
+    { to: "/wrapped", label: "Mes Stats", icon: BarChart3, color: "var(--amber)" },
   ];
 
   const AvatarBlock = ({ size = 64, withEdit = false }: { size?: number; withEdit?: boolean }) => (

@@ -695,3 +695,22 @@ export const updateCollaboratorRole = (playlistId: string, collaboratorId: strin
 
 export const removeCollaborator = (playlistId: string, collaboratorId: string) =>
   del<{ message: string }>(`/api/playlists/${playlistId}/collaborators/${collaboratorId}`);
+
+/* ── Listening Stats (Wrapped) ── */
+export type ListeningStats = {
+  totalTracksPlayed: number;
+  totalMinutesListened: number;
+  uniqueArtists: number;
+  uniqueTracks: number;
+  listeningDays: number;
+  currentStreak: number;
+  longestStreak: number;
+  topArtist: { name: string; avatarUrl: string; playCount: number; minutesListened: number } | null;
+  topTrack: { title: string; artistName: string; playCount: number; durationSeconds: number } | null;
+  topGenres: { genre: string; playCount: number; percentage: number }[];
+  hourlyDistribution: { hour: number; playCount: number }[];
+  monthlyProgress: { month: string; tracksPlayed: number; minutesListened: number }[];
+};
+
+export const getListeningStats = (period = 'all') =>
+  get<ListeningStats>(`/api/stats?period=${period}`);
