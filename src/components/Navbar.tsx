@@ -1,11 +1,12 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { Menu, X, LogOut, LayoutDashboard, ChevronDown, Radio, Mic } from "lucide-react";
+import { Menu, X, LogOut, LayoutDashboard, ChevronDown, Radio, Mic, ListMusic, History } from "lucide-react";
 import EbiaLogo from "./EbiaLogo";
 import { useState, useEffect, useRef } from "react";
 import { useApp } from "../context/AppContext";
 import LogoutModal from "./LogoutModal";
 import LanguageSwitcher from "./LanguageSwitcher";
 import NotificationCenter from "./NotificationCenter";
+import ModeSwitch from "./ModeSwitch";
 import { useTranslation } from "react-i18next";
 
 export default function Navbar() {
@@ -42,6 +43,8 @@ export default function Navbar() {
     { to: "/concerts", label: t("nav.concerts") },
     { to: "/radio", label: t("nav.radios"), icon: Radio },
     { to: "/recognize", label: t("nav.identify"), icon: Mic },
+    { to: "/playlists", label: "Playlists", icon: ListMusic },
+    { to: "/play-history", label: "Historique", icon: History },
   ];
 
   const isActive = (to: string) => location.pathname.startsWith(to);
@@ -91,6 +94,12 @@ export default function Navbar() {
 
           {/* Right */}
           <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            {/* Bascule globale Auditeur ⇄ Artiste (desktop) */}
+            {user && (user.role === "artist" || user.role === "admin") && (
+              <div className="nav-desktop" style={{ display: "flex", alignItems: "center" }}>
+                <ModeSwitch />
+              </div>
+            )}
             <LanguageSwitcher />
             {user && <NotificationCenter />}
             {user ? (
@@ -205,6 +214,12 @@ export default function Navbar() {
                       <p style={{ fontSize: "12px", color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user.email}</p>
                     </div>
                   </div>
+                  {/* Bascule globale Auditeur ⇄ Artiste (mobile) */}
+                  {(user.role === "artist" || user.role === "admin") && (
+                    <div style={{ marginTop: 14 }}>
+                      <ModeSwitch fluid onNavigate={() => setMobileOpen(false)} />
+                    </div>
+                  )}
                 </div>
               )}
 

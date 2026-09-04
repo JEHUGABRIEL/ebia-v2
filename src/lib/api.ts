@@ -245,6 +245,8 @@ export type MessageReaction = {
   emoji: string;
 };
 
+export type ChatMessageType = "text" | "image" | "audio" | "video";
+
 export type ChatMessage = {
   id: string;
   conversationId: string;
@@ -252,6 +254,8 @@ export type ChatMessage = {
   senderName: string;
   senderAvatar: string;
   content: string;
+  type?: ChatMessageType;
+  mediaUrl?: string | null;
   read: boolean;
   createdAt: string;
   reactions?: Record<string, MessageReaction[]>;
@@ -265,17 +269,64 @@ export const getMessages = (conversationId: string, page = 0, size = 50) =>
     `/api/v1/messages/${conversationId}?page=${page}&size=${size}`
   );
 
-export const sendMessage = (recipientId: string, content: string) =>
-  post<{ id: string; conversationId: string; content: string; createdAt: string }>(
+/** Options d'envoi : type de message média + URL (upload préalable via uploadChatMedia). */
+export type SendMessageOptions = {
+  type?: Exclude<ChatMessageType, "text">;
+  mediaUrl?: string;
+};
+
+export const sendMessage = (
+  recipientId: string,
+  content: string,
+  opts?: SendMessageOptions
+) =>
+  post<{ id: string; conversationId: string; content: string; type?: ChatMessageType; mediaUrl?: string | null; createdAt: string }>(
     "/api/v1/messages",
-    { recipientId, content }
+    { recipientId, content, type: opts?.type ?? undefined, mediaUrl: opts?.mediaUrl ?? undefined }
   );
 
-export const sendGroupMessage = (conversationId: string, content: string) =>
-  post<{ id: string; conversationId: string; content: string; createdAt: string }>(
+export const sendGroupMessage = (
+  conversationId: string,
+  content: string,
+  opts?: SendMessageOptions
+) =>
+  post<{ id: string; conversationId: string; content: string; type?: ChatMessageType; mediaUrl?: string | null; createdAt: string }>(
     `/api/v1/messages/${conversationId}`,
-    { content }
+    { content, type: opts?.type ?? undefined, mediaUrl: opts?.mediaUrl ?? undefined }
   );
+
+/**
+ * Upload un média (image/audio/vidéo) pour la messagerie, avec suivi de progression.
+ * @returns URL publique du fichier.
+ */
+export const uploadChatMedia = (
+  file: File,
+  onProgress?: (percent: number) => void
+): Promise<{ url: string }> =>
+  new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    const token = localStorage.getItem("ebia_token") || keycloak.token;
+    const fd = new FormData();
+    fd.append("file", file);
+    xhr.open("POST", `${BASE}/api/v1/messages/media`);
+    if (token) xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+    xhr.timeout = 180_000;
+    if (onProgress) {
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
+      };
+    }
+    xhr.onload = () => {
+      try {
+        const body = JSON.parse(xhr.responseText || "{}") as { url?: string; error?: string };
+        if (xhr.status >= 200 && xhr.status < 300 && body.url) resolve({ url: body.url });
+        else reject(new Error(body.error || `HTTP ${xhr.status}`));
+      } catch { reject(new Error("Réponse invalide du serveur")); }
+    };
+    xhr.onerror = () => reject(new Error("Erreur réseau pendant l'upload"));
+    xhr.ontimeout = () => reject(new Error("L'upload a pris trop de temps."));
+    xhr.send(fd);
+  });
 
 export const createGroupConversation = (name: string, memberIds: string[]) =>
   post<{ id: string; groupName: string; type: string }>(
@@ -303,6 +354,69 @@ export const forgotPassword = (email: string) =>
 
 export const resetPassword = (token: string, newPassword: string) =>
   post<{ message: string }>("/api/v1/auth/reset-password", { token, newPassword });
+
+/* ── Découverte personnalisée ── */
+// canonGenre vit dans ./preferences (module pur) — ré-exporté ici pour
+// préserver l'import existant depuis les pages.
+export { canonGenre } from "./preferences";
+
+export type DiscoverArtist = {
+  id: string; slug: string; name: string; genre: string; city: string;
+  avatar_url: string | null; cover_url: string | null; verified: boolean;
+  plays_count: number; followers_count: number;
+};
+
+export type DiscoverTrack = {
+  id: string; title: string; slug?: string; genre: string; duration_s: number;
+  plays_count: number; likes_count: number;
+  audio_url: string | null; cover_url: string | null; created_at?: string | null;
+  artist_id?: string | null; artist_name?: string; artist_avatar?: string | null;
+};
+
+export type DiscoverMode = "explicit" | "implicit" | "none";
+
+export type DiscoverResponse<T> = {
+  mode: DiscoverMode;
+  genres: string[];
+  data: T[];
+};
+
+/**
+ * Découverte personnalisée : genres choisis à l'inscription → uniquement ces
+ * types ; sinon activité réelle (écoutes/likes/abonnements) → genres favoris
+ * en tête ; sinon contenu mélangé. Anonyme → ordre public par popularité.
+ */
+export const getDiscoverArtists = () =>
+  get<DiscoverResponse<DiscoverArtist>>("/api/v1/discover/artists");
+
+export const getDiscoverTracks = () =>
+  get<DiscoverResponse<DiscoverTrack>>("/api/v1/discover/tracks");
+
+/** Autres artistes partageant le même genre qu'un artiste donné. */
+export const getSimilarArtists = (artistId: string, limit = 8) =>
+  get<{ data: DiscoverArtist[]; total: number }>(`/api/v1/discover/artists/${artistId}/similar?limit=${limit}`);
+
+/**
+ * Genres « actifs » de l'auditeur courant (tels que calculés par le moteur de
+ * découverte) : genres choisis à l'inscription ou affinités déduites de son
+ * activité. Vide en mode aléatoire ou pour un visiteur → pas de re-tri.
+ */
+export const getListenerPreferredGenres = async (role?: string | null): Promise<string[]> => {
+  if (role === "artist" || role === "admin") return [];
+  try {
+    const res = await getDiscoverTracks();
+    return res.mode === "none" ? [] : res.genres ?? [];
+  } catch {
+    return [];
+  }
+};
+
+/** Token courant (localStorage puis Keycloak) pour les appels authentifiés. */
+export const getAuthToken = (): string | null =>
+  localStorage.getItem("ebia_token") || keycloak.token || null;
+
+export const isLoggedListener = (role?: string | null) =>
+  role !== "artist" && role !== "admin";
 
 /* ── Social ── */
 export const recordPlay = (trackId: string) =>
@@ -346,3 +460,133 @@ export const markNotificationAsRead = (id: string) =>
 
 export const markAllNotificationsAsRead = () =>
   put<{ message: string }>('/api/v1/notifications/read-all', {});
+
+/* ── Playlists ── */
+export type PlaylistTrackItem = {
+  id: string;
+  trackId: string;
+  trackTitle: string;
+  artistName: string;
+  position: number;
+  addedAt: string;
+};
+
+export type Playlist = {
+  id: string;
+  name: string;
+  description: string;
+  isPublic: boolean;
+  ownerId: string;
+  ownerName: string;
+  trackCount: number;
+  tracks: PlaylistTrackItem[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export const getMyPlaylists = () =>
+  get<Playlist[]>("/api/playlists");
+
+export const getPlaylist = (playlistId: string) =>
+  get<Playlist>(`/api/playlists/${playlistId}`);
+
+export const createPlaylist = (data: { name: string; description?: string; isPublic?: boolean }) =>
+  post<Playlist>("/api/playlists", data);
+
+export const updatePlaylist = (playlistId: string, data: { name?: string; description?: string; isPublic?: boolean }) =>
+  put<Playlist>(`/api/playlists/${playlistId}`, data);
+
+export const deletePlaylist = (playlistId: string) =>
+  del<{ message: string }>(`/api/playlists/${playlistId}`);
+
+export const addTrackToPlaylist = (playlistId: string, trackId: string) =>
+  post<Playlist>(`/api/playlists/${playlistId}/tracks`, { trackId });
+
+export const removeTrackFromPlaylist = (playlistId: string, trackId: string) =>
+  del<Playlist>(`/api/playlists/${playlistId}/tracks/${trackId}`);
+
+export const reorderPlaylistTracks = (playlistId: string, trackIds: string[]) =>
+  put<Playlist>(`/api/playlists/${playlistId}/reorder`, { trackIds });
+
+/* ── Play History ── */
+export type PlayHistoryItem = {
+  id: string;
+  trackId: string;
+  trackTitle: string;
+  artistName: string;
+  durationPlayed: number | null;
+  playedAt: string;
+};
+
+export const getPlayHistory = (page = 0, size = 50) =>
+  get<PlayHistoryItem[]>(`/api/play-history?page=${page}&size=${size}`);
+
+export const recordPlayHistory = (data: { trackId: string; trackTitle?: string; artistName?: string; durationPlayed?: number }) =>
+  post<PlayHistoryItem>('/api/play-history', data);
+
+export const clearPlayHistory = () =>
+  del<{ message: string }>('/api/play-history');
+
+export const deletePlayHistoryEntry = (historyId: string) =>
+  del<{ message: string }>(`/api/play-history/${historyId}`);
+
+/* ── Admin Dashboard ── */
+export type AdminStats = {
+  totalUsers: number;
+  totalArtists: number;
+  totalTracks: number;
+  totalPlays: number;
+  totalLikes: number;
+  newUsersToday: number;
+  newUsersThisWeek: number;
+  activeUsersToday: number;
+  computedAt: string;
+};
+
+export type AdminUser = {
+  id: string;
+  email: string;
+  displayName: string;
+  role: string;
+  active: boolean;
+  createdAt: string;
+};
+
+export const getAdminStats = () =>
+  get<AdminStats>('/api/admin/stats');
+
+export const getAdminUsers = (page = 0, size = 20, role?: string) => {
+  const params = new URLSearchParams({ page: String(page), size: String(size) });
+  if (role) params.set('role', role);
+  return get<AdminUser[]>(`/api/admin/users?${params}`);
+};
+
+export const toggleUserActive = (userId: string) =>
+  put<{ message: string }>(`/api/admin/users/${userId}/toggle-active`, {});
+
+export const changeUserRole = (userId: string, role: string) =>
+  put<{ message: string }>(`/api/admin/users/${userId}/role`, { role });
+
+/* ── Content Reporting ── */
+export type Report = {
+  id: string;
+  reporterId: string;
+  targetId: string;
+  targetType: string;
+  reason: string;
+  description: string | null;
+  status: string;
+  createdAt: string;
+};
+
+export const createReport = (data: { targetId: string; targetType: string; reason: string; description?: string }) =>
+  post<Report>('/api/reports', data);
+
+export const getReports = (page = 0, size = 20, status?: string) => {
+  const params = new URLSearchParams({ page: String(page), size: String(size) });
+  if (status) params.set('status', status);
+  return get<Report[]>(`/api/reports?${params}`);
+};
+
+export const updateReportStatus = (reportId: string, status: string) =>
+  put<{ message: string }>(`/api/reports/${reportId}/status`, { status });

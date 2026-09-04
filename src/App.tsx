@@ -1,6 +1,7 @@
 import { useEffect, lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import { AppProvider } from "./context/AppContext";
+import { QueueProvider } from "./context/QueueContext";
 import { AuthGuard, ArtistGuard } from "./components/Guards";
 import Navbar from "./components/Navbar";
 import Player from "./components/Player";
@@ -25,6 +26,11 @@ const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const ListenerDashboard = lazy(() => import("./pages/ListenerDashboard"));
 const ArtistDashboard = lazy(() => import("./pages/ArtistDashboard"));
 const Messaging = lazy(() => import("./pages/Messaging"));
+const Playlists = lazy(() => import("./pages/Playlists"));
+const PlaylistDetail = lazy(() => import("./pages/PlaylistDetail"));
+const PlayHistoryPage = lazy(() => import("./pages/PlayHistory"));
+const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
+const Reports = lazy(() => import("./pages/Reports"));
 
 function RouteFallback() {
   return (
@@ -94,6 +100,11 @@ function AppContent() {
             <Route path="/me" element={<AuthGuard><ListenerDashboard /></AuthGuard>} />
             <Route path="/artist-dashboard" element={<ArtistGuard><ArtistDashboard /></ArtistGuard>} />
             <Route path="/messages" element={<ArtistGuard><Messaging /></ArtistGuard>} />
+            <Route path="/playlists" element={<AuthGuard><Playlists /></AuthGuard>} />
+            <Route path="/playlists/:id" element={<AuthGuard><PlaylistDetail /></AuthGuard>} />
+            <Route path="/play-history" element={<AuthGuard><PlayHistoryPage /></AuthGuard>} />
+            <Route path="/admin" element={<AuthGuard><AdminDashboard /></AuthGuard>} />
+            <Route path="/admin/reports" element={<AuthGuard><Reports /></AuthGuard>} />
           </Routes>
         </Suspense>
       </div>
@@ -108,9 +119,11 @@ function AppContent() {
 export default function App() {
   return (
     <AppProvider>
-      <BrowserRouter>
-        <AppContent />
-      </BrowserRouter>
+      <QueueProvider>
+        <BrowserRouter>
+          <AppContent />
+        </BrowserRouter>
+      </QueueProvider>
     </AppProvider>
   );
 }
