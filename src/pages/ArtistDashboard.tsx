@@ -13,6 +13,7 @@ import {
   updateMyArtistProfile, uploadArtistImage,
   type MyArtistProfile, type MyTrack, type ArtistStats
 } from "../lib/api";
+import ReleaseScheduler from "../components/ReleaseScheduler";
 
 type Section = "accueil" | "titres" | "profil" | "stats" | "parametres";
 
@@ -237,6 +238,13 @@ export default function ArtistDashboard() {
             <span style={{ fontSize: "12px", fontWeight: 600 }}>Voir mon profil</span>
           </button>
 
+          <button onClick={() => navigate("/me")} style={{ marginTop: "4px", display: "flex", alignItems: "center", gap: "10px", padding: "9px 12px", borderRadius: "8px", cursor: "pointer", background: "transparent", border: "1px solid rgba(240,235,227,0.07)", color: "var(--muted)", transition: "all 0.15s", textAlign: "left", width: "100%" }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(76,175,130,0.35)"; (e.currentTarget as HTMLElement).style.color = "#4caf82"; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(240,235,227,0.07)"; (e.currentTarget as HTMLElement).style.color = "var(--muted)"; }}>
+            <Headphones size={14} style={{ flexShrink: 0 }} />
+            <span style={{ fontSize: "12px", fontWeight: 600 }}>Passer en auditeur</span>
+          </button>
+
           {/* Profil bas */}
           <div style={{ marginTop: "auto", paddingTop: "12px", borderTop: "1px solid var(--border)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "4px 6px" }}>
@@ -434,6 +442,13 @@ export default function ArtistDashboard() {
                   </div>
                 </>
               )}
+            </div>
+          )}
+
+          {/* ── SORTIES PROGRAMMÉES ── */}
+          {section === "titres" && tracks.length > 0 && (
+            <div style={{ marginTop: "32px" }}>
+              <ReleaseScheduler tracks={tracks} onScheduled={loadTracks} />
             </div>
           )}
 

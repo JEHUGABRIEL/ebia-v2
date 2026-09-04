@@ -714,3 +714,24 @@ export type ListeningStats = {
 
 export const getListeningStats = (period = 'all') =>
   get<ListeningStats>(`/api/stats?period=${period}`);
+
+/* ── Release Scheduling ── */
+export type ScheduledRelease = {
+  id: string;
+  trackId: string;
+  trackTitle: string;
+  releaseDate: string;
+  notifyFollowers: boolean;
+  status: string;
+  createdAt: string;
+  publishedAt: string | null;
+};
+
+export const scheduleRelease = (data: { trackId: string; trackTitle: string; releaseDate: string; notifyFollowers?: boolean }) =>
+  post<ScheduledRelease>('/api/releases', data);
+
+export const getScheduledReleases = (status?: string) =>
+  get<ScheduledRelease[]>(`/api/releases${status ? `?status=${status}` : ''}`);
+
+export const cancelRelease = (releaseId: string) =>
+  del<{ message: string }>(`/api/releases/${releaseId}`);
