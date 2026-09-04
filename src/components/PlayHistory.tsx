@@ -14,6 +14,7 @@ import {
   type PlayHistoryItem,
 } from "../lib/api";
 import { useApp } from "../context/AppContext";
+import ConfirmModal from "./ConfirmModal";
 
 export default function PlayHistory() {
   const { playTrack, currentTrack, isPlaying } = useApp();
@@ -21,6 +22,8 @@ export default function PlayHistory() {
   const [history, setHistory] = useState<PlayHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [clearing, setClearing] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [confirmClearAll, setConfirmClearAll] = useState(false);
 
   useEffect(() => {
     loadHistory();
@@ -55,11 +58,12 @@ export default function PlayHistory() {
       setHistory((prev) => prev.filter((h) => h.id !== id));
     } catch (err) {
       console.error("Failed to delete history entry:", err);
+    } finally {
+      setConfirmDeleteId(null);
     }
   };
 
   const handleClearAll = async () => {
-    if (!window.confirm("Supprimer tout l'historique ?")) return;
     setClearing(true);
     try {
       await clearPlayHistory();
@@ -68,6 +72,7 @@ export default function PlayHistory() {
       console.error("Failed to clear history:", err);
     } finally {
       setClearing(false);
+      setConfirmClearAll(false);
     }
   };
 
@@ -103,7 +108,7 @@ export default function PlayHistory() {
           <p style={{ fontSize: "13px", color: "var(--muted)", marginTop: "4px" }}>{history.length} écoute{history.length !== 1 ? "s" : ""}</p>
         </div>
         {history.length > 0 && (
-          <button onClick={handleClearAll} disabled={clearing} style={{ padding: "8px 16px", borderRadius: "8px", border: "1px solid rgba(220,50,50,0.3)", background: "transparent", color: "#f08080", fontSize: "12px", fontWeight: 600, cursor: clearing ? "not-allowed" : "pointer", opacity: clearing ? 0.5 : 1 }}>
+          <button onClick={() => setConfirmClearAll(true)} disabled={clearing} style={{ padding: "8px 16px", borderRadius: "8px", border: "1px solid rgba(220,50,50,0.3)", background: "transparent", color: "#f08080", fontSize: "12px", fontWeight: 600, cursor: clearing ? "not-allowed" : "pointer", opacity: clearing ? 0.5 : 1 }}>
             {clearing ? "Suppression..." : "Tout supprimer"}
           </button>
         )}
@@ -169,7 +174,7 @@ export default function PlayHistory() {
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleDelete(item.id);
+                    setConfirmDeleteId(item.id);
                   }}
                   style={{ width: "32px", height: "32px", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", background: "none", border: "none", cursor: "pointer", color: "var(--muted)", transition: "all 0.15s", flexShrink: 0 }}
                   onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "rgba(220,50,50,0.1)"; (e.currentTarget as HTMLElement).style.color = "#f08080"; }}
@@ -182,6 +187,24 @@ export default function PlayHistory() {
           })}
         </div>
       )}
+
+      <ConfirmModal
+        open={confirmDeleteId !== null}
+        title="Retirer de l'historique"
+        message="Cette écoute sera retirée de votre historique."
+        confirmLabel="Retirer"
+        onConfirm={() => confirmDeleteId && handleDelete(confirmDeleteId)}
+        onCancel={() => setConfirmDeleteId(null)}
+      />
+      <ConfirmModal
+        open={confirmClearAll}
+        title="Supprimer tout l'historique"
+        message="Toutes vos écoutes seront définitivement supprimées de votre historique. Cette action est irréversible."
+        confirmLabel="Tout supprimer"
+        loading={clearing}
+        onConfirm={handleClearAll}
+        onCancel={() => setConfirmClearAll(false)}
+      />
     </div>
   );
 }

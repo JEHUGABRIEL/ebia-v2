@@ -26,6 +26,7 @@ import {
   type PlaylistTrackItem,
 } from "../lib/api";
 import CollaboratorsPanel from "../components/CollaboratorsPanel";
+import ConfirmModal from "../components/ConfirmModal";
 
 export default function PlaylistDetail() {
   const { id } = useParams<{ id: string }>();
@@ -38,6 +39,9 @@ export default function PlaylistDetail() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showCollaborators, setShowCollaborators] = useState(false);
+  const [confirmDeletePlaylist, setConfirmDeletePlaylist] = useState(false);
+  const [deletingPlaylist, setDeletingPlaylist] = useState(false);
+  const [confirmRemoveTrack, setConfirmRemoveTrack] = useState<{ trackId: string; title: string } | null>(null);
 
   // Edit form state
   const [formName, setFormName] = useState("");
@@ -80,6 +84,8 @@ export default function PlaylistDetail() {
       setPlaylist(updated);
     } catch (err) {
       console.error("Failed to remove track:", err);
+    } finally {
+      setConfirmRemoveTrack(null);
     }
   };
 
@@ -103,12 +109,13 @@ export default function PlaylistDetail() {
 
   const handleDelete = async () => {
     if (!id) return;
-    if (!window.confirm("Supprimer cette playlist ?")) return;
     try {
+      setDeletingPlaylist(true);
       await deletePlaylist(id);
       navigate("/playlists");
     } catch (err) {
       console.error("Failed to delete playlist:", err);
+      setDeletingPlaylist(false);
     }
   };
 
@@ -403,7 +410,7 @@ export default function PlaylistDetail() {
                 <Edit3 size={14} /> Modifier
               </button>
               <button
-                onClick={handleDelete}
+                onClick={() => setConfirmDeletePlaylist(true)}
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -566,7 +573,7 @@ export default function PlaylistDetail() {
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleRemoveTrack(track.trackId);
+                      setConfirmRemoveTrack({ trackId: track.trackId, title: track.trackTitle });
                     }}
                     style={{
                       background: "none",
@@ -770,6 +777,24 @@ export default function PlaylistDetail() {
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        open={confirmDeletePlaylist}
+        title="Supprimer la playlist"
+        message={playlist ? `« ${playlist.name} » sera définitivement supprimée. Cette action est irréversible.` : ""}
+        confirmLabel="Supprimer"
+        loading={deletingPlaylist}
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmDeletePlaylist(false)}
+      />
+      <ConfirmModal
+        open={confirmRemoveTrack !== null}
+        title="Retirer le titre"
+        message={confirmRemoveTrack ? `« ${confirmRemoveTrack.title} » sera retiré de cette playlist.` : ""}
+        confirmLabel="Retirer"
+        onConfirm={() => confirmRemoveTrack && handleRemoveTrack(confirmRemoveTrack.trackId)}
+        onCancel={() => setConfirmRemoveTrack(null)}
+      />
     </div>
   );
 }

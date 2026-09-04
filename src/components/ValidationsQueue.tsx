@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { UserCheck, FileEdit, Music2, Loader2, Check, X, ExternalLink } from "lucide-react";
+import { Loader2, Check, X, ExternalLink } from "lucide-react";
 import {
   getArtistValidations, approveArtist, rejectArtist,
   getProfileChangeValidations, approveProfileChange, rejectProfileChange,
@@ -7,13 +7,7 @@ import {
   type ArtistValidation, type ProfileChangeValidation, type TrackValidation,
 } from "../lib/api";
 
-type Tab = "artists" | "profile" | "tracks";
-
-const TABS: { key: Tab; label: string; icon: typeof UserCheck }[] = [
-  { key: "artists", label: "Comptes artistes", icon: UserCheck },
-  { key: "profile", label: "Modifications de profil", icon: FileEdit },
-  { key: "tracks", label: "Titres", icon: Music2 },
-];
+export type ValidationTab = "artists" | "profile" | "tracks";
 
 const CHANGE_TYPE_LABELS: Record<string, string> = {
   PASSWORD: "Changement de mot de passe",
@@ -27,8 +21,7 @@ function fmtDate(iso: string) {
   catch { return iso; }
 }
 
-export default function ValidationsQueue() {
-  const [tab, setTab] = useState<Tab>("artists");
+export default function ValidationsQueue({ tab }: { tab: ValidationTab }) {
   const [artists, setArtists] = useState<ArtistValidation[]>([]);
   const [profileChanges, setProfileChanges] = useState<ProfileChangeValidation[]>([]);
   const [tracks, setTracks] = useState<TrackValidation[]>([]);
@@ -88,27 +81,6 @@ export default function ValidationsQueue() {
       <p style={{ fontSize: "13px", color: "var(--muted)" }}>
         Rien de ce qu'un artiste soumet n'est visible du public tant que ce n'est pas validé ici.
       </p>
-
-      <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-        {TABS.map(t => {
-          const active = tab === t.key;
-          return (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              style={{
-                display: "flex", alignItems: "center", gap: "8px", padding: "9px 16px", borderRadius: "99px", cursor: "pointer",
-                border: `1px solid ${active ? "rgba(139,92,246,0.4)" : "var(--border)"}`,
-                background: active ? "rgba(139,92,246,0.12)" : "rgba(240,235,227,0.03)",
-                color: active ? "#8B5CF6" : "var(--muted)", fontSize: "12px", fontWeight: 700, transition: "all 0.15s",
-              }}
-            >
-              <t.icon size={14} />
-              {t.label}
-            </button>
-          );
-        })}
-      </div>
 
       <div style={{ borderRadius: "16px", background: "rgba(240,235,227,0.02)", border: "1px solid var(--border)", minHeight: "160px" }}>
         {loading ? (

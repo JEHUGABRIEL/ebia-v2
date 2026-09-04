@@ -9,6 +9,7 @@ import {
   type MyTrack,
 } from "../lib/api";
 import { Disc, Plus, Trash2, Music2, Loader2, X, Check } from "lucide-react";
+import ConfirmModal from "./ConfirmModal";
 
 type Props = {
   tracks: MyTrack[];
@@ -20,6 +21,9 @@ export default function AlbumSection({ tracks }: Props) {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedAlbum, setSelectedAlbum] = useState<Album | null>(null);
   const [error, setError] = useState("");
+  const [confirmDeleteAlbum, setConfirmDeleteAlbum] = useState<Album | null>(null);
+  const [confirmRemoveTrack, setConfirmRemoveTrack] = useState<{ albumId: string; trackId: string; title: string } | null>(null);
+  const [deletingAlbum, setDeletingAlbum] = useState(false);
 
   // Create form
   const [formTitle, setFormTitle] = useState("");
@@ -61,13 +65,16 @@ export default function AlbumSection({ tracks }: Props) {
   };
 
   const handleDelete = async (albumId: string) => {
-    if (!window.confirm("Supprimer cet album ?")) return;
     try {
+      setDeletingAlbum(true);
       await deleteAlbum(albumId);
       await loadAlbums();
       if (selectedAlbum?.id === albumId) setSelectedAlbum(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur");
+    } finally {
+      setDeletingAlbum(false);
+      setConfirmDeleteAlbum(null);
     }
   };
 
@@ -86,6 +93,8 @@ export default function AlbumSection({ tracks }: Props) {
       await loadAlbums();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur");
+    } finally {
+      setConfirmRemoveTrack(null);
     }
   };
 
@@ -150,7 +159,7 @@ export default function AlbumSection({ tracks }: Props) {
                   <button onClick={() => setSelectedAlbum(selectedAlbum?.id === album.id ? null : album)} style={{ flex: 1, padding: "8px", borderRadius: "8px", border: "1px solid var(--border)", background: "transparent", color: "var(--text)", fontSize: "12px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
                     <Music2 size={12} /> Morceaux
                   </button>
-                  <button onClick={() => handleDelete(album.id)} style={{ padding: "8px 12px", borderRadius: "8px", border: "none", background: "rgba(220,50,50,0.1)", color: "#f08080", cursor: "pointer" }}>
+                  <button onClick={() => setConfirmDeleteAlbum(album)} style={{ padding: "8px 12px", borderRadius: "8px", border: "none", background: "rgba(220,50,50,0.1)", color: "#f08080", cursor: "pointer" }}>
                     <Trash2 size={12} />
                   </button>
                 </div>
@@ -169,7 +178,7 @@ export default function AlbumSection({ tracks }: Props) {
                             <div key={t.trackId} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "6px 8px", borderRadius: "6px", background: "rgba(240,235,227,0.03)" }}>
                               <span style={{ fontSize: "11px", color: "var(--muted)", width: "20px" }}>{t.position + 1}</span>
                               <span style={{ fontSize: "12px", color: "var(--text)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{track?.title || "Titre inconnu"}</span>
-                              <button onClick={() => handleRemoveTrack(album.id, t.trackId)} style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer", padding: "2px" }}>
+                              <button onClick={() => setConfirmRemoveTrack({ albumId: album.id, trackId: t.trackId, title: track?.title || "ce morceau" })} style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer", padding: "2px" }}>
                                 <X size={12} />
                               </button>
                             </div>
@@ -229,6 +238,24 @@ export default function AlbumSection({ tracks }: Props) {
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        open={confirmDeleteAlbum !== null}
+        title="Supprimer l'album"
+        message={confirmDeleteAlbum ? `« ${confirmDeleteAlbum.title} » sera définitivement supprimé. Cette action est irréversible.` : ""}
+        confirmLabel="Supprimer"
+        loading={deletingAlbum}
+        onConfirm={() => confirmDeleteAlbum && handleDelete(confirmDeleteAlbum.id)}
+        onCancel={() => setConfirmDeleteAlbum(null)}
+      />
+      <ConfirmModal
+        open={confirmRemoveTrack !== null}
+        title="Retirer le morceau"
+        message={confirmRemoveTrack ? `« ${confirmRemoveTrack.title} » sera retiré de cet album.` : ""}
+        confirmLabel="Retirer"
+        onConfirm={() => confirmRemoveTrack && handleRemoveTrack(confirmRemoveTrack.albumId, confirmRemoveTrack.trackId)}
+        onCancel={() => setConfirmRemoveTrack(null)}
+      />
     </div>
   );
 }

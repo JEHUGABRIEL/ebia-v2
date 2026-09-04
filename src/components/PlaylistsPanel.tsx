@@ -15,6 +15,7 @@ import {
   type Playlist,
 } from "../lib/api";
 import { useApp } from "../context/AppContext";
+import ConfirmModal from "./ConfirmModal";
 
 export default function PlaylistsPanel() {
   useApp();
@@ -24,6 +25,8 @@ export default function PlaylistsPanel() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editPlaylist, setEditPlaylist] = useState<Playlist | null>(null);
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<Playlist | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Form state
   const [formName, setFormName] = useState("");
@@ -86,12 +89,15 @@ export default function PlaylistsPanel() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm("Supprimer cette playlist ?")) return;
     try {
+      setDeleting(true);
       await deletePlaylist(id);
       await loadPlaylists();
     } catch (err) {
       console.error("Failed to delete playlist:", err);
+    } finally {
+      setDeleting(false);
+      setConfirmDelete(null);
     }
   };
 
@@ -167,7 +173,7 @@ export default function PlaylistsPanel() {
                         <button onClick={() => openEdit(playlist)} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 10px", borderRadius: "6px", border: "none", background: "none", color: "var(--text)", fontSize: "12px", cursor: "pointer", width: "100%" }}>
                           <Edit3 size={12} /> Modifier
                         </button>
-                        <button onClick={() => { handleDelete(playlist.id); setMenuOpen(null); }} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 10px", borderRadius: "6px", border: "none", background: "none", color: "#f08080", fontSize: "12px", cursor: "pointer", width: "100%" }}>
+                        <button onClick={() => { setConfirmDelete(playlist); setMenuOpen(null); }} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 10px", borderRadius: "6px", border: "none", background: "none", color: "#f08080", fontSize: "12px", cursor: "pointer", width: "100%" }}>
                           <Trash2 size={12} /> Supprimer
                         </button>
                       </div>
@@ -222,6 +228,16 @@ export default function PlaylistsPanel() {
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        open={confirmDelete !== null}
+        title="Supprimer la playlist"
+        message={confirmDelete ? `« ${confirmDelete.name} » sera définitivement supprimée. Cette action est irréversible.` : ""}
+        confirmLabel="Supprimer"
+        loading={deleting}
+        onConfirm={() => confirmDelete && handleDelete(confirmDelete.id)}
+        onCancel={() => setConfirmDelete(null)}
+      />
     </div>
   );
 }

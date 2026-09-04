@@ -17,6 +17,7 @@ import {
   type PlayHistoryItem,
 } from "../lib/api";
 import { useApp } from "../context/AppContext";
+import ConfirmModal from "../components/ConfirmModal";
 
 export default function PlayHistoryPage() {
   const navigate = useNavigate();
@@ -25,6 +26,8 @@ export default function PlayHistoryPage() {
   const [history, setHistory] = useState<PlayHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [clearing, setClearing] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [confirmClearAll, setConfirmClearAll] = useState(false);
 
   useEffect(() => {
     loadHistory();
@@ -59,11 +62,12 @@ export default function PlayHistoryPage() {
       setHistory((prev) => prev.filter((h) => h.id !== historyId));
     } catch (err) {
       console.error("Failed to delete history entry:", err);
+    } finally {
+      setConfirmDeleteId(null);
     }
   };
 
   const handleClearHistory = async () => {
-    if (!window.confirm("Effacer tout l'historique des écoutes ?")) return;
     try {
       setClearing(true);
       await clearPlayHistory();
@@ -72,6 +76,7 @@ export default function PlayHistoryPage() {
       console.error("Failed to clear history:", err);
     } finally {
       setClearing(false);
+      setConfirmClearAll(false);
     }
   };
 
@@ -150,7 +155,7 @@ export default function PlayHistoryPage() {
 
           {history.length > 0 && (
             <button
-              onClick={handleClearHistory}
+              onClick={() => setConfirmClearAll(true)}
               disabled={clearing}
               style={{
                 display: "inline-flex",
@@ -365,7 +370,7 @@ export default function PlayHistoryPage() {
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleDeleteEntry(item.id);
+                    setConfirmDeleteId(item.id);
                   }}
                   style={{
                     background: "none",
@@ -393,6 +398,24 @@ export default function PlayHistoryPage() {
           </div>
         )}
       </div>
+
+      <ConfirmModal
+        open={confirmDeleteId !== null}
+        title="Retirer de l'historique"
+        message="Cette écoute sera retirée de votre historique."
+        confirmLabel="Retirer"
+        onConfirm={() => confirmDeleteId && handleDeleteEntry(confirmDeleteId)}
+        onCancel={() => setConfirmDeleteId(null)}
+      />
+      <ConfirmModal
+        open={confirmClearAll}
+        title="Effacer tout l'historique"
+        message="Toutes vos écoutes seront définitivement supprimées de votre historique. Cette action est irréversible."
+        confirmLabel="Tout effacer"
+        loading={clearing}
+        onConfirm={handleClearHistory}
+        onCancel={() => setConfirmClearAll(false)}
+      />
     </div>
   );
 }

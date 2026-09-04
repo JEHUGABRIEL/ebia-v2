@@ -20,6 +20,7 @@ import {
   updatePlaylist,
   type Playlist,
 } from "../lib/api";
+import ConfirmModal from "../components/ConfirmModal";
 
 export default function Playlists() {
   const navigate = useNavigate();
@@ -29,6 +30,8 @@ export default function Playlists() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editPlaylist, setEditPlaylist] = useState<Playlist | null>(null);
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<Playlist | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Form state
   const [formName, setFormName] = useState("");
@@ -93,13 +96,16 @@ export default function Playlists() {
   };
 
   const handleDelete = async (playlistId: string) => {
-    if (!window.confirm("Supprimer cette playlist ?")) return;
     try {
+      setDeleting(true);
       await deletePlaylist(playlistId);
       setPlaylists((prev) => prev.filter((p) => p.id !== playlistId));
       setMenuOpen(null);
     } catch (err) {
       console.error("Failed to delete playlist:", err);
+    } finally {
+      setDeleting(false);
+      setConfirmDelete(null);
     }
   };
 
@@ -391,7 +397,7 @@ export default function Playlists() {
                         <Edit3 size={14} /> Modifier
                       </button>
                       <button
-                        onClick={() => handleDelete(playlist.id)}
+                        onClick={() => { setConfirmDelete(playlist); setMenuOpen(null); }}
                         style={{
                           display: "flex",
                           alignItems: "center",
@@ -635,6 +641,16 @@ export default function Playlists() {
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        open={confirmDelete !== null}
+        title="Supprimer la playlist"
+        message={confirmDelete ? `« ${confirmDelete.name} » sera définitivement supprimée. Cette action est irréversible.` : ""}
+        confirmLabel="Supprimer"
+        loading={deleting}
+        onConfirm={() => confirmDelete && handleDelete(confirmDelete.id)}
+        onCancel={() => setConfirmDelete(null)}
+      />
     </div>
   );
 }

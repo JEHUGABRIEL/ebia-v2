@@ -24,8 +24,8 @@ import {
   type AdminStats,
   type AdminUser,
 } from "../lib/api";
-import ModerationQueue from "../components/ModerationQueue";
-import ValidationsQueue from "../components/ValidationsQueue";
+import ModerationQueue, { type ModerationFilter } from "../components/ModerationQueue";
+import ValidationsQueue, { type ValidationTab } from "../components/ValidationsQueue";
 import LogoutModal from "../components/LogoutModal";
 import EbiaLogo from "../components/EbiaLogo";
 import NotificationCenter from "../components/NotificationCenter";
@@ -47,11 +47,30 @@ const ACCOUNT_STATUS_COLORS: Record<string, string> = {
   deleted: "var(--muted)",
 };
 
-const NAV_ITEMS: { key: AdminSection; label: string; icon: typeof Users }[] = [
+const USER_ROLE_CHILDREN: { key: string; label: string }[] = [
+  { key: "", label: "Tous" },
+  { key: "listener", label: "Auditeurs" },
+  { key: "artist", label: "Artistes" },
+  { key: "admin", label: "Admins" },
+];
+
+const VALIDATION_CHILDREN: { key: ValidationTab; label: string }[] = [
+  { key: "artists", label: "Comptes artistes" },
+  { key: "profile", label: "Modifications de profil" },
+  { key: "tracks", label: "Titres" },
+];
+
+const MODERATION_CHILDREN: { key: ModerationFilter; label: string }[] = [
+  { key: "pending", label: "En attente" },
+  { key: "resolved", label: "Résolus" },
+  { key: "dismissed", label: "Rejetés" },
+];
+
+const NAV_ITEMS: { key: AdminSection; label: string; icon: typeof Users; children?: { key: string; label: string }[] }[] = [
   { key: "stats", label: "Statistiques", icon: TrendingUp },
-  { key: "users", label: "Utilisateurs", icon: Users },
-  { key: "validations", label: "Validations", icon: CheckCircle2 },
-  { key: "moderation", label: "Modération", icon: Shield },
+  { key: "users", label: "Utilisateurs", icon: Users, children: USER_ROLE_CHILDREN },
+  { key: "validations", label: "Validations", icon: CheckCircle2, children: VALIDATION_CHILDREN },
+  { key: "moderation", label: "Modération", icon: Shield, children: MODERATION_CHILDREN },
 ];
 
 export default function AdminDashboard() {
@@ -62,9 +81,12 @@ export default function AdminDashboard() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [usersLoading, setUsersLoading] = useState(true);
+  const [usersError, setUsersError] = useState(false);
   const [roleFilter, setRoleFilter] = useState<string>("");
   const [page, setPage] = useState(0);
   const [section, setSection] = useState<AdminSection>("stats");
+  const [validationTab, setValidationTab] = useState<ValidationTab>("artists");
+  const [moderationFilter, setModerationFilter] = useState<ModerationFilter>("pending");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [detailsUserId, setDetailsUserId] = useState<string | null>(null);
@@ -84,10 +106,12 @@ export default function AdminDashboard() {
   const loadUsers = async () => {
     try {
       setUsersLoading(true);
+      setUsersError(false);
       const data = await getAdminUsers(page, 20, roleFilter || undefined);
       setUsers(data);
     } catch (err) {
       console.error("Failed to load users:", err);
+      setUsersError(true);
     } finally {
       setUsersLoading(false);
     }
@@ -139,6 +163,19 @@ export default function AdminDashboard() {
 
   if (!user) return null;
 
+  const selectChild = (parentKey: AdminSection, childKey: string) => {
+    setSection(parentKey);
+    if (parentKey === "users") { setRoleFilter(childKey); setPage(0); }
+    else if (parentKey === "validations") setValidationTab(childKey as ValidationTab);
+    else if (parentKey === "moderation") setModerationFilter(childKey as ModerationFilter);
+  };
+
+  const activeChildKey = (parentKey: AdminSection): string =>
+    parentKey === "users" ? roleFilter : parentKey === "validations" ? validationTab : moderationFilter;
+
+  const currentNavItem = NAV_ITEMS.find(n => n.key === section);
+  const currentChildLabel = currentNavItem?.children?.find(c => c.key === activeChildKey(section))?.label;
+
   const sidebarContent = (onNav?: () => void) => (
     <>
       <div style={{ padding: "16px 12px 8px", display: "flex", alignItems: "center", gap: "8px" }}>
@@ -154,26 +191,54 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      <div style={{ background: "var(--bg2)", borderRadius: "12px", padding: "8px", flex: 1, display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden" }}>
+      <div style={{ background: "var(--bg2)", borderRadius: "12px", padding: "8px", flex: 1, display: "flex", flexDirection: "column", minHeight: 0, overflow: "auto" }}>
         {NAV_ITEMS.map(item => {
           const active = section === item.key;
           return (
-            <button
-              key={item.key}
-              onClick={() => { setSection(item.key); onNav?.(); }}
-              style={{
-                width: "100%", display: "flex", alignItems: "center", gap: "12px",
-                padding: "10px 12px", borderRadius: "8px", cursor: "pointer",
-                background: active ? "rgba(139,92,246,0.12)" : "transparent",
-                border: "none", color: active ? "var(--text)" : "var(--muted)",
-                transition: "all 0.15s", textAlign: "left",
-              }}
-              onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.04)"; }}
-              onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.background = "transparent"; }}
-            >
-              <item.icon size={17} style={{ color: active ? "#8B5CF6" : "inherit", flexShrink: 0 }} />
-              <span style={{ fontWeight: 600, fontSize: "13px" }}>{item.label}</span>
-            </button>
+            <div key={item.key}>
+              <button
+                onClick={() => { setSection(item.key); onNav?.(); }}
+                style={{
+                  width: "100%", display: "flex", alignItems: "center", gap: "12px",
+                  padding: "10px 12px", borderRadius: "8px", cursor: "pointer",
+                  background: active ? "rgba(139,92,246,0.12)" : "transparent",
+                  border: "none", color: active ? "var(--text)" : "var(--muted)",
+                  transition: "all 0.15s", textAlign: "left",
+                }}
+                onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.04)"; }}
+                onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+              >
+                <item.icon size={17} style={{ color: active ? "#8B5CF6" : "inherit", flexShrink: 0 }} />
+                <span style={{ fontWeight: 600, fontSize: "13px" }}>{item.label}</span>
+              </button>
+
+              {/* Sous-liens : uniquement pour la section active */}
+              {active && item.children && (
+                <div style={{ display: "flex", flexDirection: "column", marginTop: "2px", marginBottom: "4px" }}>
+                  {item.children.map(child => {
+                    const childActive = activeChildKey(item.key) === child.key;
+                    return (
+                      <button
+                        key={child.key || "all"}
+                        onClick={() => { selectChild(item.key, child.key); onNav?.(); }}
+                        style={{
+                          display: "flex", alignItems: "center", gap: "8px",
+                          padding: "7px 12px 7px 38px", borderRadius: "8px", cursor: "pointer",
+                          background: childActive ? "rgba(139,92,246,0.08)" : "transparent",
+                          border: "none", color: childActive ? "#8B5CF6" : "var(--muted)",
+                          fontSize: "12px", fontWeight: childActive ? 700 : 500,
+                          transition: "all 0.15s", textAlign: "left",
+                        }}
+                        onMouseEnter={e => { if (!childActive) (e.currentTarget as HTMLElement).style.color = "var(--text)"; }}
+                        onMouseLeave={e => { if (!childActive) (e.currentTarget as HTMLElement).style.color = "var(--muted)"; }}
+                      >
+                        {child.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           );
         })}
 
@@ -247,7 +312,8 @@ export default function AdminDashboard() {
 
         <div className="dashboard-main" style={{ padding: "36px 40px", maxWidth: "1360px", margin: "0 auto" }}>
           <h1 className="bebas" style={{ fontSize: "36px", color: "var(--text)", lineHeight: 1, marginBottom: "28px" }}>
-            {NAV_ITEMS.find(n => n.key === section)?.label}
+            {currentNavItem?.label}
+            {currentChildLabel && <span style={{ color: "var(--muted)" }}> — {currentChildLabel}</span>}
           </h1>
 
           {/* Stats Section */}
@@ -290,33 +356,21 @@ export default function AdminDashboard() {
           {/* Users Section */}
           {section === "users" && (
             <div>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", marginBottom: "20px" }}>
-                <div style={{ display: "flex", gap: "8px" }}>
-                  {["", "listener", "artist", "admin"].map((role) => (
-                    <button
-                      key={role}
-                      onClick={() => { setRoleFilter(role); setPage(0); }}
-                      style={{
-                        padding: "8px 14px",
-                        borderRadius: "99px",
-                        border: "1px solid rgba(240,235,227,0.1)",
-                        background: roleFilter === role ? "var(--amber)" : "transparent",
-                        color: roleFilter === role ? "#fff" : "var(--muted)",
-                        fontSize: "12px",
-                        fontWeight: 600,
-                        cursor: "pointer",
-                        transition: "all 0.15s",
-                      }}
-                    >
-                      {role || "Tous"}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
               {usersLoading ? (
                 <div style={{ textAlign: "center", padding: "40px 0" }}>
                   <Loader2 size={24} style={{ color: "var(--amber)", animation: "spin 1s linear infinite" }} />
+                </div>
+              ) : usersError ? (
+                <div style={{ textAlign: "center", padding: "60px 20px", borderRadius: "16px", background: "rgba(240,235,227,0.03)", border: "1px solid rgba(240,235,227,0.06)" }}>
+                  <p style={{ color: "var(--muted)", fontSize: "13px", marginBottom: "14px" }}>
+                    Impossible de charger les utilisateurs.
+                  </p>
+                  <button
+                    onClick={loadUsers}
+                    style={{ padding: "8px 18px", borderRadius: "99px", border: "1px solid rgba(232,96,26,0.3)", background: "none", color: "var(--amber)", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}
+                  >
+                    Réessayer
+                  </button>
                 </div>
               ) : (
                 <div style={{ background: "rgba(240,235,227,0.02)", border: "1px solid rgba(240,235,227,0.06)", borderRadius: "16px", overflow: "hidden" }}>
@@ -415,14 +469,14 @@ export default function AdminDashboard() {
           {/* Validations Section */}
           {section === "validations" && (
             <div style={{ maxWidth: "900px" }}>
-              <ValidationsQueue />
+              <ValidationsQueue tab={validationTab} />
             </div>
           )}
 
           {/* Moderation Section */}
           {section === "moderation" && (
             <div style={{ maxWidth: "800px" }}>
-              <ModerationQueue />
+              <ModerationQueue filter={moderationFilter} />
             </div>
           )}
         </div>

@@ -7,6 +7,7 @@ import {
   type MyTrack,
 } from "../lib/api";
 import { Calendar, Clock, Trash2, Loader2, Check, Bell } from "lucide-react";
+import ConfirmModal from "./ConfirmModal";
 
 type Props = {
   tracks: MyTrack[];
@@ -22,6 +23,7 @@ export default function ReleaseScheduler({ tracks, onScheduled }: Props) {
   const [notifyFollowers, setNotifyFollowers] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [confirmCancelId, setConfirmCancelId] = useState<string | null>(null);
 
   useEffect(() => {
     loadReleases();
@@ -63,12 +65,13 @@ export default function ReleaseScheduler({ tracks, onScheduled }: Props) {
   };
 
   const handleCancel = async (releaseId: string) => {
-    if (!window.confirm("Annuler cette programmation ?")) return;
     try {
       await cancelRelease(releaseId);
       await loadReleases();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur lors de l'annulation");
+    } finally {
+      setConfirmCancelId(null);
     }
   };
 
@@ -181,7 +184,7 @@ export default function ReleaseScheduler({ tracks, onScheduled }: Props) {
 
               {release.status === "scheduled" && (
                 <button
-                  onClick={() => handleCancel(release.id)}
+                  onClick={() => setConfirmCancelId(release.id)}
                   className="p-1.5 rounded-lg hover:bg-red-500/10 text-white/40 hover:text-red-400 transition"
                   title="Annuler"
                 >
@@ -192,6 +195,15 @@ export default function ReleaseScheduler({ tracks, onScheduled }: Props) {
           ))}
         </div>
       )}
+
+      <ConfirmModal
+        open={confirmCancelId !== null}
+        title="Annuler la programmation"
+        message="Ce titre ne sera plus publié automatiquement à la date prévue."
+        confirmLabel="Annuler la sortie"
+        onConfirm={() => confirmCancelId && handleCancel(confirmCancelId)}
+        onCancel={() => setConfirmCancelId(null)}
+      />
     </div>
   );
 }

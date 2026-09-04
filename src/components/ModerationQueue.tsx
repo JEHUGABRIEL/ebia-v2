@@ -23,18 +23,19 @@ const STATUS_STYLES: Record<string, { color: string; bg: string; border: string;
   dismissed: { color: "var(--muted)", bg: "rgba(240,235,227,0.06)", border: "var(--border)", label: "Rejeté" },
 };
 
-const FILTERS: { key: "pending" | "resolved" | "dismissed"; label: string; color: string }[] = [
+export type ModerationFilter = "pending" | "resolved" | "dismissed";
+
+const FILTERS: { key: ModerationFilter; label: string; color: string }[] = [
   { key: "pending", label: "En attente", color: "var(--amber)" },
   { key: "resolved", label: "Résolus", color: "#4caf82" },
   { key: "dismissed", label: "Rejetés", color: "var(--muted)" },
 ];
 
-export default function ModerationQueue() {
+export default function ModerationQueue({ filter }: { filter: ModerationFilter }) {
   const [flags, setFlags] = useState<ContentFlag[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [stats, setStats] = useState({ pending: 0, resolved: 0, dismissed: 0 });
-  const [filter, setFilter] = useState<"pending" | "resolved" | "dismissed">("pending");
   const [resolvingId, setResolvingId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -86,25 +87,22 @@ export default function ModerationQueue() {
         <p style={{ fontSize: "13px", color: "var(--muted)", marginTop: "6px" }}>File de signalements sur le contenu</p>
       </div>
 
-      {/* Compteurs + filtre fusionnés : chaque pastille EST le bouton de filtre,
-         évite d'avoir deux rangées de contrôles qui font la même chose. */}
+      {/* Compteurs informatifs — la sélection se fait via les sous-liens de la sidebar. */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px" }}>
         {FILTERS.map(f => {
           const active = filter === f.key;
           return (
-            <button
+            <div
               key={f.key}
-              onClick={() => setFilter(f.key)}
               style={{
-                padding: "16px 12px", borderRadius: "14px", textAlign: "center", cursor: "pointer",
+                padding: "16px 12px", borderRadius: "14px", textAlign: "center",
                 background: active ? `${f.color}1a` : "rgba(240,235,227,0.03)",
                 border: `1px solid ${active ? `${f.color}55` : "var(--border)"}`,
-                transition: "all 0.15s",
               }}
             >
               <p className="bebas" style={{ fontSize: "26px", color: f.color, lineHeight: 1, marginBottom: "4px" }}>{stats[f.key]}</p>
               <p style={{ fontSize: "11px", color: active ? "var(--text)" : "var(--muted)", fontWeight: 600 }}>{f.label}</p>
-            </button>
+            </div>
           );
         })}
       </div>
