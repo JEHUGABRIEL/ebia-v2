@@ -8,9 +8,10 @@ import { getArtists, getTracks, getMyArtistProfile, updateProfile, uploadUserAva
 import PlayHistory from "../components/PlayHistory";
 import ActivityFeed from "../components/ActivityFeed";
 import Wrapped from "../pages/Wrapped";
+import PlaylistsPanel from "../components/PlaylistsPanel";
 import { daysLeft, type OfflineTrack } from "../lib/offline";
 
-type Section = "accueil" | "recherche" | "bibliotheque" | "favoris" | "suivis" | "parametres" | "decouvrir" | "telechargements" | "play-history" | "activity" | "wrapped";
+type Section = "accueil" | "recherche" | "bibliotheque" | "favoris" | "suivis" | "parametres" | "decouvrir" | "telechargements" | "playlists" | "play-history" | "activity" | "wrapped";
 
 const MOCK_ARTISTS = [
   { id: "1", name: "Idylle Mamba", genre: "Afro-Folk", slug: "idylle-mamba", avatar: "https://images.unsplash.com/photo-1516585427167-9f4af9627e6c?w=200" },
@@ -135,7 +136,7 @@ export default function ListenerDashboard() {
   ];
 
   const extraLinks = [
-    { to: "/playlists", label: "Playlists", icon: ListMusic, color: "var(--amber)" },
+    { section: "playlists" as Section, label: "Playlists", icon: ListMusic, color: "var(--amber)" },
     { section: "play-history" as Section, label: "Historique", icon: History, color: "var(--gold)" },
     { section: "activity" as Section, label: "Actualités", icon: Rss, color: "var(--green, #10b981)" },
     { section: "wrapped" as Section, label: "Mes Stats", icon: BarChart3, color: "var(--amber)" },
@@ -224,33 +225,18 @@ export default function ListenerDashboard() {
           ))}
           {/* Liens externes (Playlists, Historique, etc.) */}
           {extraLinks.map(link => (
-            link.section ? (
-              <button key={link.section} onClick={() => { setSection(link.section); onNav?.(); }} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "8px 10px", borderRadius: "8px", cursor: "pointer", background: section === link.section ? "rgba(240,235,227,0.04)" : "transparent", border: "none", textAlign: "left", transition: "background 0.15s" }}
-                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.04)"}
-                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = section === link.section ? "rgba(240,235,227,0.04)" : "transparent"}
-              >
-                <div style={{ width: "34px", height: "34px", borderRadius: "8px", flexShrink: 0, background: `${link.color}18`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <link.icon size={14} style={{ color: link.color }} />
-                </div>
-                <div>
-                  <p style={{ fontSize: "12px", fontWeight: 700, color: "var(--text)" }}>{link.label}</p>
-                  <p style={{ fontSize: "10px", color: "var(--muted)" }}>{link.label === "Playlists" ? "Mes playlists" : link.label === "Historique" ? "Écoutes récentes" : link.label === "Mes Stats" ? "Wrapped" : "Flux d'activité"}</p>
-                </div>
-              </button>
-            ) : (
-              <Link key={link.to} to={link.to} onClick={onNav} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "8px 10px", borderRadius: "8px", textDecoration: "none", transition: "background 0.15s" }}
-                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.04)"}
-                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}
-              >
-                <div style={{ width: "34px", height: "34px", borderRadius: "8px", flexShrink: 0, background: `${link.color}18`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <link.icon size={14} style={{ color: link.color }} />
-                </div>
-                <div>
-                  <p style={{ fontSize: "12px", fontWeight: 700, color: "var(--text)" }}>{link.label}</p>
-                  <p style={{ fontSize: "10px", color: "var(--muted)" }}>Mes playlists</p>
-                </div>
-              </Link>
-            )
+            <button key={link.section} onClick={() => { setSection(link.section); onNav?.(); }} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "8px 10px", borderRadius: "8px", cursor: "pointer", background: section === link.section ? "rgba(240,235,227,0.04)" : "transparent", border: "none", textAlign: "left", transition: "background 0.15s" }}
+              onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.04)"}
+              onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = section === link.section ? "rgba(240,235,227,0.04)" : "transparent"}
+            >
+              <div style={{ width: "34px", height: "34px", borderRadius: "8px", flexShrink: 0, background: `${link.color}18`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <link.icon size={14} style={{ color: link.color }} />
+              </div>
+              <div>
+                <p style={{ fontSize: "12px", fontWeight: 700, color: "var(--text)" }}>{link.label}</p>
+                <p style={{ fontSize: "10px", color: "var(--muted)" }}>{link.label === "Playlists" ? "Mes playlists" : link.label === "Historique" ? "Écoutes récentes" : link.label === "Mes Stats" ? "Wrapped" : "Flux d'activité"}</p>
+              </div>
+            </button>
           ))}
         </div>
         <div style={{ marginTop: "auto", paddingTop: "12px", borderTop: "1px solid var(--border)" }}>
@@ -812,6 +798,13 @@ export default function ListenerDashboard() {
                   })}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* ── PLAYLISTS ── */}
+          {section === "playlists" && (
+            <div style={{ maxWidth: "1000px" }}>
+              <PlaylistsPanel />
             </div>
           )}
 
