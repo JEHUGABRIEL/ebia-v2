@@ -735,3 +735,44 @@ export const getScheduledReleases = (status?: string) =>
 
 export const cancelRelease = (releaseId: string) =>
   del<{ message: string }>(`/api/releases/${releaseId}`);
+
+/* ── Album Management ── */
+export type AlbumTrack = {
+  trackId: string;
+  position: number;
+};
+
+export type Album = {
+  id: string;
+  title: string;
+  description: string | null;
+  coverUrl: string | null;
+  genre: string | null;
+  releaseDate: string | null;
+  isPublished: boolean;
+  trackCount: number;
+  tracks: AlbumTrack[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export const getMyAlbums = () =>
+  get<Album[]>('/api/albums');
+
+export const getAlbum = (albumId: string) =>
+  get<Album>(`/api/albums/${albumId}`);
+
+export const createAlbum = (data: { title: string; description?: string; genre?: string; coverUrl?: string; releaseDate?: string }) =>
+  post<Album>('/api/albums', data);
+
+export const updateAlbum = (albumId: string, data: { title?: string; description?: string; genre?: string; coverUrl?: string; releaseDate?: string }) =>
+  put<Album>(`/api/albums/${albumId}`, data);
+
+export const deleteAlbum = (albumId: string) =>
+  del<{ message: string }>(`/api/albums/${albumId}`);
+
+export const addTrackToAlbum = (albumId: string, trackId: string) =>
+  post<{ message: string }>(`/api/albums/${albumId}/tracks`, { trackId });
+
+export const removeTrackFromAlbum = (albumId: string, trackId: string) =>
+  del<{ message: string }>(`/api/albums/${albumId}/tracks/${trackId}`);

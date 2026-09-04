@@ -14,8 +14,9 @@ import {
   type MyArtistProfile, type MyTrack, type ArtistStats
 } from "../lib/api";
 import ReleaseScheduler from "../components/ReleaseScheduler";
+import AlbumSection from "../components/AlbumSection";
 
-type Section = "accueil" | "titres" | "profil" | "stats" | "parametres";
+type Section = "accueil" | "titres" | "albums" | "profil" | "stats" | "parametres";
 
 const FREE_LIMIT = 5;
 const fmtNum = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
@@ -201,6 +202,7 @@ export default function ArtistDashboard() {
   const navItems: { key: string; icon: typeof Home; label: string; onClick: () => void; active: boolean; badge?: "plus" | "lock" }[] = [
     { key: "accueil", icon: Home, label: "Accueil", onClick: () => setSection("accueil"), active: section === "accueil" },
     { key: "titres", icon: Music2, label: "Mes titres", onClick: () => setSection("titres"), active: section === "titres" },
+    { key: "albums", icon: Music2, label: "Mes albums", onClick: () => setSection("albums"), active: section === "albums" },
     { key: "upload", icon: Upload, label: "Uploader", onClick: () => setUploadOpen(true), active: false, badge: isFreeTierFull ? "lock" : "plus" },
     { key: "stats", icon: BarChart2, label: "Statistiques", onClick: () => setSection("stats"), active: section === "stats" },
     { key: "profil", icon: Mic2, label: "Mon profil", onClick: () => setSection("profil"), active: section === "profil" },
@@ -450,6 +452,11 @@ export default function ArtistDashboard() {
             <div style={{ marginTop: "32px" }}>
               <ReleaseScheduler tracks={tracks} onScheduled={loadTracks} />
             </div>
+          )}
+
+          {/* ── MES ALBUMS ── */}
+          {section === "albums" && (
+            <AlbumSection tracks={tracks} />
           )}
 
           {/* ── STATS ── */}
