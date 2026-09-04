@@ -53,7 +53,17 @@ export default function Recognize() {
         throw new Error("no_support");
       }
 
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      // Le navigateur applique par défaut echoCancellation/noiseSuppression/autoGainControl,
+      // des filtres DSP pensés pour la voix qui déforment le spectre et cassent le matching
+      // d'empreintes audio (les pics de fréquence doivent rester fidèles au signal d'origine).
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+        },
+        video: false,
+      });
 
       // Analyser le niveau audio pour les visualisations
       const ctx = new AudioContext();
