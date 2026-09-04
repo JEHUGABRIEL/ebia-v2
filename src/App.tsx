@@ -1,5 +1,5 @@
 import { useEffect, lazy, Suspense } from "react";
-import { BrowserRouter, Routes, Route, useLocation, useNavigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { AppProvider } from "./context/AppContext";
 import { QueueProvider } from "./context/QueueContext";
 import { EQProvider } from "./context/EQContext";
@@ -33,7 +33,12 @@ const Messaging = lazy(() => import("./pages/Messaging"));
 const Playlists = lazy(() => import("./pages/Playlists"));
 const PlaylistDetail = lazy(() => import("./pages/PlaylistDetail"));
 const PlayHistoryPage = lazy(() => import("./pages/PlayHistory"));
-const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
+const AdminLayout = lazy(() => import("./pages/AdminLayout"));
+const AdminOverview = lazy(() => import("./pages/admin/AdminOverview"));
+const AdminStats = lazy(() => import("./pages/admin/AdminStats"));
+const AdminUsers = lazy(() => import("./pages/admin/AdminUsers"));
+const AdminValidations = lazy(() => import("./pages/admin/AdminValidations"));
+const AdminModeration = lazy(() => import("./pages/admin/AdminModeration"));
 const Settings = lazy(() => import("./pages/Settings"));
 const Activity = lazy(() => import("./pages/Activity"));
 const Wrapped = lazy(() => import("./pages/Wrapped"));
@@ -109,7 +114,16 @@ function AppContent() {
             <Route path="/playlists" element={<AuthGuard><Playlists /></AuthGuard>} />
             <Route path="/playlists/:id" element={<AuthGuard><PlaylistDetail /></AuthGuard>} />
             <Route path="/play-history" element={<AuthGuard><PlayHistoryPage /></AuthGuard>} />
-            <Route path="/admin" element={<AdminGuard><AdminDashboard /></AdminGuard>} />
+            <Route path="/admin" element={<AdminGuard><AdminLayout /></AdminGuard>}>
+              <Route index element={<AdminOverview />} />
+              <Route path="stats" element={<AdminStats />} />
+              <Route path="users" element={<Navigate to="/admin/users/listener" replace />} />
+              <Route path="users/:role" element={<AdminUsers />} />
+              <Route path="validations" element={<Navigate to="/admin/validations/artists" replace />} />
+              <Route path="validations/:tab" element={<AdminValidations />} />
+              <Route path="moderation" element={<Navigate to="/admin/moderation/pending" replace />} />
+              <Route path="moderation/:filter" element={<AdminModeration />} />
+            </Route>
             <Route path="/settings" element={<AuthGuard><Settings /></AuthGuard>} />
             <Route path="/activity" element={<AuthGuard><Activity /></AuthGuard>} />
             <Route path="/wrapped" element={<AuthGuard><Wrapped /></AuthGuard>} />

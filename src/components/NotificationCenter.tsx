@@ -186,7 +186,10 @@ export default function NotificationCenter() {
     setOpen(false);
     // Naviguer vers l'entité concernée
     if (n.entityType === "admin_validation") {
-      navigate(`/admin`);
+      if (n.type === "admin_new_artist") navigate("/admin/validations/artists");
+      else if (n.type === "admin_new_track") navigate("/admin/validations/tracks");
+      else if (n.type === "admin_new_profile_change") navigate("/admin/validations/profile");
+      else navigate("/admin");
     } else if (n.entityType === "conversation" && n.entityId) {
       navigate(`/messages`);
     } else if (n.entityType === "track" && n.entityId) {
