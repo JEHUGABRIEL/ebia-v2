@@ -145,6 +145,29 @@ body {
   .sidebar-dashboard-mobile-bar { display: flex !important; }
 }
 
+/* ── Grilles du dashboard artiste (responsive, sans JS) ── */
+.dash-stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+.dash-kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.dash-two-col { display: grid; grid-template-columns: 1fr 320px; gap: 18px; }
+.dash-settings-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; align-items: start; }
+
+@media (max-width: 900px) {
+  .dash-two-col { grid-template-columns: 1fr; }
+  .dash-settings-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 600px) {
+  .dash-stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .dash-kpi-grid { grid-template-columns: 1fr; }
+}
+
+/* ── Ligne "Mes titres" : les colonnes secondaires disparaissent avant
+   de forcer un scroll horizontal ── */
+.dash-track-row { gap: 16px; }
+@media (max-width: 640px) {
+  .dash-track-secondary { display: none !important; }
+  .dash-track-row { gap: 10px; }
+}
+
 /* ── Cards responsive ── */
 @media (max-width: 600px) {
   .grid-artists { grid-template-columns: repeat(2, 1fr) !important; }

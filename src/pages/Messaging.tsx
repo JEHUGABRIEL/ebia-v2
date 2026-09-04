@@ -1319,20 +1319,24 @@ export default function Messaging() {
                       </button>
                     </>
                   )}
-                  {/* Retour toujours visible vers mon espace (dashboard) */}
+                  {/* Séparateur visuel : distingue "retour à mon espace" (navigation hors
+                      messagerie) des boutons d'appel juste avant (action dans la conversation) */}
+                  <div style={{ width: 1, height: 22, background: "rgba(240,235,227,0.1)", flexShrink: 0, margin: "0 2px" }} />
                   <button
                     onClick={goBackHome}
                     title="Retour à mon espace"
                     style={{
-                      width: 34, height: 34, borderRadius: 10, flexShrink: 0, cursor: "pointer",
-                      background: "rgba(240,235,227,0.06)", border: "1px solid rgba(240,235,227,0.08)",
-                      color: "var(--muted)", display: "flex", alignItems: "center", justifyContent: "center",
+                      height: 34, padding: isDesktop ? "0 14px 0 10px" : "0 9px", borderRadius: 99, flexShrink: 0, cursor: "pointer",
+                      background: "rgba(232,96,26,0.1)", border: "1px solid rgba(232,96,26,0.2)",
+                      color: "var(--amber)", display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                      fontSize: 12, fontWeight: 700, whiteSpace: "nowrap",
                       transition: "all 0.15s",
                     }}
-                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--amber)"; (e.currentTarget as HTMLElement).style.background = "rgba(232,96,26,0.15)"; }}
-                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--muted)"; (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.06)"; }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "rgba(232,96,26,0.2)"; }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "rgba(232,96,26,0.1)"; }}
                   >
                     <LayoutDashboard size={15} />
+                    {isDesktop && "Mon espace"}
                   </button>
                 </header>
 

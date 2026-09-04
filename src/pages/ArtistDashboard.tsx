@@ -1,12 +1,13 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useApp } from "../context/AppContext";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import {
   Home, Music2, Upload, BarChart2, Settings, LogOut,
   Play, Pause, Trash2, Eye, Heart, Headphones, TrendingUp,
-  Camera, Plus, Mic2, Lock, Crown, Zap
+  Camera, Plus, Mic2, Lock, Crown, Zap, Menu, X as XIcon
 } from "lucide-react";
 import LogoutModal from "../components/LogoutModal";
+import EbiaLogo from "../components/EbiaLogo";
 import UploadTrackModal from "../components/UploadTrackModal";
 import {
   getMyArtistProfile, getMyTracks, getMyStats, deleteMyTrack,
@@ -96,6 +97,7 @@ export default function ArtistDashboard() {
   const navigate = useNavigate();
 
   const [section, setSection] = useState<Section>("accueil");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [playingId, setPlayingId] = useState<string | null>(null);
@@ -214,68 +216,103 @@ export default function ArtistDashboard() {
 
   if (!user) return null;
 
+  const sidebarContent = (onNav?: () => void) => (
+    <>
+      <div style={{ padding: "16px 12px 8px", display: "flex", alignItems: "center", gap: "8px" }}>
+        <div style={{ width: "28px", height: "28px", borderRadius: "7px", background: "var(--amber)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <Music2 size={14} color="white" />
+        </div>
+        <div>
+          <span className="bebas" style={{ fontSize: "15px", color: "var(--text)", letterSpacing: "0.1em", display: "block", lineHeight: 1 }}>E-BIA</span>
+          <span style={{ fontSize: "9px", color: "var(--amber)", letterSpacing: "0.15em", textTransform: "uppercase", fontWeight: 700 }}>Espace Artiste</span>
+        </div>
+      </div>
+
+      <div style={{ background: "var(--bg2)", borderRadius: "12px", padding: "8px", flex: 1, display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden" }}>
+        {navItems.map(item => (
+          <SidebarNavButton key={item.key} icon={item.icon} label={item.label} onClick={() => { item.onClick(); onNav?.(); }} active={item.active} badge={item.badge} />
+        ))}
+
+        <button onClick={() => { navigate("/artist/" + (profile?.slug ?? "")); onNav?.(); }} style={{ marginTop: "4px", display: "flex", alignItems: "center", gap: "10px", padding: "9px 12px", borderRadius: "8px", cursor: "pointer", background: "transparent", border: "1px solid rgba(240,235,227,0.07)", color: "var(--muted)", transition: "all 0.15s", textAlign: "left", width: "100%" }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(232,96,26,0.3)"; (e.currentTarget as HTMLElement).style.color = "var(--amber)"; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(240,235,227,0.07)"; (e.currentTarget as HTMLElement).style.color = "var(--muted)"; }}>
+          <Eye size={14} style={{ flexShrink: 0 }} />
+          <span style={{ fontSize: "12px", fontWeight: 600 }}>Voir mon profil</span>
+        </button>
+
+        <button onClick={() => { navigate("/me"); onNav?.(); }} style={{ marginTop: "4px", display: "flex", alignItems: "center", gap: "10px", padding: "9px 12px", borderRadius: "8px", cursor: "pointer", background: "transparent", border: "1px solid rgba(240,235,227,0.07)", color: "var(--muted)", transition: "all 0.15s", textAlign: "left", width: "100%" }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(76,175,130,0.35)"; (e.currentTarget as HTMLElement).style.color = "#4caf82"; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(240,235,227,0.07)"; (e.currentTarget as HTMLElement).style.color = "var(--muted)"; }}>
+          <Headphones size={14} style={{ flexShrink: 0 }} />
+          <span style={{ fontSize: "12px", fontWeight: 600 }}>Passer en auditeur</span>
+        </button>
+
+        {/* Profil bas */}
+        <div style={{ marginTop: "auto", paddingTop: "12px", borderTop: "1px solid var(--border)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "4px 6px" }}>
+            <div style={{ width: "30px", height: "30px", borderRadius: "50%", flexShrink: 0, overflow: "hidden" }}>
+              {avatarPreview || profile?.avatar_url
+                ? <img src={avatarPreview || profile?.avatar_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                : <div style={{ width: "100%", height: "100%", background: "linear-gradient(135deg, var(--amber), var(--gold))", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 800, color: "#fff" }}>{user.displayName?.[0]?.toUpperCase()}</div>
+              }
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ fontSize: "11px", fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{profile?.stage_name || user.displayName}</p>
+              <p style={{ fontSize: "10px", color: "var(--amber)", fontWeight: 600 }}>
+                {profile?.plan === "pro" ? "⭐ Pro" : "Artiste · Gratuit"}
+              </p>
+            </div>
+            <button onClick={() => setLogoutOpen(true)} style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer", padding: "4px", borderRadius: "6px", transition: "all 0.15s" }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "var(--text)"; (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.06)"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "var(--muted)"; (e.currentTarget as HTMLElement).style.background = "none"; }}>
+              <LogOut size={13} />
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+
   return (
     <div style={{ display: "flex", height: "100vh", background: "var(--bg)" }}>
 
-      {/* ── SIDEBAR ── */}
-      <aside className="sidebar-dashboard" style={{ flexDirection: "column", gap: "8px", padding: "8px", background: "#000" }}>
-        <div style={{ padding: "16px 12px 8px", display: "flex", alignItems: "center", gap: "8px" }}>
-          <div style={{ width: "28px", height: "28px", borderRadius: "7px", background: "var(--amber)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Music2 size={14} color="white" />
-          </div>
-          <div>
-            <span className="bebas" style={{ fontSize: "15px", color: "var(--text)", letterSpacing: "0.1em", display: "block", lineHeight: 1 }}>E-BIA</span>
-            <span style={{ fontSize: "9px", color: "var(--amber)", letterSpacing: "0.15em", textTransform: "uppercase", fontWeight: 700 }}>Espace Artiste</span>
-          </div>
-        </div>
-
-        <div style={{ background: "var(--bg2)", borderRadius: "12px", padding: "8px", flex: 1, display: "flex", flexDirection: "column" }}>
-          {navItems.map(item => (
-            <SidebarNavButton key={item.key} icon={item.icon} label={item.label} onClick={item.onClick} active={item.active} badge={item.badge} />
-          ))}
-
-          <button onClick={() => navigate("/artist/" + (profile?.slug ?? ""))} style={{ marginTop: "4px", display: "flex", alignItems: "center", gap: "10px", padding: "9px 12px", borderRadius: "8px", cursor: "pointer", background: "transparent", border: "1px solid rgba(240,235,227,0.07)", color: "var(--muted)", transition: "all 0.15s", textAlign: "left", width: "100%" }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(232,96,26,0.3)"; (e.currentTarget as HTMLElement).style.color = "var(--amber)"; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(240,235,227,0.07)"; (e.currentTarget as HTMLElement).style.color = "var(--muted)"; }}>
-            <Eye size={14} style={{ flexShrink: 0 }} />
-            <span style={{ fontSize: "12px", fontWeight: 600 }}>Voir mon profil</span>
-          </button>
-
-          <button onClick={() => navigate("/me")} style={{ marginTop: "4px", display: "flex", alignItems: "center", gap: "10px", padding: "9px 12px", borderRadius: "8px", cursor: "pointer", background: "transparent", border: "1px solid rgba(240,235,227,0.07)", color: "var(--muted)", transition: "all 0.15s", textAlign: "left", width: "100%" }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(76,175,130,0.35)"; (e.currentTarget as HTMLElement).style.color = "#4caf82"; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(240,235,227,0.07)"; (e.currentTarget as HTMLElement).style.color = "var(--muted)"; }}>
-            <Headphones size={14} style={{ flexShrink: 0 }} />
-            <span style={{ fontSize: "12px", fontWeight: 600 }}>Passer en auditeur</span>
-          </button>
-
-          {/* Profil bas */}
-          <div style={{ marginTop: "auto", paddingTop: "12px", borderTop: "1px solid var(--border)" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "4px 6px" }}>
-              <div style={{ width: "30px", height: "30px", borderRadius: "50%", flexShrink: 0, overflow: "hidden" }}>
-                {avatarPreview || profile?.avatar_url
-                  ? <img src={avatarPreview || profile?.avatar_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                  : <div style={{ width: "100%", height: "100%", background: "linear-gradient(135deg, var(--amber), var(--gold))", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 800, color: "#fff" }}>{user.displayName?.[0]?.toUpperCase()}</div>
-                }
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: "11px", fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{profile?.stage_name || user.displayName}</p>
-                <p style={{ fontSize: "10px", color: "var(--amber)", fontWeight: 600 }}>
-                  {profile?.plan === "pro" ? "⭐ Pro" : "Artiste · Gratuit"}
-                </p>
-              </div>
-              <button onClick={() => setLogoutOpen(true)} style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer", padding: "4px", borderRadius: "6px", transition: "all 0.15s" }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "var(--text)"; (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.06)"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "var(--muted)"; (e.currentTarget as HTMLElement).style.background = "none"; }}>
-                <LogOut size={13} />
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* ── SIDEBAR desktop ── */}
+      <aside className="sidebar-dashboard" style={{ flexDirection: "column", gap: "8px", padding: "8px", background: "#000", overflow: "hidden" }}>
+        {sidebarContent()}
       </aside>
+
+      {/* ── DRAWER mobile ── */}
+      {mobileMenuOpen && (
+        <div onClick={() => setMobileMenuOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 90, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }} />
+      )}
+      <div style={{ position: "fixed", top: 0, left: mobileMenuOpen ? 0 : "-260px", width: "260px", height: "100vh", zIndex: 91, background: "#000", display: "flex", flexDirection: "column", gap: "8px", padding: "8px", transition: "left 0.25s ease", overflow: "hidden" }}>
+        <div style={{ display: "flex", justifyContent: "flex-end", padding: "8px 4px 0" }}>
+          <button onClick={() => setMobileMenuOpen(false)} style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer", padding: "4px" }}>
+            <XIcon size={20} />
+          </button>
+        </div>
+        {sidebarContent(() => setMobileMenuOpen(false))}
+      </div>
 
       {/* ── MAIN ── */}
       <main style={{ flex: 1, overflowY: "auto", background: section === "accueil" ? "linear-gradient(180deg, #1a0800 0%, var(--bg) 300px)" : "var(--bg)" }}>
-        <div style={{ padding: "36px 40px", maxWidth: "1680px", margin: "0 auto" }}>
+        {/* Barre mobile top avec hamburger */}
+        <div className="sidebar-dashboard-mobile-bar" style={{ alignItems: "center", justifyContent: "space-between", padding: "12px 16px", background: "#000", borderBottom: "1px solid var(--border)", position: "sticky", top: 0, zIndex: 10 }}>
+          <button onClick={() => setMobileMenuOpen(true)} style={{ background: "none", border: "none", color: "var(--text)", cursor: "pointer", padding: "4px", display: "flex" }}>
+            <Menu size={22} />
+          </button>
+          <Link to="/" style={{ display: "flex", alignItems: "center", gap: "6px", textDecoration: "none" }}>
+            <EbiaLogo size={22} />
+            <span className="bebas" style={{ fontSize: "14px", color: "var(--text)", letterSpacing: "0.1em" }}>E-BIA</span>
+          </Link>
+          <div style={{ width: "28px", height: "28px", borderRadius: "50%", overflow: "hidden", flexShrink: 0 }}>
+            {avatarPreview || profile?.avatar_url
+              ? <img src={avatarPreview || profile?.avatar_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              : <div style={{ width: "100%", height: "100%", background: "linear-gradient(135deg, var(--amber), var(--gold))", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 800, color: "#fff" }}>{user.displayName?.[0]?.toUpperCase()}</div>
+            }
+          </div>
+        </div>
+        <div className="dashboard-main" style={{ padding: "36px 40px", maxWidth: "1680px", margin: "0 auto" }}>
 
           {/* Bandeau profil artiste non trouvé */}
           {!loadingProfile && !loadingTracks && !profile && (
@@ -308,11 +345,11 @@ export default function ArtistDashboard() {
 
               {/* Stats cards */}
               {loadingStats ? (
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "14px" }}>
+                <div className="dash-stats-grid">
                   {[...Array(4)].map((_, i) => <div key={i} style={{ height: "120px", borderRadius: "14px", background: "rgba(240,235,227,0.04)", animation: "pulse 1.5s infinite" }} />)}
                 </div>
               ) : stats ? (
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "14px" }}>
+                <div className="dash-stats-grid">
                   <StatCard icon={Headphones} label="Écoutes totales" value={fmtNum(stats.total_plays)} color="var(--amber)" />
                   <StatCard icon={Heart} label="Likes" value={fmtNum(stats.total_likes)} color="#e25c5c" />
                   <StatCard icon={Music2} label="Titres publiés" value={String(stats.tracks_published)} color="var(--gold)" />
@@ -322,7 +359,7 @@ export default function ArtistDashboard() {
 
               {/* Chart + top tracks */}
               {stats && (
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: "18px" }}>
+                <div className="dash-two-col">
                   <div style={{ padding: "24px", borderRadius: "14px", background: "rgba(240,235,227,0.03)", border: "1px solid var(--border)" }}>
                     <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "24px" }}>
                       <div>
@@ -397,18 +434,18 @@ export default function ArtistDashboard() {
                 </div>
               ) : (
                 <>
-                  <div style={{ display: "flex", alignItems: "center", gap: "16px", padding: "0 16px 10px", fontSize: "10px", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--muted)", borderBottom: "1px solid var(--border)" }}>
+                  <div className="dash-track-row" style={{ display: "flex", alignItems: "center", padding: "0 16px 10px", fontSize: "10px", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--muted)", borderBottom: "1px solid var(--border)" }}>
                     <span style={{ width: "28px" }}>#</span>
                     <span style={{ flex: 1 }}>Titre</span>
                     <span style={{ width: "72px", textAlign: "right" }}>Écoutes</span>
-                    <span style={{ width: "56px", textAlign: "right" }}>Likes</span>
-                    <span style={{ width: "52px", textAlign: "right" }}>Durée</span>
+                    <span className="dash-track-secondary" style={{ width: "56px", textAlign: "right" }}>Likes</span>
+                    <span className="dash-track-secondary" style={{ width: "52px", textAlign: "right" }}>Durée</span>
                     <span style={{ width: "80px", textAlign: "right" }}>Statut</span>
                     <span style={{ width: "32px" }} />
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: "2px", marginTop: "4px" }}>
                     {tracks.map((track) => (
-                      <div key={track.id} style={{ display: "flex", alignItems: "center", gap: "16px", padding: "11px 16px", borderRadius: "10px", transition: "background 0.15s" }}
+                      <div key={track.id} className="dash-track-row" style={{ display: "flex", alignItems: "center", padding: "11px 16px", borderRadius: "10px", transition: "background 0.15s" }}
                         onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.04)"}
                         onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}>
                         <div style={{ width: "28px", flexShrink: 0 }}>
@@ -426,8 +463,8 @@ export default function ArtistDashboard() {
                         </div>
 
                         <span style={{ width: "72px", textAlign: "right", fontSize: "13px", color: "var(--muted)", fontVariantNumeric: "tabular-nums" }}>{fmtNum(track.plays_count)}</span>
-                        <span style={{ width: "56px", textAlign: "right", fontSize: "13px", color: "var(--muted)" }}>{fmtNum(track.likes_count)}</span>
-                        <span style={{ width: "52px", textAlign: "right", fontSize: "13px", color: "var(--muted)", fontVariantNumeric: "tabular-nums" }}>{fmtDur(track.duration_s)}</span>
+                        <span className="dash-track-secondary" style={{ width: "56px", textAlign: "right", fontSize: "13px", color: "var(--muted)" }}>{fmtNum(track.likes_count)}</span>
+                        <span className="dash-track-secondary" style={{ width: "52px", textAlign: "right", fontSize: "13px", color: "var(--muted)", fontVariantNumeric: "tabular-nums" }}>{fmtDur(track.duration_s)}</span>
 
                         <div style={{ width: "80px", display: "flex", justifyContent: "flex-end" }}>
                           <span style={{ padding: "4px 9px", borderRadius: "99px", fontSize: "10px", fontWeight: 700, background: track.status === "published" ? "rgba(76,175,130,0.12)" : "rgba(240,235,227,0.06)", color: track.status === "published" ? "#4caf82" : "var(--muted)", border: `1px solid ${track.status === "published" ? "rgba(76,175,130,0.25)" : "var(--border)"}` }}>
@@ -475,7 +512,7 @@ export default function ArtistDashboard() {
               ) : (
                 <>
                   {/* KPIs */}
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "14px" }}>
+                  <div className="dash-kpi-grid">
                     {[
                       { label: "Total écoutes", value: fmtNum(stats.total_plays), color: "var(--amber)" },
                       { label: "Total likes", value: fmtNum(stats.total_likes), color: "#e25c5c" },
@@ -629,7 +666,7 @@ export default function ArtistDashboard() {
           {section === "parametres" && (
             <div style={{ maxWidth: "1100px", margin: "0 auto" }}>
               <h1 className="bebas" style={{ fontSize: "42px", color: "var(--text)", marginBottom: "28px" }}>Paramètres</h1>
-              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "24px", alignItems: "start" }}>
+              <div className="dash-settings-grid">
                 {/* Colonne gauche : Compte */}
                 <div style={{ padding: "28px 32px", borderRadius: "16px", background: "rgba(240,235,227,0.03)", border: "1px solid var(--border)" }}>
                   <h2 className="bebas" style={{ fontSize: "24px", color: "var(--text)", marginBottom: "20px" }}>Compte</h2>
