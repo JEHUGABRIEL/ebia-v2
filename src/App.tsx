@@ -33,6 +33,7 @@ const PlayHistoryPage = lazy(() => import("./pages/PlayHistory"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 const Reports = lazy(() => import("./pages/Reports"));
 const Settings = lazy(() => import("./pages/Settings"));
+const Activity = lazy(() => import("./pages/Activity"));
 
 function RouteFallback() {
   return (
@@ -108,6 +109,7 @@ function AppContent() {
             <Route path="/admin" element={<AuthGuard><AdminDashboard /></AuthGuard>} />
             <Route path="/admin/reports" element={<AuthGuard><Reports /></AuthGuard>} />
             <Route path="/settings" element={<AuthGuard><Settings /></AuthGuard>} />
+            <Route path="/activity" element={<AuthGuard><Activity /></AuthGuard>} />
           </Routes>
         </Suspense>
       </div>

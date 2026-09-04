@@ -639,6 +639,28 @@ export const saveTrackLyrics = (trackId: string, data: { language: string; plain
 export const deleteTrackLyrics = (trackId: string) =>
   del<{ message: string }>(`/api/tracks/${trackId}/lyrics`);
 
+/* ── Activity Feed ── */
+export type Activity = {
+  id: string;
+  userName: string;
+  userAvatar: string | null;
+  type: string;
+  title: string;
+  description: string | null;
+  targetType: string | null;
+  targetSlug: string | null;
+  createdAt: string;
+};
+
+export const getActivityFeed = (limit = 50) =>
+  get<Activity[]>(`/api/activity/feed?limit=${limit}`);
+
+export const recordActivity = (data: {
+  user_id: string; user_name: string; user_avatar?: string;
+  type: string; title: string; description?: string;
+  target_id?: string; target_type?: string; target_slug?: string;
+}) => post<Activity>('/api/activity/record', data);
+
 export const deleteAccount = (password: string) =>
   fetch(`${BASE}/api/settings`, {
     method: 'DELETE',
