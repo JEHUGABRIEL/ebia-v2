@@ -334,6 +334,10 @@ export const createGroupConversation = (name: string, memberIds: string[]) =>
     { name, memberIds }
   );
 
+/** Signale un appel audio/vidéo resté sans réponse (déclenche une notification "appel manqué"). */
+export const reportMissedCall = (calleeId: string, type: "audio" | "video") =>
+  post<{ reported: boolean }>("/api/v1/calls/missed", { calleeId, type });
+
 export const getArtistsForMessaging = () =>
   get<{ data: Artist[] }>("/api/v1/artists");
 

@@ -2,10 +2,11 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft, Check, CheckCheck, Image as ImageIcon, LayoutDashboard,
-  MessageSquare, Music2, Paperclip, Pencil, Search, Send, SmilePlus,
+  MessageSquare, Music2, Paperclip, Pencil, Phone, Search, Send, SmilePlus,
   Users, Video as VideoIcon, X,
 } from "lucide-react";
 import { useApp } from "../context/AppContext";
+import { useCall } from "../context/CallContext";
 import {
   getConversations,
   getMessages,
@@ -473,6 +474,7 @@ function GroupChatModal({
 
 export default function Messaging() {
   const { user, currentTrack } = useApp();
+  const { startCall } = useCall();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -1277,6 +1279,45 @@ export default function Messaging() {
                     <button onClick={closeConversation} style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer", display: "flex", padding: 4 }}>
                       <X size={18} />
                     </button>
+                  )}
+                  {/* Appel audio/vidéo — conversations directes uniquement (pas de groupe) */}
+                  {activeConv.type !== "group" && !activeConv.pending && activeConv.otherParticipantId && (
+                    <>
+                      <button
+                        onClick={() => void startCall(
+                          { userId: activeConv.otherParticipantId!, name: convTitle, avatar: activeConv.otherParticipantAvatar || undefined },
+                          activeConv.id, "audio",
+                        )}
+                        title="Appel audio"
+                        style={{
+                          width: 34, height: 34, borderRadius: 10, flexShrink: 0, cursor: "pointer",
+                          background: "rgba(240,235,227,0.06)", border: "1px solid rgba(240,235,227,0.08)",
+                          color: "var(--muted)", display: "flex", alignItems: "center", justifyContent: "center",
+                          transition: "all 0.15s",
+                        }}
+                        onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--amber)"; (e.currentTarget as HTMLElement).style.background = "rgba(232,96,26,0.15)"; }}
+                        onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--muted)"; (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.06)"; }}
+                      >
+                        <Phone size={15} />
+                      </button>
+                      <button
+                        onClick={() => void startCall(
+                          { userId: activeConv.otherParticipantId!, name: convTitle, avatar: activeConv.otherParticipantAvatar || undefined },
+                          activeConv.id, "video",
+                        )}
+                        title="Appel vidéo"
+                        style={{
+                          width: 34, height: 34, borderRadius: 10, flexShrink: 0, cursor: "pointer",
+                          background: "rgba(240,235,227,0.06)", border: "1px solid rgba(240,235,227,0.08)",
+                          color: "var(--muted)", display: "flex", alignItems: "center", justifyContent: "center",
+                          transition: "all 0.15s",
+                        }}
+                        onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--amber)"; (e.currentTarget as HTMLElement).style.background = "rgba(232,96,26,0.15)"; }}
+                        onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--muted)"; (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.06)"; }}
+                      >
+                        <VideoIcon size={15} />
+                      </button>
+                    </>
                   )}
                   {/* Retour toujours visible vers mon espace (dashboard) */}
                   <button

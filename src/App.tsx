@@ -3,11 +3,14 @@ import { BrowserRouter, Routes, Route, useLocation, useNavigate } from "react-ro
 import { AppProvider } from "./context/AppContext";
 import { QueueProvider } from "./context/QueueContext";
 import { EQProvider } from "./context/EQContext";
+import { CallProvider } from "./context/CallContext";
 import { AuthGuard, ArtistGuard } from "./components/Guards";
 import Navbar from "./components/Navbar";
 import Player from "./components/Player";
 import LoginModal from "./components/LoginModal";
 import MessageFab from "./components/MessageFab";
+import CallScreen from "./components/CallScreen";
+import IncomingCallToast from "./components/IncomingCallToast";
 import Footer from "./components/Footer";
 import { App as CapApp } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
@@ -119,6 +122,8 @@ function AppContent() {
       <Player />
       <MessageFab />
       <LoginModal />
+      <CallScreen />
+      <IncomingCallToast />
     </>
   );
 }
@@ -126,13 +131,15 @@ function AppContent() {
 export default function App() {
   return (
     <AppProvider>
-      <QueueProvider>
-        <EQProvider>
-          <BrowserRouter>
-            <AppContent />
-          </BrowserRouter>
-        </EQProvider>
-      </QueueProvider>
+      <CallProvider>
+        <QueueProvider>
+          <EQProvider>
+            <BrowserRouter>
+              <AppContent />
+            </BrowserRouter>
+          </EQProvider>
+        </QueueProvider>
+      </CallProvider>
     </AppProvider>
   );
 }
