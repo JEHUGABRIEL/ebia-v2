@@ -12,6 +12,7 @@ import {
   CheckCircle2,
   TrendingUp,
   ChevronDown,
+  Crown,
 } from "lucide-react";
 import LogoutModal from "../components/LogoutModal";
 import EbiaLogo from "../components/EbiaLogo";
@@ -29,6 +30,13 @@ const NAV_ITEMS: NavGroup[] = [
       { to: "/admin/users/listener", label: "Auditeurs" },
       { to: "/admin/users/artist", label: "Artistes" },
       { to: "/admin/users/admin", label: "Admins" },
+    ],
+  },
+  {
+    key: "subscriptions", label: "Abonnement", icon: Crown, base: "/admin/subscriptions",
+    children: [
+      { to: "/admin/subscriptions/free", label: "Gratuit" },
+      { to: "/admin/subscriptions/pro", label: "Pro" },
     ],
   },
   {

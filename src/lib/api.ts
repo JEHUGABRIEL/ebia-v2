@@ -595,14 +595,20 @@ export type AdminUserDetails = AdminUser & {
 export const getAdminStats = () =>
   get<AdminStats>('/api/admin/stats');
 
-export const getAdminUsers = (page = 0, size = 20, role?: string) => {
+export const getAdminUsers = (page = 0, size = 20, role?: string, subscription?: "free" | "pro") => {
   const params = new URLSearchParams({ page: String(page), size: String(size) });
   if (role) params.set('role', role);
+  if (subscription) params.set('subscription', subscription);
   return get<AdminUser[]>(`/api/admin/users?${params}`);
 };
 
 export const getAdminUserDetails = (userId: string) =>
   get<AdminUserDetails>(`/api/admin/users/${userId}`);
+
+export type SubscriptionSummary = { pro: number; free: number; total: number };
+
+export const getSubscriptionSummary = () =>
+  get<SubscriptionSummary>('/api/admin/subscriptions/summary');
 
 export const changeUserRole = (userId: string, role: string) =>
   put<{ message: string }>(`/api/admin/users/${userId}/role`, { role });
