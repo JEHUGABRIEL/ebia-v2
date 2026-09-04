@@ -569,6 +569,7 @@ export type AdminUser = {
   displayName: string;
   role: string;
   active: boolean;
+  subscription: "free" | "pro";
   createdAt: string;
 };
 
@@ -586,6 +587,9 @@ export const toggleUserActive = (userId: string) =>
 
 export const changeUserRole = (userId: string, role: string) =>
   put<{ message: string }>(`/api/admin/users/${userId}/role`, { role });
+
+export const changeUserSubscription = (userId: string, plan: "free" | "pro") =>
+  put<{ message: string; subscription: string }>(`/api/admin/users/${userId}/subscription`, { plan });
 
 /* ── Admin — Validations (comptes artistes, profils, titres) ── */
 export type ArtistValidation = {

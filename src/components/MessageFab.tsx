@@ -15,7 +15,7 @@ export default function MessageFab() {
   const location = useLocation();
   const [unreadCount, setUnreadCount] = useState(0);
 
-  const isMessagingUser = !!user && (user.role === "artist" || user.role === "admin");
+  const isMessagingUser = !!user && user.role === "artist";
 
   // Refresh the unread badge on mount, whenever the route changes (so leaving
   // /messages updates it) and when the window regains focus.

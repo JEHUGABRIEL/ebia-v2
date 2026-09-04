@@ -21,6 +21,7 @@ import {
   getAdminUsers,
   toggleUserActive,
   changeUserRole,
+  changeUserSubscription,
   type AdminStats,
   type AdminUser,
 } from "../lib/api";
@@ -28,6 +29,7 @@ import ModerationQueue from "../components/ModerationQueue";
 import ValidationsQueue from "../components/ValidationsQueue";
 import LogoutModal from "../components/LogoutModal";
 import EbiaLogo from "../components/EbiaLogo";
+import NotificationCenter from "../components/NotificationCenter";
 
 type AdminSection = "stats" | "users" | "validations" | "moderation";
 
@@ -107,6 +109,17 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleChangeSubscription = async (userId: string, plan: "free" | "pro") => {
+    try {
+      await changeUserSubscription(userId, plan);
+      setUsers((prev) =>
+        prev.map((u) => (u.id === userId ? { ...u, subscription: plan } : u))
+      );
+    } catch (err) {
+      console.error("Failed to change user subscription:", err);
+    }
+  };
+
   const statCards = stats
     ? [
         { label: "Utilisateurs", value: stats.totalUsers, icon: Users, color: "#3B82F6" },
@@ -131,6 +144,9 @@ export default function AdminDashboard() {
         <div>
           <span className="bebas" style={{ fontSize: "15px", color: "var(--text)", letterSpacing: "0.1em", display: "block", lineHeight: 1 }}>E-BIA</span>
           <span style={{ fontSize: "9px", color: "#8B5CF6", letterSpacing: "0.15em", textTransform: "uppercase", fontWeight: 700 }}>Administration</span>
+        </div>
+        <div style={{ marginLeft: "auto" }}>
+          <NotificationCenter />
         </div>
       </div>
 
@@ -217,8 +233,11 @@ export default function AdminDashboard() {
             <EbiaLogo size={22} />
             <span className="bebas" style={{ fontSize: "14px", color: "var(--text)", letterSpacing: "0.1em" }}>E-BIA</span>
           </Link>
-          <div style={{ width: "28px", height: "28px", borderRadius: "50%", background: "linear-gradient(135deg, #8B5CF6, #6D28D9)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 800, color: "#fff", flexShrink: 0 }}>
-            {user.displayName?.[0]?.toUpperCase()}
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <NotificationCenter />
+            <div style={{ width: "28px", height: "28px", borderRadius: "50%", background: "linear-gradient(135deg, #8B5CF6, #6D28D9)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 800, color: "#fff", flexShrink: 0 }}>
+              {user.displayName?.[0]?.toUpperCase()}
+            </div>
           </div>
         </div>
 
@@ -303,6 +322,7 @@ export default function AdminDashboard() {
                     <span>Email</span>
                     <span>Rôle</span>
                     <span>Statut</span>
+                    <span>Abonnement</span>
                     <span style={{ textAlign: "right" }}>Actions</span>
                   </div>
 
@@ -325,6 +345,26 @@ export default function AdminDashboard() {
                       <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "12px", fontWeight: 600, color: u.active ? "#10B981" : "#EF4444" }}>
                         <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: u.active ? "#10B981" : "#EF4444" }} />
                         {u.active ? "Actif" : "Inactif"}
+                      </span>
+                      <span>
+                        {u.role === "admin" ? (
+                          <span style={{ fontSize: "12px", color: "var(--muted)" }}>—</span>
+                        ) : (
+                          <select
+                            value={u.subscription || "free"}
+                            onChange={(e) => handleChangeSubscription(u.id, e.target.value as "free" | "pro")}
+                            style={{
+                              padding: "6px 10px", borderRadius: "8px",
+                              border: `1px solid ${u.subscription === "pro" ? "rgba(201,147,10,0.35)" : "rgba(240,235,227,0.1)"}`,
+                              background: u.subscription === "pro" ? "rgba(201,147,10,0.1)" : "rgba(240,235,227,0.05)",
+                              color: u.subscription === "pro" ? "var(--gold)" : "var(--text)",
+                              fontSize: "12px", fontWeight: 600, cursor: "pointer",
+                            }}
+                          >
+                            <option value="free">free</option>
+                            <option value="pro">pro</option>
+                          </select>
+                        )}
                       </span>
                       <div style={{ textAlign: "right" }}>
                         <button

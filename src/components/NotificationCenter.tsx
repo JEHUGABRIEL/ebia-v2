@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Bell, CheckCheck, Heart, UserPlus, Music, Smartphone, AlertTriangle, MessageSquare, X } from "lucide-react";
+import { Bell, CheckCheck, Heart, UserPlus, Music, Smartphone, AlertTriangle, MessageSquare, X, ShieldCheck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -19,6 +19,15 @@ const NOTIFICATION_ICONS: Record<string, typeof Bell> = {
   new_device: Smartphone,
   new_message: MessageSquare,
   alert: AlertTriangle,
+  admin_new_artist: ShieldCheck,
+  admin_new_track: ShieldCheck,
+  admin_new_profile_change: ShieldCheck,
+  account_approved: ShieldCheck,
+  account_rejected: ShieldCheck,
+  track_approved: Music,
+  track_rejected: Music,
+  profile_change_approved: ShieldCheck,
+  profile_change_rejected: ShieldCheck,
 };
 
 const NOTIFICATION_COLORS: Record<string, string> = {
@@ -28,6 +37,15 @@ const NOTIFICATION_COLORS: Record<string, string> = {
   new_track: "#e8601a",
   new_device: "#3b82f6",
   alert: "#f59e0b",
+  admin_new_artist: "#8B5CF6",
+  admin_new_track: "#8B5CF6",
+  admin_new_profile_change: "#8B5CF6",
+  account_approved: "#10b981",
+  account_rejected: "#f43f5e",
+  track_approved: "#10b981",
+  track_rejected: "#f43f5e",
+  profile_change_approved: "#10b981",
+  profile_change_rejected: "#f43f5e",
 };
 
 function timeAgo(dateStr: string): string {
@@ -167,7 +185,9 @@ export default function NotificationCenter() {
     }
     setOpen(false);
     // Naviguer vers l'entité concernée
-    if (n.entityType === "conversation" && n.entityId) {
+    if (n.entityType === "admin_validation") {
+      navigate(`/admin`);
+    } else if (n.entityType === "conversation" && n.entityId) {
       navigate(`/messages`);
     } else if (n.entityType === "track" && n.entityId) {
       navigate(`/explore`);

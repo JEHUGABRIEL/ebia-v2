@@ -51,6 +51,18 @@ export const ArtistGuard = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+// La messagerie est réservée aux artistes — un admin n'y a pas accès
+// (contrairement à /artist-dashboard, où il garde un accès de lecture).
+export const MessagingGuard = ({ children }: { children: React.ReactNode }) => {
+  const { user, authReady } = useApp();
+  const { t } = useTranslation();
+  if (!authReady) return <div className="min-h-screen bg-zinc-950 flex items-center justify-center text-zinc-500 uppercase tracking-widest text-xs">{t("guards.loading")}</div>;
+  if (!user) return <Navigate to="/login" replace />;
+  if (user.role === "admin") return <Navigate to="/admin" replace />;
+  if (user.role !== "artist") return <Navigate to="/me" replace />;
+  return <>{children}</>;
+};
+
 export const AdminGuard = ({ children }: { children: React.ReactNode }) => {
   const { user, authReady } = useApp();
   const { t } = useTranslation();
