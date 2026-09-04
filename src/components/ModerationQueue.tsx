@@ -17,31 +17,40 @@ const FLAG_TYPE_LABELS: Record<string, string> = {
   OTHER: "Autre",
 };
 
-const STATUS_COLORS: Record<string, string> = {
-  pending: "bg-amber-500/20 text-amber-400 border-amber-500/30",
-  resolved: "bg-green-500/20 text-green-400 border-green-500/30",
-  dismissed: "bg-white/10 text-white/50 border-white/10",
+const STATUS_STYLES: Record<string, { color: string; bg: string; border: string; label: string }> = {
+  pending: { color: "var(--amber)", bg: "rgba(232,96,26,0.12)", border: "rgba(232,96,26,0.3)", label: "En attente" },
+  resolved: { color: "#4caf82", bg: "rgba(76,175,130,0.12)", border: "rgba(76,175,130,0.3)", label: "Résolu" },
+  dismissed: { color: "var(--muted)", bg: "rgba(240,235,227,0.06)", border: "var(--border)", label: "Rejeté" },
 };
+
+const FILTERS: { key: "pending" | "resolved" | "dismissed"; label: string; color: string }[] = [
+  { key: "pending", label: "En attente", color: "var(--amber)" },
+  { key: "resolved", label: "Résolus", color: "#4caf82" },
+  { key: "dismissed", label: "Rejetés", color: "var(--muted)" },
+];
 
 export default function ModerationQueue() {
   const [flags, setFlags] = useState<ContentFlag[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [stats, setStats] = useState({ pending: 0, resolved: 0, dismissed: 0 });
-  const [filter, setFilter] = useState<string>("pending");
+  const [filter, setFilter] = useState<"pending" | "resolved" | "dismissed">("pending");
   const [resolvingId, setResolvingId] = useState<string | null>(null);
 
   useEffect(() => {
     loadFlags();
     loadStats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter]);
 
   const loadFlags = async () => {
     setLoading(true);
+    setLoadError(false);
     try {
-      const data = await getFlaggedContent(filter || undefined);
+      const data = await getFlaggedContent(filter);
       setFlags(data);
     } catch {
-      // Ignore
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -52,7 +61,7 @@ export default function ModerationQueue() {
       const data = await getModerationStats();
       setStats(data);
     } catch {
-      // Ignore
+      /* Les pastilles resteront à 0 — pas bloquant pour la liste elle-même */
     }
   };
 
@@ -70,111 +79,117 @@ export default function ModerationQueue() {
   };
 
   return (
-    <div className="space-y-4">
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
       {/* Header */}
       <div>
-        <h1 className="bebas text-3xl text-white">Modération</h1>
-        <p className="text-sm text-white/40 mt-1">File de signalements en attente</p>
+        <h1 className="bebas" style={{ fontSize: "28px", color: "var(--text)", lineHeight: 1 }}>Modération</h1>
+        <p style={{ fontSize: "13px", color: "var(--muted)", marginTop: "6px" }}>File de signalements sur le contenu</p>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-3">
-        {[
-          { label: "En attente", value: stats.pending, color: "text-amber-400", bg: "bg-amber-500/10" },
-          { label: "Résolus", value: stats.resolved, color: "text-green-400", bg: "bg-green-500/10" },
-          { label: "Rejetés", value: stats.dismissed, color: "text-white/50", bg: "bg-white/5" },
-        ].map(s => (
-          <div key={s.label} className={`${s.bg} rounded-xl p-4 text-center`}>
-            <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
-            <p className="text-xs text-white/40 mt-1">{s.label}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Filter */}
-      <div className="flex gap-2">
-        {["pending", "resolved", "dismissed"].map(s => (
-          <button
-            key={s}
-            onClick={() => setFilter(s)}
-            className={`px-4 py-2 rounded-lg text-xs font-semibold transition ${
-              filter === s ? "bg-amber-500 text-white" : "bg-white/5 text-white/40 hover:bg-white/10"
-            }`}
-          >
-            {s === "pending" ? "En attente" : s === "resolved" ? "Résolus" : "Rejetés"}
-          </button>
-        ))}
+      {/* Compteurs + filtre fusionnés : chaque pastille EST le bouton de filtre,
+         évite d'avoir deux rangées de contrôles qui font la même chose. */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px" }}>
+        {FILTERS.map(f => {
+          const active = filter === f.key;
+          return (
+            <button
+              key={f.key}
+              onClick={() => setFilter(f.key)}
+              style={{
+                padding: "16px 12px", borderRadius: "14px", textAlign: "center", cursor: "pointer",
+                background: active ? `${f.color}1a` : "rgba(240,235,227,0.03)",
+                border: `1px solid ${active ? `${f.color}55` : "var(--border)"}`,
+                transition: "all 0.15s",
+              }}
+            >
+              <p className="bebas" style={{ fontSize: "26px", color: f.color, lineHeight: 1, marginBottom: "4px" }}>{stats[f.key]}</p>
+              <p style={{ fontSize: "11px", color: active ? "var(--text)" : "var(--muted)", fontWeight: 600 }}>{f.label}</p>
+            </button>
+          );
+        })}
       </div>
 
       {/* Flags list */}
-      {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 size={24} className="text-amber-500 animate-spin" />
-        </div>
-      ) : flags.length === 0 ? (
-        <div className="text-center py-12 text-white/40">
-          <Shield size={48} className="mx-auto mb-4 opacity-30" />
-          <p>Aucun signalement {filter === "pending" ? "en attente" : filter}</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {flags.map(flag => (
-            <div key={flag.id} className="bg-white/[0.03] rounded-xl border border-white/[0.06] p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${STATUS_COLORS[flag.status] || STATUS_COLORS.pending}`}>
-                      {flag.status}
-                    </span>
-                    <span className="text-xs text-white/40">
-                      {FLAG_TYPE_LABELS[flag.flagType] || flag.flagType}
-                    </span>
+      <div style={{ borderRadius: "16px", background: "rgba(240,235,227,0.02)", border: "1px solid var(--border)", minHeight: "160px" }}>
+        {loading ? (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "60px 0" }}>
+            <Loader2 size={24} style={{ color: "var(--amber)", animation: "spin 1s linear infinite" }} />
+          </div>
+        ) : loadError ? (
+          <div style={{ textAlign: "center", padding: "48px 20px" }}>
+            <p style={{ color: "var(--muted)", fontSize: "13px", marginBottom: "14px" }}>Impossible de charger les signalements.</p>
+            <button onClick={loadFlags} style={{ padding: "8px 18px", borderRadius: "99px", border: "1px solid rgba(232,96,26,0.3)", background: "none", color: "var(--amber)", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}>
+              Réessayer
+            </button>
+          </div>
+        ) : flags.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "48px 20px" }}>
+            <Shield size={36} style={{ color: "var(--muted)", opacity: 0.4, marginBottom: "12px" }} />
+            <p style={{ color: "var(--muted)", fontSize: "13px" }}>
+              Aucun signalement {filter === "pending" ? "en attente" : filter === "resolved" ? "résolu" : "rejeté"}
+            </p>
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            {flags.map((flag, idx) => {
+              const statusStyle = STATUS_STYLES[flag.status] || STATUS_STYLES.pending;
+              return (
+                <div key={flag.id} style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "12px", padding: "16px 18px", borderBottom: idx < flags.length - 1 ? "1px solid rgba(240,235,227,0.04)" : "none" }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px", flexWrap: "wrap" }}>
+                      <span style={{ padding: "3px 9px", borderRadius: "99px", fontSize: "10px", fontWeight: 700, color: statusStyle.color, background: statusStyle.bg, border: `1px solid ${statusStyle.border}` }}>
+                        {statusStyle.label}
+                      </span>
+                      <span style={{ fontSize: "11px", color: "var(--muted)" }}>
+                        {FLAG_TYPE_LABELS[flag.flagType] || flag.flagType}
+                      </span>
+                    </div>
+
+                    <p style={{ fontSize: "13px", fontWeight: 700, color: "var(--text)", marginBottom: "3px" }}>
+                      {flag.targetTitle || `Contenu ${flag.targetType}`}
+                    </p>
+
+                    {flag.reason && (
+                      <p style={{ fontSize: "12px", color: "var(--muted)", marginBottom: "6px", fontStyle: "italic" }}>"{flag.reason}"</p>
+                    )}
+
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "11px", color: "rgba(240,235,227,0.3)" }}>
+                      <span>Par {flag.reporterName || "Anonyme"}</span>
+                      <span>·</span>
+                      <span>{new Date(flag.createdAt).toLocaleDateString("fr-FR")}</span>
+                    </div>
+
+                    {flag.reviewNote && (
+                      <p style={{ fontSize: "11px", color: "var(--muted)", marginTop: "8px", fontStyle: "italic" }}>Note : {flag.reviewNote}</p>
+                    )}
                   </div>
 
-                  <p className="text-sm text-white font-medium mb-1">
-                    {flag.targetTitle || `Contenu ${flag.targetType}`}
-                  </p>
-
-                  {flag.reason && (
-                    <p className="text-xs text-white/50 mb-2">"{flag.reason}"</p>
-                  )}
-
-                  <div className="flex items-center gap-3 text-xs text-white/30">
-                    <span>Par {flag.reporterName || "Anonyme"}</span>
-                    <span>•</span>
-                    <span>{new Date(flag.createdAt).toLocaleDateString("fr-FR")}</span>
-                  </div>
-
-                  {flag.reviewNote && (
-                    <p className="text-xs text-white/40 mt-2 italic">Note: {flag.reviewNote}</p>
+                  {flag.status === "pending" && (
+                    <div style={{ display: "flex", gap: "6px", flexShrink: 0 }}>
+                      <button
+                        onClick={() => handleResolve(flag.id, "resolved")}
+                        disabled={resolvingId === flag.id}
+                        title="Résoudre"
+                        style={{ width: "30px", height: "30px", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(76,175,130,0.1)", border: "none", color: "#4caf82", cursor: resolvingId === flag.id ? "not-allowed" : "pointer", opacity: resolvingId === flag.id ? 0.5 : 1, transition: "background 0.15s" }}
+                      >
+                        <Check size={14} />
+                      </button>
+                      <button
+                        onClick={() => handleResolve(flag.id, "dismissed")}
+                        disabled={resolvingId === flag.id}
+                        title="Rejeter"
+                        style={{ width: "30px", height: "30px", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(240,235,227,0.05)", border: "none", color: "var(--muted)", cursor: resolvingId === flag.id ? "not-allowed" : "pointer", opacity: resolvingId === flag.id ? 0.5 : 1, transition: "background 0.15s" }}
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
                   )}
                 </div>
-
-                {flag.status === "pending" && (
-                  <div className="flex gap-1 flex-shrink-0">
-                    <button
-                      onClick={() => handleResolve(flag.id, "resolved")}
-                      disabled={resolvingId === flag.id}
-                      className="p-2 rounded-lg bg-green-500/10 text-green-400 hover:bg-green-500/20 transition disabled:opacity-50"
-                      title="Résoudre"
-                    >
-                      <Check size={14} />
-                    </button>
-                    <button
-                      onClick={() => handleResolve(flag.id, "dismissed")}
-                      disabled={resolvingId === flag.id}
-                      className="p-2 rounded-lg bg-white/5 text-white/40 hover:bg-white/10 transition disabled:opacity-50"
-                      title="Rejeter"
-                    >
-                      <X size={14} />
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

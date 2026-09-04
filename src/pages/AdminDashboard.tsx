@@ -196,6 +196,30 @@ export default function AdminDashboard() {
               style={{ color: "var(--amber)", animation: "spin 1s linear infinite" }}
             />
           </div>
+          ) : !stats ? (
+          <div
+            style={{
+              textAlign: "center",
+              padding: "60px 20px",
+              borderRadius: "16px",
+              background: "rgba(240,235,227,0.03)",
+              border: "1px solid rgba(240,235,227,0.06)",
+              marginBottom: "48px",
+            }}
+          >
+            <p style={{ color: "var(--muted)", fontSize: "13px", marginBottom: "14px" }}>
+              Impossible de charger les statistiques.
+            </p>
+            <button
+              onClick={loadStats}
+              style={{
+                padding: "8px 18px", borderRadius: "99px", border: "1px solid rgba(232,96,26,0.3)",
+                background: "none", color: "var(--amber)", fontSize: "12px", fontWeight: 600, cursor: "pointer",
+              }}
+            >
+              Réessayer
+            </button>
+          </div>
           ) : (
           <div
             style={{
