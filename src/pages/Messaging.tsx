@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
-  ArrowLeft, Check, CheckCheck, MessageSquare, Music2, Pencil,
-  Search, Send, SmilePlus, Users, X,
+  ArrowLeft, Check, CheckCheck, Image as ImageIcon, LayoutDashboard,
+  MessageSquare, Music2, Paperclip, Pencil, Search, Send, SmilePlus,
+  Users, Video as VideoIcon, X,
 } from "lucide-react";
 import { useApp } from "../context/AppContext";
 import {
@@ -13,8 +15,10 @@ import {
   createGroupConversation,
   getArtistsForMessaging,
   toggleReaction,
+  uploadChatMedia,
   type Conversation,
   type ChatMessage,
+  type ChatMessageType,
   type Artist,
 } from "../lib/api";
 import {
@@ -26,8 +30,81 @@ import {
 
 /* ─────────────────────────── Constantes & helpers ─────────────────────────── */
 
-const QUICK_EMOJIS = ["👍", "❤️", "😂", "🔥", "👏", "😮", "😢", "🎉"];
+/* Émojis rapides partagés : barre de saisie + sélecteur de réactions */
+const QUICK_EMOJIS = [
+  // Visages & sourires
+  "😀", "😃", "😄", "😁", "😆", "😂", "🤣", "🥲",
+  "😊", "😇", "🙂", "🙃", "😉", "😍", "🥰", "😘",
+  "😗", "😙", "😚", "😋", "😛", "😝", "😜", "🤪",
+  "🤨", "🧐", "🤓", "😎", "🥸", "🥳", "😏", "😒",
+  "😞", "😔", "😟", "😕", "🙁", "☹️", "😣", "😖",
+  "😫", "😩", "🥺", "😢", "😭", "😤", "😠", "😡",
+  "🤬", "🤯", "😳", "🥵", "🥶", "😱", "😨", "😰",
+  "😥", "😓", "🤗", "🤔", "🫡", "🤭", "🫢", "🫣",
+  "🤫", "🤥", "😶", "😐", "😑", "😬", "🙄", "😯",
+  "😦", "😧", "😮", "😲", "🥱", "😴", "🤤", "😪",
+  "😵", "🤐", "🥴", "🤢", "🤮", "🤧", "😷", "🤒",
+  "🤕", "🤑", "🤠", "💀", "👻", "👽", "🤖", "🎃",
+  // Mains & gestes
+  "👍", "👎", "👌", "✌️", "🤞", "🤟", "🤘", "👊",
+  "✊", "🤝", "🙏", "💪", "👏", "🙌", "👐", "👋",
+  "🤙", "🫶", "🤲", "🫰", "👆", "👇", "👈", "👉",
+  "☝️", "✋", "🖐️", "🖖", "👋", "🤳", "💅", "🫵",
+  // Cœurs & émotions
+  "❤️", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍",
+  "🤎", "💔", "❣️", "💕", "💞", "💓", "💗", "💖",
+  "💘", "💝", "💟", "☮️", "✝️", "💯", "💢", "💥",
+  // Musique & fête
+  "🎵", "🎶", "🎤", "🎧", "🎸", "🎹", "🎷", "🎺",
+  "🎻", "🎼", "🥁", "💃", "🕺", "🎉", "🎊", "✨",
+  "⭐", "🌟", "🎬", "📷", "🎥", "🎭", "🪩", "🎇",
+  // Animaux & nature
+  "🐶", "🐱", "🐭", "🐹", "🐰", "🦊", "🐻", "🐼",
+  "🐨", "🐯", "🦁", "🐮", "🐷", "🐸", "🐵", "🙈",
+  "🙉", "🙊", "🐔", "🐧", "🐦", "🐤", "🦅", "🦉",
+  "🐝", "🐛", "🦋", "🐌", "🐢", "🐍", "🐘", "🦒",
+  "🕊️", "🌍", "🌞", "🌙", "⭐", "🌈", "🌹", "🌺",
+  "🌸", "🌼", "🌻", "🍀", "🍁", "🔥", "⚡", "❄️",
+  // Nourriture & boissons
+  "☕", "🍵", "🧋", "🍹", "🍾", "🥂", "🍻", "🍺",
+  "🍷", "🥃", "🍎", "🍌", "🍉", "🍇", "🍓", "🥭",
+  "🍍", "🥑", "🍕", "🍔", "🍟", "🌭", "🌮", "🍗",
+  "🍲", "🍜", "🍣", "🍩", "🍪", "🎂", "🍰", "🍫",
+  // Activités & voyages
+  "🚀", "✈️", "🚗", "🚲", "⚽", "🏀", "🏈", "🎾",
+  "🏆", "🎯", "🎳", "🎮", "🎲", "🎫", "🏖️", "🏔️",
+  // Objets & symboles
+  "📱", "💻", "📷", "📸", "🖼️", "🎙️", "🎚️", "🎛️",
+  "💿", "📀", "📻", "📺", "💎", "👑", "💰", "💸",
+  "📅", "📍", "🔊", "🔁", "💤", "✅", "❌", "⚠️",
+  "❗", "❓", "🔔", "🔒", "🔑", "💡", "🎁", "🏅",
+];
 const MOBILE_BP = 900; // en dessous : une seule colonne (liste OU conversation)
+
+/** Type "texte" si absent (anciens messages). */
+const typeOf = (m: { type?: ChatMessageType }): ChatMessageType => m.type || "text";
+
+/** Libellé court d'un message média, utilisé pour la liste/aperçus. */
+const MEDIA_LABELS: Record<Exclude<ChatMessageType, "text">, string> = {
+  image: "📷 Photo",
+  audio: "🎵 Audio",
+  video: "🎬 Vidéo",
+};
+
+/** Aperçu texte d'un message pour la liste des discussions. */
+const previewText = (msg: Pick<ChatMessage, "type" | "content">): string => {
+  const t = typeOf(msg);
+  if (t === "text") return msg.content || "";
+  const label = MEDIA_LABELS[t];
+  return msg.content ? `${label} — ${msg.content}` : label;
+};
+
+/** Taille max d'un média côté client (cohérent avec le backend). */
+const MEDIA_MAX_BYTES: Record<Exclude<ChatMessageType, "text">, number> = {
+  image: 10 * 1024 * 1024,
+  audio: 25 * 1024 * 1024,
+  video: 50 * 1024 * 1024,
+};
 
 type PendingConversation = Conversation & { pending?: boolean };
 
@@ -346,11 +423,14 @@ function GroupChatModal({
         {loading ? (
           <p style={{ padding: "24px", textAlign: "center", fontSize: 12, color: "var(--muted)" }}>Chargement…</p>
         ) : artists.map((a) => {
-          const on = members.has(a.id);
+          // La messagerie cible les comptes utilisateurs (user_id), pas la fiche artiste.
+          const uid = a.user_id;
+          if (!uid) return null;
+          const on = members.has(uid);
           return (
             <button
-              key={a.id}
-              onClick={() => toggle(a.id)}
+              key={uid}
+              onClick={() => toggle(uid)}
               style={{
                 width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "8px 10px",
                 borderRadius: 10, border: on ? "1px solid rgba(232,96,26,0.4)" : "1px solid transparent",
@@ -393,6 +473,8 @@ function GroupChatModal({
 
 export default function Messaging() {
   const { user, currentTrack } = useApp();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConv, setActiveConv] = useState<PendingConversation | null>(null);
@@ -411,13 +493,21 @@ export default function Messaging() {
   const [showGroupModal, setShowGroupModal] = useState(false);
   const [availableArtists, setAvailableArtists] = useState<Artist[]>([]);
   const [loadingArtists, setLoadingArtists] = useState(false);
+  const [attachOpen, setAttachOpen] = useState(false);
+  const [uploading, setUploading] = useState<{ type: Exclude<ChatMessageType, "text">; progress: number } | null>(null);
+  const [mediaPreview, setMediaPreview] = useState<{ url: string; type: ChatMessageType } | null>(null);
   const [isDesktop, setIsDesktop] = useState(() =>
     typeof window !== "undefined" ? window.matchMedia(`(min-width: ${MOBILE_BP}px)`).matches : true
   );
 
   const inputRef = useRef<HTMLInputElement>(null);
   const threadRef = useRef<HTMLDivElement>(null);
+  const handledToRef = useRef<string | null>(null);
   const reactionPickerRef = useRef<HTMLDivElement>(null);
+  const attachRef = useRef<HTMLDivElement>(null);
+  const fileImageRef = useRef<HTMLInputElement>(null);
+  const fileAudioRef = useRef<HTMLInputElement>(null);
+  const fileVideoRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isTypingRef = useRef(false);
 
@@ -441,6 +531,34 @@ export default function Messaging() {
       return () => document.removeEventListener("mousedown", handleClick);
     }
   }, [reactionPickerMsgId]);
+
+  /* Fermer le menu pièce jointe au clic extérieur / touche Échap */
+  useEffect(() => {
+    if (!attachOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (attachRef.current && !attachRef.current.contains(e.target as Node)) setAttachOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setAttachOpen(false); };
+    document.addEventListener("mousedown", handleClick);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [attachOpen]);
+
+  /* Fermer l'aperçu média (plein écran) avec Échap */
+  useEffect(() => {
+    if (!mediaPreview) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setMediaPreview(null); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [mediaPreview]);
+
+  /* Retour vers l'espace (dashboard) — façon application */
+  const goBackHome = useCallback(() => {
+    navigate(user?.role === "artist" || user?.role === "admin" ? "/artist-dashboard" : "/me");
+  }, [navigate, user?.role]);
 
   /* Charger les conversations (triées : plus récente en haut) */
   const loadConversations = useCallback(async (): Promise<Conversation[]> => {
@@ -480,6 +598,7 @@ export default function Messaging() {
     setActiveConv(conv);
     setReactionPickerMsgId(null);
     setShowEmojiPicker(false);
+    setAttachOpen(false);
     // badge lu localement
     setConversations((prev) => prev.map((c) => c.id === conv.id ? { ...c, unreadCount: 0 } : c));
   }, []);
@@ -491,6 +610,7 @@ export default function Messaging() {
     setTypingUsers(new Set());
     setReactionPickerMsgId(null);
     setShowEmojiPicker(false);
+    setAttachOpen(false);
   }, []);
 
   useEffect(() => {
@@ -504,6 +624,51 @@ export default function Messaging() {
     }, 0);
     return () => clearTimeout(t);
   }, [activeConv, loadMessages]);
+
+  /* Ouverture directe depuis un profil artiste (?to=user_id) — ex: bouton Message */
+  useEffect(() => {
+    const toUid = searchParams.get("to");
+    if (!toUid || !user) return;
+    if (user.role !== "artist" && user.role !== "admin") return;
+    if (loadingConvs) return; // attendre que la liste des discussions soit chargée
+    if (handledToRef.current === toUid) return;
+    let cancelled = false;
+    (async () => {
+      let artist = availableArtists.find((a) => a.user_id === toUid);
+      if (!artist) {
+        try {
+          const r = await getArtistsForMessaging();
+          artist = (r.data || []).find((a) => a.user_id === toUid);
+        } catch { /* nom par défaut */ }
+      }
+      if (cancelled) return;
+      const existing = conversations.find(
+        (c) => c.type === "direct" && c.otherParticipantId === toUid
+      );
+      if (existing) {
+        openConversation(existing);
+      } else {
+        const draft: PendingConversation = {
+          id: "",
+          type: "direct",
+          otherParticipantId: toUid,
+          otherParticipantName: artist?.name || "Artiste",
+          otherParticipantAvatar: artist?.avatar_url || null,
+          groupName: null,
+          members: [],
+          lastMessage: null,
+          lastMessageAt: null,
+          unreadCount: 0,
+          pending: true,
+        };
+        setActiveConv(draft);
+      }
+      handledToRef.current = toUid;
+      setSearchParams({}, { replace: true });
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, loadingConvs, conversations, availableArtists, user?.id]);
 
   /* Scroll en bas à chaque nouveau message */
   useEffect(() => {
@@ -519,7 +684,9 @@ export default function Messaging() {
       setLoadingArtists(true);
       getArtistsForMessaging()
         .then((r) => {
-          const list = (r.data || []).filter((a) => a.id !== user?.id);
+          // Seuls les artistes rattachés à un compte utilisateur sont joignables :
+          // la messagerie cible les user_id (le backend vérifie le rôle du destinataire).
+          const list = (r.data || []).filter((a) => a.user_id && a.user_id !== user?.id);
           setAvailableArtists(list);
         })
         .catch(() => setAvailableArtists([]))
@@ -576,7 +743,7 @@ export default function Messaging() {
           c.id === msg.conversationId
             ? {
                 ...c,
-                lastMessage: msg.content,
+                lastMessage: previewText(msg),
                 lastMessageAt: msg.createdAt,
                 unreadCount: isActive ? 0 : (c.unreadCount || 0) + 1,
               }
@@ -632,11 +799,11 @@ export default function Messaging() {
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
   }, []);
 
-  const stopTyping = () => {
+  const stopTyping = useCallback(() => {
     isTypingRef.current = false;
     sendTyping(false);
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-  };
+  }, [sendTyping]);
 
   /* Réactions */
   const handleToggleReaction = async (messageId: string, emoji: string) => {
@@ -660,8 +827,10 @@ export default function Messaging() {
   /* Démarrer une discussion directe (depuis le sélecteur) */
   const startDirectChat = (artist: Artist) => {
     setShowDirectModal(false);
+    // Cible du message = compte utilisateur de l'artiste (user_id), jamais l'id de la fiche.
+    if (!artist.user_id) return;
     const existing = conversations.find(
-      (c) => c.type === "direct" && c.otherParticipantId === artist.id
+      (c) => c.type === "direct" && c.otherParticipantId === artist.user_id
     );
     if (existing) {
       openConversation(existing);
@@ -670,7 +839,7 @@ export default function Messaging() {
     const draft: PendingConversation = {
       id: "",
       type: "direct",
-      otherParticipantId: artist.id,
+      otherParticipantId: artist.user_id,
       otherParticipantName: artist.name || "Artiste",
       otherParticipantAvatar: artist.avatar_url,
       groupName: null,
@@ -693,18 +862,24 @@ export default function Messaging() {
     } catch { /* silencieux */ }
   };
 
-  /* Envoi */
-  const handleSend = async () => {
-    if (!activeConv || !newMessage.trim() || sending) return;
-    const content = newMessage.trim();
+  /* Envoi (texte ou média). media.mediaUrl défini ⇒ message média (légende = newMessage). */
+  const handleSend = useCallback(async (media?: { type: Exclude<ChatMessageType, "text">; mediaUrl: string }) => {
+    const isMedia = !!media?.mediaUrl;
+    if (!activeConv || sending) return;
+    if (!isMedia && !newMessage.trim()) return;
+    const content = isMedia ? newMessage.trim() : newMessage.trim();
+    const type: ChatMessageType = isMedia ? media!.type : "text";
+    const mediaUrl = isMedia ? media!.mediaUrl : null;
+    const preview = previewText({ type, content });
+
     stopTyping();
     setSending(true);
     try {
-      let result: { id: string; conversationId: string; content: string; createdAt: string };
+      let result: { id: string; conversationId: string; content: string; type?: ChatMessageType; mediaUrl?: string | null; createdAt: string };
       if (activeConv.type === "group" && !activeConv.pending) {
-        result = await sendGroupMessage(activeConv.id, content);
+        result = await sendGroupMessage(activeConv.id, content, isMedia ? { type: media!.type, mediaUrl: media!.mediaUrl } : undefined);
       } else if (activeConv.otherParticipantId) {
-        result = await sendMessage(activeConv.otherParticipantId, content);
+        result = await sendMessage(activeConv.otherParticipantId, content, isMedia ? { type: media!.type, mediaUrl: media!.mediaUrl } : undefined);
       } else {
         return;
       }
@@ -716,11 +891,13 @@ export default function Messaging() {
         senderName: user?.displayName || "",
         senderAvatar: user?.avatarUrl || "",
         content,
+        type: result.type || type,
+        mediaUrl: result.mediaUrl ?? mediaUrl,
         read: false,
         createdAt: result.createdAt,
       };
       setMessages((prev) => [...prev, optimistic]);
-      setNewMessage("");
+      if (!isMedia) setNewMessage("");
 
       // Si c'était une discussion "en attente", on bascule vers la vraie conversation
       if (activeConv.pending) {
@@ -732,7 +909,7 @@ export default function Messaging() {
           otherParticipantAvatar: activeConv.otherParticipantAvatar,
           groupName: null,
           members: [],
-          lastMessage: content,
+          lastMessage: preview,
           lastMessageAt: result.createdAt,
           unreadCount: 0,
         };
@@ -741,7 +918,7 @@ export default function Messaging() {
       } else {
         setConversations((prev) =>
           sortConvs(prev.map((c) =>
-            c.id === activeConv.id ? { ...c, lastMessage: content, lastMessageAt: result.createdAt } : c
+            c.id === activeConv.id ? { ...c, lastMessage: preview, lastMessageAt: result.createdAt } : c
           ))
         );
       }
@@ -749,9 +926,31 @@ export default function Messaging() {
     finally {
       setSending(false);
     }
-  };
+  }, [activeConv, sending, newMessage, stopTyping, loadConversations, user]);
 
-  const canSend = !!activeConv && !!newMessage.trim() && !sending;
+  /* Envoyer un média : upload (avec progression) puis envoi du message */
+  const pickAndSendMedia = useCallback(async (type: Exclude<ChatMessageType, "text">, file: File) => {
+    const max = MEDIA_MAX_BYTES[type];
+    if (file.size > max) {
+      const mb = Math.round(max / (1024 * 1024));
+      const label = type === "image" ? "une image" : type === "audio" ? "un audio" : "une vidéo";
+      alert(`Fichier trop volumineux (max ${mb} Mo pour ${label}).`);
+      return;
+    }
+    setAttachOpen(false);
+    setUploading({ type, progress: 0 });
+    try {
+      const { url } = await uploadChatMedia(file, (p) => setUploading({ type, progress: p }));
+      await handleSend({ type, mediaUrl: url });
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Échec de l'envoi du fichier.");
+    } finally {
+      setUploading(null);
+    }
+  }, [handleSend]);
+
+  const canSend = !!activeConv && !!newMessage.trim() && !uploading && !sending;
+  const canAttach = !!activeConv && !uploading && !sending;
 
   /* Nom / sous-titre de la conversation active */
   const convTitle = activeConv
@@ -786,6 +985,35 @@ export default function Messaging() {
           <p style={{ fontSize: 14, color: "var(--muted)", lineHeight: 1.6 }}>
             La messagerie est disponible uniquement pour les artistes.
           </p>
+          <div style={{ display: "flex", gap: 10, justifyContent: "center", marginTop: 22, flexWrap: "wrap" }}>
+            <button
+              onClick={goBackHome}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 8,
+                padding: "11px 22px", borderRadius: 99, border: "none", cursor: "pointer",
+                background: "var(--amber)", color: "#fff", fontSize: 13, fontWeight: 700,
+                transition: "box-shadow 0.2s",
+              }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 24px rgba(232,96,26,0.35)"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}
+            >
+              <LayoutDashboard size={15} /> Aller à mon espace
+            </button>
+            <button
+              onClick={() => navigate("/")}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 8,
+                padding: "11px 22px", borderRadius: 99, cursor: "pointer",
+                border: "1px solid rgba(240,235,227,0.15)", background: "transparent",
+                color: "var(--muted)", fontSize: 13, fontWeight: 600,
+                transition: "all 0.2s",
+              }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--text)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(240,235,227,0.3)"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--muted)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(240,235,227,0.15)"; }}
+            >
+              Retour à l'accueil
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -838,6 +1066,21 @@ export default function Messaging() {
             {/* En-tête : actions + recherche */}
             <div style={{ padding: "12px 12px 8px", borderBottom: "1px solid rgba(240,235,227,0.05)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                {/* Retour vers l'espace (dashboard) */}
+                <button
+                  title="Retour à mon espace"
+                  onClick={goBackHome}
+                  style={{
+                    width: 34, height: 34, borderRadius: 10, flexShrink: 0, cursor: "pointer",
+                    background: "rgba(240,235,227,0.06)", border: "1px solid rgba(240,235,227,0.08)",
+                    color: "var(--muted)", display: "flex", alignItems: "center", justifyContent: "center",
+                    transition: "all 0.15s",
+                  }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--amber)"; (e.currentTarget as HTMLElement).style.background = "rgba(232,96,26,0.15)"; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--muted)"; (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.06)"; }}
+                >
+                  <LayoutDashboard size={15} />
+                </button>
                 <div style={{ flex: 1, position: "relative" }}>
                   <Search size={15} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--muted)" }} />
                   <input
@@ -932,7 +1175,7 @@ export default function Messaging() {
                             <span style={{ fontSize: 10.5, color: "var(--muted)", flexShrink: 0 }}>{listTime(msg.createdAt)}</span>
                           </div>
                           <p style={{ fontSize: 12.5, color: "var(--muted)", margin: "2px 0 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                            {msg.content}
+                            {previewText(msg)}
                           </p>
                         </div>
                       </button>
@@ -1035,6 +1278,21 @@ export default function Messaging() {
                       <X size={18} />
                     </button>
                   )}
+                  {/* Retour toujours visible vers mon espace (dashboard) */}
+                  <button
+                    onClick={goBackHome}
+                    title="Retour à mon espace"
+                    style={{
+                      width: 34, height: 34, borderRadius: 10, flexShrink: 0, cursor: "pointer",
+                      background: "rgba(240,235,227,0.06)", border: "1px solid rgba(240,235,227,0.08)",
+                      color: "var(--muted)", display: "flex", alignItems: "center", justifyContent: "center",
+                      transition: "all 0.15s",
+                    }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--amber)"; (e.currentTarget as HTMLElement).style.background = "rgba(232,96,26,0.15)"; }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--muted)"; (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.06)"; }}
+                  >
+                    <LayoutDashboard size={15} />
+                  </button>
                 </header>
 
                 {/* Fil de messages */}
@@ -1084,6 +1342,7 @@ export default function Messaging() {
                           reactionPickerRef={reactionPickerRef}
                           onOpenReactions={(id) => setReactionPickerMsgId((cur) => cur === id ? null : id)}
                           onToggleReaction={handleToggleReaction}
+                          onPreviewMedia={(url, t) => setMediaPreview({ url, type: t })}
                         />
                       )
                     )
@@ -1120,7 +1379,9 @@ export default function Messaging() {
                     <div style={{
                       position: "absolute", bottom: "calc(100% + 8px)", left: 14,
                       background: "var(--bg3)", border: "1px solid rgba(240,235,227,0.1)",
-                      borderRadius: 14, padding: "8px 10px", display: "flex", gap: 4,
+                      borderRadius: 16, padding: "8px 10px",
+                      width: 308, maxHeight: 240, overflowY: "auto",
+                      display: "flex", flexWrap: "wrap", gap: 2,
                       boxShadow: "0 12px 40px rgba(0,0,0,0.5)", zIndex: 5,
                     }}>
                       {QUICK_EMOJIS.map((e) => (
@@ -1128,7 +1389,7 @@ export default function Messaging() {
                           key={e}
                           onClick={() => setNewMessage((m) => m + e)}
                           style={{
-                            width: 32, height: 32, fontSize: 18, background: "transparent",
+                            width: 30, height: 30, fontSize: 17, background: "transparent",
                             border: "none", borderRadius: 8, cursor: "pointer",
                             transition: "background 0.12s, transform 0.12s",
                           }}
@@ -1141,56 +1402,135 @@ export default function Messaging() {
                     </div>
                   )}
 
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <button
-                      title="Émojis"
-                      onClick={() => setShowEmojiPicker((v) => !v)}
+                  {/* Menu pièce jointe */}
+                  {attachOpen && (
+                    <div
+                      ref={attachRef}
                       style={{
-                        width: 38, height: 38, borderRadius: "50%", flexShrink: 0, cursor: "pointer",
-                        background: "transparent", border: "none", color: showEmojiPicker ? "var(--amber)" : "var(--muted)",
-                        display: "flex", alignItems: "center", justifyContent: "center",
+                        position: "absolute", bottom: "calc(100% + 8px)", left: 14,
+                        background: "var(--bg3)", border: "1px solid rgba(240,235,227,0.1)",
+                        borderRadius: 16, padding: "6px", minWidth: 230,
+                        boxShadow: "0 12px 40px rgba(0,0,0,0.5)", zIndex: 5,
                       }}
                     >
-                      <SmilePlus size={21} />
-                    </button>
+                      <button
+                        onClick={() => fileImageRef.current?.click()}
+                        style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "9px 10px", borderRadius: 10, border: "none", background: "transparent", color: "var(--text)", fontSize: 13, cursor: "pointer", textAlign: "left", transition: "background 0.12s" }}
+                        onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.05)"}
+                        onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = "transparent"}
+                      >
+                        <span style={{ width: 30, height: 30, borderRadius: 8, background: "rgba(232,96,26,0.14)", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><ImageIcon size={15} style={{ color: "var(--amber)" }} /></span>
+                        Image
+                      </button>
+                      <button
+                        onClick={() => fileVideoRef.current?.click()}
+                        style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "9px 10px", borderRadius: 10, border: "none", background: "transparent", color: "var(--text)", fontSize: 13, cursor: "pointer", textAlign: "left", transition: "background 0.12s" }}
+                        onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.05)"}
+                        onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = "transparent"}
+                      >
+                        <span style={{ width: 30, height: 30, borderRadius: 8, background: "rgba(201,147,10,0.14)", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><VideoIcon size={15} style={{ color: "var(--gold)" }} /></span>
+                        Vidéo
+                      </button>
+                      <button
+                        onClick={() => fileAudioRef.current?.click()}
+                        style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "9px 10px", borderRadius: 10, border: "none", background: "transparent", color: "var(--text)", fontSize: 13, cursor: "pointer", textAlign: "left", transition: "background 0.12s" }}
+                        onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.05)"}
+                        onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = "transparent"}
+                      >
+                        <span style={{ width: 30, height: 30, borderRadius: 8, background: "rgba(76,175,130,0.14)", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Music2 size={15} style={{ color: "#4caf82" }} /></span>
+                        Audio
+                      </button>
+                    </div>
+                  )}
 
-                    <input
-                      ref={inputRef}
-                      value={newMessage}
-                      onChange={(e) => {
-                        setNewMessage(e.target.value);
-                        handleTypingInput(true);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
-                      }}
-                      placeholder="Écrire un message…"
-                      style={{
-                        flex: 1, padding: "11px 16px", borderRadius: 12,
-                        background: "rgba(240,235,227,0.06)", border: "none",
-                        color: "var(--text)", fontSize: 13.5, outline: "none",
-                        boxSizing: "border-box",
-                      }}
-                    />
+                  {/* Inputs cachés pour les pièces jointes */}
+                  <input ref={fileImageRef} type="file" accept="image/*" style={{ display: "none" }}
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) void pickAndSendMedia("image", f); e.target.value = ""; }} />
+                  <input ref={fileVideoRef} type="file" accept="video/*" style={{ display: "none" }}
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) void pickAndSendMedia("video", f); e.target.value = ""; }} />
+                  <input ref={fileAudioRef} type="file" accept="audio/*" style={{ display: "none" }}
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) void pickAndSendMedia("audio", f); e.target.value = ""; }} />
 
-                    <button
-                      onClick={handleSend}
-                      disabled={!canSend}
-                      title="Envoyer"
-                      style={{
-                        width: 42, height: 42, borderRadius: "50%", flexShrink: 0, border: "none",
-                        background: canSend ? "var(--amber)" : "rgba(240,235,227,0.08)",
-                        color: canSend ? "#fff" : "var(--muted)",
-                        cursor: canSend ? "pointer" : "default",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        transition: "background 0.15s, box-shadow 0.15s",
-                      }}
-                      onMouseEnter={(e) => { if (canSend) (e.currentTarget as HTMLElement).style.boxShadow = "0 6px 18px rgba(232,96,26,0.4)"; }}
-                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}
-                    >
-                      <Send size={17} />
-                    </button>
-                  </div>
+                  {uploading ? (
+                    /* Progression de l'upload */
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      <span style={{ width: 38, height: 38, borderRadius: "50%", flexShrink: 0, background: "rgba(232,96,26,0.12)", display: "inline-flex", alignItems: "center", justifyContent: "center", color: "var(--amber)" }}>
+                        {uploading.type === "image" ? <ImageIcon size={19} /> : uploading.type === "video" ? <VideoIcon size={19} /> : <Music2 size={19} />}
+                      </span>
+                      <div style={{ flex: 1 }}>
+                        <p style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 5 }}>
+                          Envoi {MEDIA_LABELS[uploading.type]}… {uploading.progress}%
+                        </p>
+                        <div style={{ height: 5, borderRadius: 99, background: "rgba(240,235,227,0.08)", overflow: "hidden" }}>
+                          <div style={{ height: "100%", width: `${uploading.progress}%`, borderRadius: 99, background: "var(--amber)", transition: "width 0.15s" }} />
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <button
+                        title="Émojis"
+                        onClick={() => { setShowEmojiPicker((v) => !v); setAttachOpen(false); }}
+                        style={{
+                          width: 38, height: 38, borderRadius: "50%", flexShrink: 0, cursor: "pointer",
+                          background: "transparent", border: "none", color: showEmojiPicker ? "var(--amber)" : "var(--muted)",
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                        }}
+                      >
+                        <SmilePlus size={21} />
+                      </button>
+
+                      <button
+                        title="Joindre un fichier"
+                        disabled={!canAttach}
+                        onClick={() => { setAttachOpen((v) => !v); setShowEmojiPicker(false); }}
+                        style={{
+                          width: 38, height: 38, borderRadius: "50%", flexShrink: 0, cursor: canAttach ? "pointer" : "not-allowed",
+                          background: "transparent", border: "none", color: attachOpen ? "var(--amber)" : canAttach ? "var(--muted)" : "rgba(240,235,227,0.2)",
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                        }}
+                      >
+                        <Paperclip size={20} />
+                      </button>
+
+                      <input
+                        ref={inputRef}
+                        value={newMessage}
+                        onChange={(e) => {
+                          setNewMessage(e.target.value);
+                          handleTypingInput(true);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void handleSend(); }
+                        }}
+                        placeholder="Écrire un message…"
+                        style={{
+                          flex: 1, padding: "11px 16px", borderRadius: 12,
+                          background: "rgba(240,235,227,0.06)", border: "none",
+                          color: "var(--text)", fontSize: 13.5, outline: "none",
+                          boxSizing: "border-box",
+                        }}
+                      />
+
+                      <button
+                        onClick={() => void handleSend()}
+                        disabled={!canSend}
+                        title="Envoyer"
+                        style={{
+                          width: 42, height: 42, borderRadius: "50%", flexShrink: 0, border: "none",
+                          background: canSend ? "var(--amber)" : "rgba(240,235,227,0.08)",
+                          color: canSend ? "#fff" : "var(--muted)",
+                          cursor: canSend ? "pointer" : "default",
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          transition: "background 0.15s, box-shadow 0.15s",
+                        }}
+                        onMouseEnter={(e) => { if (canSend) (e.currentTarget as HTMLElement).style.boxShadow = "0 6px 18px rgba(232,96,26,0.4)"; }}
+                        onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}
+                      >
+                        <Send size={17} />
+                      </button>
+                    </div>
+                  )}
                 </div>
               </>
             ) : (
@@ -1219,6 +1559,31 @@ export default function Messaging() {
           </section>
         )}
       </div>
+
+      {/* ── Aperçu média plein écran ── */}
+      {mediaPreview && (
+        <div
+          onClick={() => setMediaPreview(null)}
+          style={{
+            position: "fixed", inset: 0, zIndex: 320,
+            background: "rgba(0,0,0,0.94)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            padding: "24px", cursor: "zoom-out",
+          }}
+        >
+          <button
+            onClick={() => setMediaPreview(null)}
+            style={{ position: "absolute", top: 18, right: 18, width: 38, height: 38, borderRadius: "50%", border: "none", cursor: "pointer", background: "rgba(240,235,227,0.1)", color: "var(--text)", display: "flex", alignItems: "center", justifyContent: "center" }}
+          >
+            <X size={18} />
+          </button>
+          {mediaPreview.type === "image" ? (
+            <img src={mediaPreview.url} alt="" style={{ maxWidth: "92vw", maxHeight: "88vh", borderRadius: 10, objectFit: "contain" }} />
+          ) : (
+            <video src={mediaPreview.url} controls autoPlay style={{ maxWidth: "92vw", maxHeight: "88vh", borderRadius: 10 }} />
+          )}
+        </div>
+      )}
 
       {/* ── Modales ── */}
       {showDirectModal && (
@@ -1260,7 +1625,7 @@ export default function Messaging() {
 /* ─────────────────────────── Bulle de message ─────────────────────────────── */
 
 function Bubble({
-  msg, isMe, isGroup, groupStart, groupEnd, user, reactionPickerMsgId, reactionPickerRef, onOpenReactions, onToggleReaction,
+  msg, isMe, isGroup, groupStart, groupEnd, user, reactionPickerMsgId, reactionPickerRef, onOpenReactions, onToggleReaction, onPreviewMedia,
 }: {
   msg: ChatMessage;
   isMe: boolean;
@@ -1272,11 +1637,15 @@ function Bubble({
   reactionPickerRef: React.RefObject<HTMLDivElement | null>;
   onOpenReactions: (id: string) => void;
   onToggleReaction: (id: string, emoji: string) => void;
+  onPreviewMedia: (url: string, type: Exclude<ChatMessageType, "text">) => void;
 }) {
   const reactions = msg.reactions || {};
   const reactionKeys = Object.keys(reactions);
   const showName = !isMe && isGroup && groupStart;
   const senderColor = avatarColor(msg.senderName || "?");
+  const mtype = typeOf(msg);
+  const isMedia = mtype !== "text";
+  const hasMedia = isMedia && !!msg.mediaUrl;
 
   return (
     <div className="msg-row" style={{ display: "flex", justifyContent: isMe ? "flex-end" : "flex-start", marginTop: groupStart && !showName && !isMe ? 8 : 0 }}>
@@ -1289,7 +1658,7 @@ function Bubble({
 
         <div
           style={{
-            padding: "7px 12px 6px",
+            padding: hasMedia && !msg.content ? "4px 5px 2px" : "7px 12px 6px",
             borderRadius: 12,
             background: isMe ? "linear-gradient(135deg, #E8601A, #d25412)" : "#202020",
             color: isMe ? "#fff" : "var(--text)",
@@ -1299,12 +1668,41 @@ function Bubble({
             wordBreak: "break-word",
           }}
         >
-          <p style={{ fontSize: 13.5, lineHeight: 1.45, margin: 0, whiteSpace: "pre-wrap" }}>
-            {msg.content}
-          </p>
+          {/* Média joint (image / vidéo / audio) */}
+          {hasMedia && mtype === "image" && (
+            <img
+              src={msg.mediaUrl || ""}
+              alt={msg.content || "Photo"}
+              onClick={(e) => { e.stopPropagation(); onPreviewMedia(msg.mediaUrl || "", "image"); }}
+              style={{ display: "block", maxWidth: "min(280px, 58vw)", maxHeight: 320, borderRadius: 9, objectFit: "cover", cursor: "zoom-in", marginBottom: msg.content ? 4 : 0 }}
+            />
+          )}
+          {hasMedia && mtype === "video" && (
+            <video
+              src={msg.mediaUrl || ""}
+              controls
+              preload="metadata"
+              style={{ display: "block", width: "min(300px, 62vw)", maxHeight: 260, borderRadius: 9, marginBottom: msg.content ? 4 : 0 }}
+            />
+          )}
+          {hasMedia && mtype === "audio" && (
+            <audio
+              src={msg.mediaUrl || ""}
+              controls
+              preload="metadata"
+              style={{ display: "block", width: "min(250px, 60vw)", marginBottom: msg.content ? 4 : 0 }}
+            />
+          )}
+
+          {/* Légende (message texte OU légende d'un média) */}
+          {(msg.content || !isMedia) && (
+            <p style={{ fontSize: 13.5, lineHeight: 1.45, margin: 0, whiteSpace: "pre-wrap" }}>
+              {msg.content}
+            </p>
+          )}
 
           {/* méta : heure + accusé de lecture */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 4, marginTop: 3 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 4, marginTop: 3, minHeight: 13 }}>
             <span style={{ fontSize: 10, color: isMe ? "rgba(255,255,255,0.72)" : "rgba(240,235,227,0.4)" }}>
               {bubbleTime(msg.createdAt)}
             </span>
@@ -1342,11 +1740,12 @@ function Bubble({
               style={{
                 position: "absolute",
                 [isMe ? "right" : "left"]: 0,
-                top: -42,
+                top: -48,
+                width: 260, maxHeight: 160, overflowY: "auto",
                 background: "var(--bg3)",
                 border: "1px solid rgba(240,235,227,0.12)",
-                borderRadius: 99, padding: "4px 6px",
-                display: "flex", gap: 2, zIndex: 10,
+                borderRadius: 16, padding: "6px 8px",
+                display: "flex", flexWrap: "wrap", gap: 2, zIndex: 10,
                 boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
               }}
             >
