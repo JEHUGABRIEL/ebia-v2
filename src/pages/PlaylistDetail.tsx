@@ -13,6 +13,7 @@ import {
   Edit3,
   Eye,
   EyeOff,
+  Users,
 } from "lucide-react";
 import { useApp } from "../context/AppContext";
 import {
@@ -24,17 +25,19 @@ import {
   type Playlist,
   type PlaylistTrackItem,
 } from "../lib/api";
+import CollaboratorsPanel from "../components/CollaboratorsPanel";
 
 export default function PlaylistDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { } = useTranslation();
-  const { playTrack, currentTrack, isPlaying } = useApp();
+  const { user, playTrack, currentTrack, isPlaying } = useApp();
 
   const [playlist, setPlaylist] = useState<Playlist | null>(null);
   const [loading, setLoading] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showCollaborators, setShowCollaborators] = useState(false);
 
   // Edit form state
   const [formName, setFormName] = useState("");
@@ -327,6 +330,26 @@ export default function PlaylistDetail() {
           </button>
         )}
 
+        {playlist.ownerId === user?.id && (
+          <button
+            onClick={() => { setShowCollaborators(true); setMenuOpen(false); }}
+            style={{
+              padding: "13px",
+              borderRadius: "50%",
+              background: "rgba(240,235,227,0.05)",
+              border: "1px solid rgba(240,235,227,0.1)",
+              color: "var(--muted)",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+            title="Gérer les collaborateurs"
+          >
+            <Users size={18} />
+          </button>
+        )}
+
         <div style={{ position: "relative" }}>
           <button
             onClick={() => setMenuOpen(!menuOpen)}
@@ -571,6 +594,15 @@ export default function PlaylistDetail() {
           </div>
         )}
       </div>
+
+      {/* Collaborators Panel */}
+      {showCollaborators && (
+        <CollaboratorsPanel
+          playlistId={playlist.id}
+          isOwner={playlist.ownerId === user?.id}
+          onClose={() => setShowCollaborators(false)}
+        />
+      )}
 
       {/* Edit Modal */}
       {showEditModal && (

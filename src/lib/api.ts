@@ -673,3 +673,25 @@ export const deleteAccount = (password: string) =>
     }
     return res.json() as Promise<{ message: string }>;
   });
+
+/* ── Collaborative Playlists ── */
+export type PlaylistCollaborator = {
+  id: string;
+  userId: string;
+  userName: string | null;
+  userAvatar: string | null;
+  role: string;
+  invitedAt: string;
+};
+
+export const getCollaborators = (playlistId: string) =>
+  get<PlaylistCollaborator[]>(`/api/playlists/${playlistId}/collaborators`);
+
+export const inviteCollaborator = (playlistId: string, userId: string, role: string) =>
+  post<PlaylistCollaborator>(`/api/playlists/${playlistId}/collaborators`, { userId, role });
+
+export const updateCollaboratorRole = (playlistId: string, collaboratorId: string, role: string) =>
+  put<PlaylistCollaborator>(`/api/playlists/${playlistId}/collaborators/${collaboratorId}`, { role });
+
+export const removeCollaborator = (playlistId: string, collaboratorId: string) =>
+  del<{ message: string }>(`/api/playlists/${playlistId}/collaborators/${collaboratorId}`);
