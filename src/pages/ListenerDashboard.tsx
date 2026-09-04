@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect } from "react";
 import { useApp, type DownloadableTrack } from "../context/AppContext";
 import { useNavigate, Link } from "react-router-dom";
-import { Home, Search, Library, Heart, Users, Settings, Plus, ChevronRight, LogOut, Camera, Mic2, Music2, Loader, Menu, X as XIcon, Download, DownloadCloud, CheckCircle2, Trash2, WifiOff, Star, Upload, BarChart2, Mic, DollarSign, TrendingUp } from "lucide-react";
+import { Home, Search, Library, Heart, Users, Settings, Plus, ChevronRight, LogOut, Camera, Mic2, Music2, Loader, Menu, X as XIcon, Download, DownloadCloud, CheckCircle2, Trash2, WifiOff, Star, Upload, BarChart2, Mic, DollarSign, TrendingUp, ListMusic, History } from "lucide-react";
 import LogoutModal from "../components/LogoutModal";
 import EbiaLogo from "../components/EbiaLogo";
-import { getArtists, getTracks, getMyArtistProfile, updateProfile, uploadUserAvatar, becomeArtist, type Artist } from "../lib/api";
+import { getArtists, getTracks, getMyArtistProfile, updateProfile, uploadUserAvatar, becomeArtist, getDiscoverArtists, type Artist, type DiscoverArtist } from "../lib/api";
 import { daysLeft, type OfflineTrack } from "../lib/offline";
 
 type Section = "accueil" | "recherche" | "bibliotheque" | "favoris" | "suivis" | "parametres" | "decouvrir" | "telechargements";
@@ -54,6 +54,7 @@ export default function ListenerDashboard() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [offlineTracks, setOfflineTracks] = useState<OfflineTrack[]>([]);
   const [popularTracks, setPopularTracks] = useState<any[]>([]);
+  const [discoverArtists, setDiscoverArtists] = useState<DiscoverArtist[] | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -63,6 +64,13 @@ export default function ListenerDashboard() {
     /* Nouveautés du mois — scroll horizontal */
     getTracks({ new_this_month: "true", limit: "12" }).then(r => setNewTracks(r.data)).catch(() => {});
     getMyArtistProfile().then(() => setHasArtistProfile(true)).catch(() => setHasArtistProfile(false));
+    /* Contenu personnalisé (genres choisis à l'inscription ou déduits de l'activité) */
+    getDiscoverArtists().then(r => {
+      // Mode « none » = contenu aléatoire : on garde alors les artistes populaires.
+      if (r.data.length > 0 && r.mode !== "none") {
+        setDiscoverArtists(r.data);
+      }
+    }).catch(() => {});
   }, []);
 
   /* Rafraîchir la liste hors-ligne quand on entre dans la section */
@@ -123,6 +131,11 @@ export default function ListenerDashboard() {
     { id: "parametres", icon: Settings, label: "Paramètres", color: "var(--muted)" },
   ];
 
+  const extraLinks = [
+    { to: "/playlists", label: "Playlists", icon: ListMusic, color: "var(--amber)" },
+    { to: "/play-history", label: "Historique", icon: History, color: "var(--gold)" },
+  ];
+
   const AvatarBlock = ({ size = 64, withEdit = false }: { size?: number; withEdit?: boolean }) => (
     <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
       {avatarUrl ? (
@@ -178,6 +191,15 @@ export default function ListenerDashboard() {
           </div>
         )}
       </div>
+      {/* Bascule rapide vers l'espace artiste (mode Facebook) */}
+      {(user.role === "artist" || user.role === "admin" || hasArtistProfile) && (
+        <button onClick={() => navigate("/artist-dashboard")} style={{ marginTop: "4px", display: "flex", alignItems: "center", gap: "10px", padding: "9px 12px", borderRadius: "8px", cursor: "pointer", background: "transparent", border: "1px solid rgba(232,96,26,0.25)", color: "var(--amber)", transition: "all 0.15s", textAlign: "left", width: "100%" }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(232,96,26,0.55)"; e.currentTarget.style.background = "rgba(232,96,26,0.08)"; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(232,96,26,0.25)"; e.currentTarget.style.background = "transparent"; }}>
+          <Mic2 size={15} style={{ flexShrink: 0 }} />
+          <span style={{ fontSize: "12px", fontWeight: 700, flex: 1 }}>Passer en mode artiste</span>
+        </button>
+      )}
       <div style={{ background: "var(--bg2)", borderRadius: "12px", padding: "14px 12px", flex: 1, display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px", padding: "0 4px" }}>
           <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.1em" }}>Bibliothèque</span>
@@ -194,6 +216,21 @@ export default function ListenerDashboard() {
                 <p style={{ fontSize: "10px", color: "var(--muted)" }}>Playlist</p>
               </div>
             </button>
+          ))}
+          {/* Liens externes (Playlists, Historique) */}
+          {extraLinks.map(link => (
+            <Link key={link.to} to={link.to} onClick={onNav} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "8px 10px", borderRadius: "8px", textDecoration: "none", transition: "background 0.15s" }}
+              onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.04)"}
+              onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}
+            >
+              <div style={{ width: "34px", height: "34px", borderRadius: "8px", flexShrink: 0, background: `${link.color}18`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <link.icon size={14} style={{ color: link.color }} />
+              </div>
+              <div>
+                <p style={{ fontSize: "12px", fontWeight: 700, color: "var(--text)" }}>{link.label}</p>
+                <p style={{ fontSize: "10px", color: "var(--muted)" }}>{link.to === "/playlists" ? "Mes playlists" : "Écoutes récentes"}</p>
+              </div>
+            </Link>
           ))}
         </div>
         <div style={{ marginTop: "auto", paddingTop: "12px", borderTop: "1px solid var(--border)" }}>
@@ -326,14 +363,14 @@ export default function ListenerDashboard() {
               {/* Artistes */}
               <div>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "18px" }}>
-                  <h2 className="bebas" style={{ fontSize: "24px", color: "var(--text)" }}>Artistes populaires</h2>
+                  <h2 className="bebas" style={{ fontSize: "24px", color: "var(--text)" }}>{discoverArtists ? "Pour vous" : "Artistes populaires"}</h2>
                   <button onClick={() => navigate("/explore")} style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", background: "none", border: "none", cursor: "pointer" }}
                     onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = "var(--text)"}
                     onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = "var(--muted)"}
                   >Tout afficher</button>
                 </div>
                 <div style={{ display: "flex", gap: "10px", overflowX: "auto", paddingBottom: "8px", scrollbarWidth: "none" }}>
-                  {(realArtists.length > 0 ? realArtists : []).slice(0, 10).map(artist => (
+                  {(discoverArtists ?? (realArtists.length > 0 ? realArtists : [])).slice(0, 10).map(artist => (
                     <button key={artist.id} onClick={() => navigate(`/artist/${artist.slug}`)} style={{ flexShrink: 0, width: "100px", padding: "10px 6px", borderRadius: "12px", textAlign: "center", background: "transparent", border: "none", cursor: "pointer", transition: "background 0.15s" }}
                       onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.04)"}
                       onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}>
@@ -431,11 +468,11 @@ export default function ListenerDashboard() {
                 <h1 className="bebas" style={{ fontSize: "36px", color: "var(--text)" }}>Découvrir</h1>
               </div>
 
-              {/* Artistes les plus populaires ce mois */}
+              {/* Artistes — populaires ou personnalisés selon l'auditeur */}
               <div>
-                <h2 className="bebas" style={{ fontSize: "24px", color: "var(--text)", marginBottom: "18px" }}><span style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}><TrendingUp size={18} style={{ color: "var(--amber)" }} /> Artistes les plus écoutés</span></h2>
+                <h2 className="bebas" style={{ fontSize: "24px", color: "var(--text)", marginBottom: "18px" }}><span style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}><TrendingUp size={18} style={{ color: "var(--amber)" }} /> {discoverArtists ? "Recommandé pour vous" : "Artistes les plus écoutés"}</span></h2>
                 <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                  {[...realArtists].sort((a, b) => (b.plays_count || 0) - (a.plays_count || 0)).slice(0, 10).map((artist, i) => (
+                  {(discoverArtists ?? [...realArtists].sort((a, b) => (b.plays_count || 0) - (a.plays_count || 0))).slice(0, 10).map((artist, i) => (
                     <button key={artist.id} onClick={() => navigate(`/artist/${artist.slug}`)} style={{ display: "flex", alignItems: "center", gap: "16px", padding: "10px 14px", borderRadius: "10px", background: "transparent", border: "none", cursor: "pointer", textAlign: "left", transition: "background 0.15s" }}
                       onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.04)"}
                       onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}>

@@ -1,5 +1,5 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { Menu, X, LogOut, LayoutDashboard, ChevronDown, Radio, Mic, ListMusic, History } from "lucide-react";
+import { Menu, X, LogOut, LayoutDashboard, ChevronDown, Radio, Mic } from "lucide-react";
 import EbiaLogo from "./EbiaLogo";
 import { useState, useEffect, useRef } from "react";
 import { useApp } from "../context/AppContext";
@@ -43,8 +43,6 @@ export default function Navbar() {
     { to: "/concerts", label: t("nav.concerts") },
     { to: "/radio", label: t("nav.radios"), icon: Radio },
     { to: "/recognize", label: t("nav.identify"), icon: Mic },
-    { to: "/playlists", label: "Playlists", icon: ListMusic },
-    { to: "/play-history", label: "Historique", icon: History },
   ];
 
   const isActive = (to: string) => location.pathname.startsWith(to);
