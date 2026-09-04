@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { useApp } from "../context/AppContext";
 import {
   Users,
   Music2,
@@ -9,6 +11,9 @@ import {
   TrendingUp,
   Calendar,
   Activity,
+  LogOut,
+  Menu,
+  X as XIcon,
 } from "lucide-react";
 import {
   getAdminStats,
@@ -19,10 +24,21 @@ import {
   type AdminUser,
 } from "../lib/api";
 import ModerationQueue from "../components/ModerationQueue";
+import LogoutModal from "../components/LogoutModal";
+import EbiaLogo from "../components/EbiaLogo";
 
 type AdminSection = "stats" | "users" | "moderation";
 
+const NAV_ITEMS: { key: AdminSection; label: string; icon: typeof Users }[] = [
+  { key: "stats", label: "Statistiques", icon: TrendingUp },
+  { key: "users", label: "Utilisateurs", icon: Users },
+  { key: "moderation", label: "Modération", icon: Shield },
+];
+
 export default function AdminDashboard() {
+  const { user } = useApp();
+  const navigate = useNavigate();
+
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,14 +46,8 @@ export default function AdminDashboard() {
   const [roleFilter, setRoleFilter] = useState<string>("");
   const [page, setPage] = useState(0);
   const [section, setSection] = useState<AdminSection>("stats");
-
-  useEffect(() => {
-    loadStats();
-  }, []);
-
-  useEffect(() => {
-    loadUsers();
-  }, [page, roleFilter]);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [logoutOpen, setLogoutOpen] = useState(false);
 
   const loadStats = async () => {
     try {
@@ -62,6 +72,15 @@ export default function AdminDashboard() {
       setUsersLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadStats();
+  }, []);
+
+  useEffect(() => {
+    loadUsers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, roleFilter]);
 
   const handleToggleActive = async (userId: string) => {
     try {
@@ -98,409 +117,264 @@ export default function AdminDashboard() {
       ]
     : [];
 
-  return (
-    <div style={{ minHeight: "100vh", background: "var(--bg)", paddingBottom: "120px" }}>
-      {/* Header */}
-      <section
-        style={{
-          padding: "120px 24px 40px",
-          maxWidth: "1360px",
-          margin: "0 auto",
-        }}
-      >
-        <div style={{ position: "relative", zIndex: 1 }}>
-          <div
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "8px",
-              padding: "5px 12px",
-              borderRadius: "99px",
-              border: "1px solid rgba(139,92,246,0.3)",
-              marginBottom: "20px",
-              fontSize: "11px",
-              fontWeight: 700,
-              letterSpacing: "0.15em",
-              textTransform: "uppercase",
-              color: "#8B5CF6",
-            }}
-          >
-            <Shield size={12} />
-            Administration
-          </div>
+  if (!user) return null;
 
-          <h1
-            className="bebas"
-            style={{
-              fontSize: "clamp(48px, 8vw, 96px)",
-              color: "var(--text)",
-              lineHeight: 0.92,
-              marginBottom: "16px",
-            }}
-          >
-            Dashboard Admin
+  const sidebarContent = (onNav?: () => void) => (
+    <>
+      <div style={{ padding: "16px 12px 8px", display: "flex", alignItems: "center", gap: "8px" }}>
+        <div style={{ width: "28px", height: "28px", borderRadius: "7px", background: "#8B5CF6", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <Shield size={14} color="white" />
+        </div>
+        <div>
+          <span className="bebas" style={{ fontSize: "15px", color: "var(--text)", letterSpacing: "0.1em", display: "block", lineHeight: 1 }}>E-BIA</span>
+          <span style={{ fontSize: "9px", color: "#8B5CF6", letterSpacing: "0.15em", textTransform: "uppercase", fontWeight: 700 }}>Administration</span>
+        </div>
+      </div>
+
+      <div style={{ background: "var(--bg2)", borderRadius: "12px", padding: "8px", flex: 1, display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden" }}>
+        {NAV_ITEMS.map(item => {
+          const active = section === item.key;
+          return (
+            <button
+              key={item.key}
+              onClick={() => { setSection(item.key); onNav?.(); }}
+              style={{
+                width: "100%", display: "flex", alignItems: "center", gap: "12px",
+                padding: "10px 12px", borderRadius: "8px", cursor: "pointer",
+                background: active ? "rgba(139,92,246,0.12)" : "transparent",
+                border: "none", color: active ? "var(--text)" : "var(--muted)",
+                transition: "all 0.15s", textAlign: "left",
+              }}
+              onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.04)"; }}
+              onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+            >
+              <item.icon size={17} style={{ color: active ? "#8B5CF6" : "inherit", flexShrink: 0 }} />
+              <span style={{ fontWeight: 600, fontSize: "13px" }}>{item.label}</span>
+            </button>
+          );
+        })}
+
+        <button onClick={() => { navigate("/"); onNav?.(); }} style={{ marginTop: "4px", display: "flex", alignItems: "center", gap: "10px", padding: "9px 12px", borderRadius: "8px", cursor: "pointer", background: "transparent", border: "1px solid rgba(240,235,227,0.07)", color: "var(--muted)", transition: "all 0.15s", textAlign: "left", width: "100%" }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(76,175,130,0.35)"; (e.currentTarget as HTMLElement).style.color = "#4caf82"; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(240,235,227,0.07)"; (e.currentTarget as HTMLElement).style.color = "var(--muted)"; }}>
+          <Music2 size={14} style={{ flexShrink: 0 }} />
+          <span style={{ fontSize: "12px", fontWeight: 600 }}>Retour à E-BIA</span>
+        </button>
+
+        {/* Profil bas */}
+        <div style={{ marginTop: "auto", paddingTop: "12px", borderTop: "1px solid var(--border)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "4px 6px" }}>
+            <div style={{ width: "30px", height: "30px", borderRadius: "50%", flexShrink: 0, overflow: "hidden", background: "linear-gradient(135deg, #8B5CF6, #6D28D9)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 800, color: "#fff" }}>
+              {user.displayName?.[0]?.toUpperCase()}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ fontSize: "11px", fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user.displayName}</p>
+              <p style={{ fontSize: "10px", color: "#8B5CF6", fontWeight: 600 }}>Administrateur</p>
+            </div>
+            <button onClick={() => setLogoutOpen(true)} title="Se déconnecter" style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer", padding: "4px", borderRadius: "6px", transition: "all 0.15s" }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "var(--text)"; (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.06)"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "var(--muted)"; (e.currentTarget as HTMLElement).style.background = "none"; }}>
+              <LogOut size={13} />
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+
+  return (
+    <div style={{ display: "flex", height: "100vh", background: "var(--bg)" }}>
+
+      {/* ── SIDEBAR desktop ── */}
+      <aside className="sidebar-dashboard" style={{ flexDirection: "column", gap: "8px", padding: "8px", background: "#000", overflow: "hidden" }}>
+        {sidebarContent()}
+      </aside>
+
+      {/* ── DRAWER mobile ── */}
+      {mobileMenuOpen && (
+        <div onClick={() => setMobileMenuOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 90, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }} />
+      )}
+      <div style={{ position: "fixed", top: 0, left: mobileMenuOpen ? 0 : "-260px", width: "260px", height: "100vh", zIndex: 91, background: "#000", display: "flex", flexDirection: "column", gap: "8px", padding: "8px", transition: "left 0.25s ease", overflow: "hidden" }}>
+        <div style={{ display: "flex", justifyContent: "flex-end", padding: "8px 4px 0" }}>
+          <button onClick={() => setMobileMenuOpen(false)} style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer", padding: "4px" }}>
+            <XIcon size={20} />
+          </button>
+        </div>
+        {sidebarContent(() => setMobileMenuOpen(false))}
+      </div>
+
+      {/* ── MAIN ── */}
+      <main style={{ flex: 1, overflowY: "auto", background: "var(--bg)" }}>
+        {/* Barre mobile top avec hamburger */}
+        <div className="sidebar-dashboard-mobile-bar" style={{ alignItems: "center", justifyContent: "space-between", padding: "12px 16px", background: "#000", borderBottom: "1px solid var(--border)", position: "sticky", top: 0, zIndex: 10 }}>
+          <button onClick={() => setMobileMenuOpen(true)} style={{ background: "none", border: "none", color: "var(--text)", cursor: "pointer", padding: "4px", display: "flex" }}>
+            <Menu size={22} />
+          </button>
+          <Link to="/" style={{ display: "flex", alignItems: "center", gap: "6px", textDecoration: "none" }}>
+            <EbiaLogo size={22} />
+            <span className="bebas" style={{ fontSize: "14px", color: "var(--text)", letterSpacing: "0.1em" }}>E-BIA</span>
+          </Link>
+          <div style={{ width: "28px", height: "28px", borderRadius: "50%", background: "linear-gradient(135deg, #8B5CF6, #6D28D9)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 800, color: "#fff", flexShrink: 0 }}>
+            {user.displayName?.[0]?.toUpperCase()}
+          </div>
+        </div>
+
+        <div className="dashboard-main" style={{ padding: "36px 40px", maxWidth: "1360px", margin: "0 auto" }}>
+          <h1 className="bebas" style={{ fontSize: "36px", color: "var(--text)", lineHeight: 1, marginBottom: "28px" }}>
+            {NAV_ITEMS.find(n => n.key === section)?.label}
           </h1>
 
-          <p
-            style={{
-              fontSize: "16px",
-              color: "var(--muted)",
-              maxWidth: "500px",
-              lineHeight: 1.7,
-            }}
-          >
-            Gérez les utilisateurs et surveillez l'activité de la plateforme.
-          </p>
-        </div>
-      </section>
-
-      <div style={{ maxWidth: "1360px", margin: "0 auto", padding: "0 24px" }}>
-        {/* Navigation tabs */}
-        <div className="admin-tabs" style={{ display: "flex", gap: "8px", marginBottom: "32px" }}>
-          {([
-            { key: "stats" as AdminSection, label: "Statistiques", icon: TrendingUp },
-            { key: "users" as AdminSection, label: "Utilisateurs", icon: Users },
-            { key: "moderation" as AdminSection, label: "Modération", icon: Shield },
-          ]).map(tab => (
-            <button
-              key={tab.key}
-              onClick={() => setSection(tab.key)}
-              style={{
-                display: "flex", alignItems: "center", gap: "8px",
-                padding: "10px 18px", borderRadius: "99px",
-                background: section === tab.key ? "var(--amber)" : "rgba(240,235,227,0.05)",
-                color: section === tab.key ? "#fff" : "var(--muted)",
-                border: "none", fontSize: "13px", fontWeight: 600, cursor: "pointer",
-                transition: "all 0.15s",
-              }}
-            >
-              <tab.icon size={14} /> {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Stats Section */}
-        {section === "stats" && (
-        <>
-          {loading ? (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: "80px 0",
-            }}
-          >
-            <Loader2
-              size={32}
-              style={{ color: "var(--amber)", animation: "spin 1s linear infinite" }}
-            />
-          </div>
-          ) : !stats ? (
-          <div
-            style={{
-              textAlign: "center",
-              padding: "60px 20px",
-              borderRadius: "16px",
-              background: "rgba(240,235,227,0.03)",
-              border: "1px solid rgba(240,235,227,0.06)",
-              marginBottom: "48px",
-            }}
-          >
-            <p style={{ color: "var(--muted)", fontSize: "13px", marginBottom: "14px" }}>
-              Impossible de charger les statistiques.
-            </p>
-            <button
-              onClick={loadStats}
-              style={{
-                padding: "8px 18px", borderRadius: "99px", border: "1px solid rgba(232,96,26,0.3)",
-                background: "none", color: "var(--amber)", fontSize: "12px", fontWeight: 600, cursor: "pointer",
-              }}
-            >
-              Réessayer
-            </button>
-          </div>
-          ) : (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
-              gap: "16px",
-              marginBottom: "48px",
-            }}
-          >
-            {statCards.map((card) => (
-              <div
-                key={card.label}
-                style={{
-                  padding: "20px",
-                  borderRadius: "16px",
-                  background: "rgba(240,235,227,0.03)",
-                  border: "1px solid rgba(240,235,227,0.06)",
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "10px",
-                    marginBottom: "12px",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: "36px",
-                      height: "36px",
-                      borderRadius: "10px",
-                      background: `${card.color}15`,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <card.icon size={18} style={{ color: card.color }} />
-                  </div>
-                  <span
-                    style={{ fontSize: "12px", color: "var(--muted)", fontWeight: 600 }}
-                  >
-                    {card.label}
-                  </span>
+          {/* Stats Section */}
+          {section === "stats" && (
+            <>
+              {loading ? (
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "80px 0" }}>
+                  <Loader2 size={32} style={{ color: "var(--amber)", animation: "spin 1s linear infinite" }} />
                 </div>
-                <p
-                  style={{
-                    fontSize: "28px",
-                    fontWeight: 800,
-                    color: "var(--text)",
-                  }}
-                >
-                  {card.value.toLocaleString("fr-FR")}
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
-        </>
-        )}
-
-        {/* Users Section */}
-        {section === "users" && (
-        <div style={{ marginBottom: "32px" }}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              marginBottom: "24px",
-            }}
-          >
-            <h2 style={{ fontSize: "22px", fontWeight: 800, color: "var(--text)" }}>
-              Utilisateurs
-            </h2>
-
-            <div style={{ display: "flex", gap: "8px" }}>
-              {["", "listener", "artist", "admin"].map((role) => (
-                <button
-                  key={role}
-                  onClick={() => { setRoleFilter(role); setPage(0); }}
-                  style={{
-                    padding: "8px 14px",
-                    borderRadius: "99px",
-                    border: "1px solid rgba(240,235,227,0.1)",
-                    background: roleFilter === role ? "var(--amber)" : "transparent",
-                    color: roleFilter === role ? "#fff" : "var(--muted)",
-                    fontSize: "12px",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    transition: "all 0.15s",
-                  }}
-                >
-                  {role || "Tous"}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {usersLoading ? (
-            <div style={{ textAlign: "center", padding: "40px 0" }}>
-              <Loader2
-                size={24}
-                style={{ color: "var(--amber)", animation: "spin 1s linear infinite" }}
-              />
-            </div>
-          ) : (
-            <div
-              style={{
-                background: "rgba(240,235,227,0.02)",
-                border: "1px solid rgba(240,235,227,0.06)",
-                borderRadius: "16px",
-                overflow: "hidden",
-              }}
-            >
-              {/* Table Header */}
-              <div
-                className="admin-user-row admin-table-header"
-                style={{
-                  padding: "14px 20px",
-                  borderBottom: "1px solid rgba(240,235,227,0.06)",
-                  fontSize: "11px",
-                  fontWeight: 600,
-                  color: "var(--muted)",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                }}
-              >
-                <span>Nom</span>
-                <span>Email</span>
-                <span>Rôle</span>
-                <span>Statut</span>
-                <span style={{ textAlign: "right" }}>Actions</span>
-              </div>
-
-              {/* Users */}
-              {users.map((user) => (
-                <div
-                  key={user.id}
-                  className="admin-user-row"
-                  style={{
-                    padding: "14px 20px",
-                    borderBottom: "1px solid rgba(240,235,227,0.03)",
-                    alignItems: "center",
-                    fontSize: "14px",
-                  }}
-                >
-                  <span style={{ fontWeight: 600, color: "var(--text)" }}>
-                    {user.displayName || "—"}
-                  </span>
-                  <span style={{ color: "var(--muted)" }}>{user.email}</span>
-                  <span>
-                    <select
-                      value={user.role}
-                      onChange={(e) => handleChangeRole(user.id, e.target.value)}
-                      style={{
-                        padding: "6px 10px",
-                        borderRadius: "8px",
-                        border: "1px solid rgba(240,235,227,0.1)",
-                        background: "rgba(240,235,227,0.05)",
-                        color: "var(--text)",
-                        fontSize: "12px",
-                        cursor: "pointer",
-                      }}
-                    >
-                      <option value="listener">listener</option>
-                      <option value="artist">artist</option>
-                      <option value="admin">admin</option>
-                    </select>
-                  </span>
-                  <span
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "6px",
-                      fontSize: "12px",
-                      fontWeight: 600,
-                      color: user.active ? "#10B981" : "#EF4444",
-                    }}
+              ) : !stats ? (
+                <div style={{ textAlign: "center", padding: "60px 20px", borderRadius: "16px", background: "rgba(240,235,227,0.03)", border: "1px solid rgba(240,235,227,0.06)" }}>
+                  <p style={{ color: "var(--muted)", fontSize: "13px", marginBottom: "14px" }}>
+                    Impossible de charger les statistiques.
+                  </p>
+                  <button
+                    onClick={loadStats}
+                    style={{ padding: "8px 18px", borderRadius: "99px", border: "1px solid rgba(232,96,26,0.3)", background: "none", color: "var(--amber)", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}
                   >
-                    <span
-                      style={{
-                        width: "6px",
-                        height: "6px",
-                        borderRadius: "50%",
-                        background: user.active ? "#10B981" : "#EF4444",
-                      }}
-                    />
-                    {user.active ? "Actif" : "Inactif"}
-                  </span>
-                  <div style={{ textAlign: "right" }}>
-                    <button
-                      onClick={() => handleToggleActive(user.id)}
-                      style={{
-                        padding: "6px 12px",
-                        borderRadius: "8px",
-                        border: "1px solid rgba(240,235,227,0.1)",
-                        background: "none",
-                        color: user.active ? "#EF4444" : "#10B981",
-                        fontSize: "11px",
-                        fontWeight: 600,
-                        cursor: "pointer",
-                      }}
-                    >
-                      {user.active ? "Désactiver" : "Activer"}
-                    </button>
-                  </div>
+                    Réessayer
+                  </button>
                 </div>
-              ))}
-
-              {users.length === 0 && (
-                <div style={{ textAlign: "center", padding: "40px 20px", color: "var(--muted)" }}>
-                  Aucun utilisateur trouvé
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "16px" }}>
+                  {statCards.map((card) => (
+                    <div key={card.label} style={{ padding: "20px", borderRadius: "16px", background: "rgba(240,235,227,0.03)", border: "1px solid rgba(240,235,227,0.06)" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
+                        <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: `${card.color}15`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <card.icon size={18} style={{ color: card.color }} />
+                        </div>
+                        <span style={{ fontSize: "12px", color: "var(--muted)", fontWeight: 600 }}>{card.label}</span>
+                      </div>
+                      <p style={{ fontSize: "28px", fontWeight: 800, color: "var(--text)" }}>{card.value.toLocaleString("fr-FR")}</p>
+                    </div>
+                  ))}
                 </div>
               )}
+            </>
+          )}
+
+          {/* Users Section */}
+          {section === "users" && (
+            <div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", marginBottom: "20px" }}>
+                <div style={{ display: "flex", gap: "8px" }}>
+                  {["", "listener", "artist", "admin"].map((role) => (
+                    <button
+                      key={role}
+                      onClick={() => { setRoleFilter(role); setPage(0); }}
+                      style={{
+                        padding: "8px 14px",
+                        borderRadius: "99px",
+                        border: "1px solid rgba(240,235,227,0.1)",
+                        background: roleFilter === role ? "var(--amber)" : "transparent",
+                        color: roleFilter === role ? "#fff" : "var(--muted)",
+                        fontSize: "12px",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        transition: "all 0.15s",
+                      }}
+                    >
+                      {role || "Tous"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {usersLoading ? (
+                <div style={{ textAlign: "center", padding: "40px 0" }}>
+                  <Loader2 size={24} style={{ color: "var(--amber)", animation: "spin 1s linear infinite" }} />
+                </div>
+              ) : (
+                <div style={{ background: "rgba(240,235,227,0.02)", border: "1px solid rgba(240,235,227,0.06)", borderRadius: "16px", overflow: "hidden" }}>
+                  {/* Table Header */}
+                  <div className="admin-user-row admin-table-header" style={{ padding: "14px 20px", borderBottom: "1px solid rgba(240,235,227,0.06)", fontSize: "11px", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                    <span>Nom</span>
+                    <span>Email</span>
+                    <span>Rôle</span>
+                    <span>Statut</span>
+                    <span style={{ textAlign: "right" }}>Actions</span>
+                  </div>
+
+                  {/* Users */}
+                  {users.map((u) => (
+                    <div key={u.id} className="admin-user-row" style={{ padding: "14px 20px", borderBottom: "1px solid rgba(240,235,227,0.03)", alignItems: "center", fontSize: "14px" }}>
+                      <span style={{ fontWeight: 600, color: "var(--text)" }}>{u.displayName || "—"}</span>
+                      <span style={{ color: "var(--muted)" }}>{u.email}</span>
+                      <span>
+                        <select
+                          value={u.role}
+                          onChange={(e) => handleChangeRole(u.id, e.target.value)}
+                          style={{ padding: "6px 10px", borderRadius: "8px", border: "1px solid rgba(240,235,227,0.1)", background: "rgba(240,235,227,0.05)", color: "var(--text)", fontSize: "12px", cursor: "pointer" }}
+                        >
+                          <option value="listener">listener</option>
+                          <option value="artist">artist</option>
+                          <option value="admin">admin</option>
+                        </select>
+                      </span>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "12px", fontWeight: 600, color: u.active ? "#10B981" : "#EF4444" }}>
+                        <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: u.active ? "#10B981" : "#EF4444" }} />
+                        {u.active ? "Actif" : "Inactif"}
+                      </span>
+                      <div style={{ textAlign: "right" }}>
+                        <button
+                          onClick={() => handleToggleActive(u.id)}
+                          style={{ padding: "6px 12px", borderRadius: "8px", border: "1px solid rgba(240,235,227,0.1)", background: "none", color: u.active ? "#EF4444" : "#10B981", fontSize: "11px", fontWeight: 600, cursor: "pointer" }}
+                        >
+                          {u.active ? "Désactiver" : "Activer"}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+
+                  {users.length === 0 && (
+                    <div style={{ textAlign: "center", padding: "40px 20px", color: "var(--muted)" }}>
+                      Aucun utilisateur trouvé
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Pagination */}
+              <div style={{ display: "flex", justifyContent: "center", gap: "12px", marginTop: "24px" }}>
+                <button
+                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+                  disabled={page === 0}
+                  style={{ padding: "10px 20px", borderRadius: "99px", border: "1px solid rgba(240,235,227,0.1)", background: "none", color: page === 0 ? "rgba(240,235,227,0.2)" : "var(--muted)", fontSize: "13px", fontWeight: 600, cursor: page === 0 ? "not-allowed" : "pointer" }}
+                >
+                  Précédent
+                </button>
+                <span style={{ display: "flex", alignItems: "center", fontSize: "13px", color: "var(--muted)" }}>
+                  Page {page + 1}
+                </span>
+                <button
+                  onClick={() => setPage((p) => p + 1)}
+                  disabled={users.length < 20}
+                  style={{ padding: "10px 20px", borderRadius: "99px", border: "1px solid rgba(240,235,227,0.1)", background: "none", color: users.length < 20 ? "rgba(240,235,227,0.2)" : "var(--muted)", fontSize: "13px", fontWeight: 600, cursor: users.length < 20 ? "not-allowed" : "pointer" }}
+                >
+                  Suivant
+                </button>
+              </div>
             </div>
           )}
 
-          {/* Pagination */}
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              gap: "12px",
-              marginTop: "24px",
-            }}
-          >
-            <button
-              onClick={() => setPage((p) => Math.max(0, p - 1))}
-              disabled={page === 0}
-              style={{
-                padding: "10px 20px",
-                borderRadius: "99px",
-                border: "1px solid rgba(240,235,227,0.1)",
-                background: "none",
-                color: page === 0 ? "rgba(240,235,227,0.2)" : "var(--muted)",
-                fontSize: "13px",
-                fontWeight: 600,
-                cursor: page === 0 ? "not-allowed" : "pointer",
-              }}
-            >
-              Précédent
-            </button>
-            <span
-              style={{
-                display: "flex",
-                alignItems: "center",
-                fontSize: "13px",
-                color: "var(--muted)",
-              }}
-            >
-              Page {page + 1}
-            </span>
-            <button
-              onClick={() => setPage((p) => p + 1)}
-              disabled={users.length < 20}
-              style={{
-                padding: "10px 20px",
-                borderRadius: "99px",
-                border: "1px solid rgba(240,235,227,0.1)",
-                background: "none",
-                color: users.length < 20 ? "rgba(240,235,227,0.2)" : "var(--muted)",
-                fontSize: "13px",
-                fontWeight: 600,
-                cursor: users.length < 20 ? "not-allowed" : "pointer",
-              }}
-            >
-              Suivant
-            </button>
-          </div>
+          {/* Moderation Section */}
+          {section === "moderation" && (
+            <div style={{ maxWidth: "800px" }}>
+              <ModerationQueue />
+            </div>
+          )}
         </div>
-        )}
+      </main>
 
-        {/* Moderation Section */}
-        {section === "moderation" && (
-          <div style={{ maxWidth: "800px" }}>
-            <ModerationQueue />
-          </div>
-        )}
-      </div>
+      <LogoutModal open={logoutOpen} onClose={() => setLogoutOpen(false)} />
     </div>
   );
 }

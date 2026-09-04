@@ -571,30 +571,6 @@ export const toggleUserActive = (userId: string) =>
 export const changeUserRole = (userId: string, role: string) =>
   put<{ message: string }>(`/api/admin/users/${userId}/role`, { role });
 
-/* ── Content Reporting ── */
-export type Report = {
-  id: string;
-  reporterId: string;
-  targetId: string;
-  targetType: string;
-  reason: string;
-  description: string | null;
-  status: string;
-  createdAt: string;
-};
-
-export const createReport = (data: { targetId: string; targetType: string; reason: string; description?: string }) =>
-  post<Report>('/api/reports', data);
-
-export const getReports = (page = 0, size = 20, status?: string) => {
-  const params = new URLSearchParams({ page: String(page), size: String(size) });
-  if (status) params.set('status', status);
-  return get<Report[]>(`/api/reports?${params}`);
-};
-
-export const updateReportStatus = (reportId: string, status: string) =>
-  put<{ message: string }>(`/api/reports/${reportId}/status`, { status });
-
 /* ── User Settings ── */
 export type UserSettings = {
   displayName: string;

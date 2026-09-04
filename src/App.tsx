@@ -34,7 +34,6 @@ const Playlists = lazy(() => import("./pages/Playlists"));
 const PlaylistDetail = lazy(() => import("./pages/PlaylistDetail"));
 const PlayHistoryPage = lazy(() => import("./pages/PlayHistory"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
-const Reports = lazy(() => import("./pages/Reports"));
 const Settings = lazy(() => import("./pages/Settings"));
 const Activity = lazy(() => import("./pages/Activity"));
 const Wrapped = lazy(() => import("./pages/Wrapped"));
@@ -47,7 +46,7 @@ function RouteFallback() {
   );
 }
 
-const NO_CHROME = ["/login", "/me", "/artist-dashboard", "/forgot-password", "/reset-password"];
+const NO_CHROME = ["/login", "/me", "/artist-dashboard", "/forgot-password", "/reset-password", "/admin"];
 const ROUTE_STORAGE_KEY = "ebia_last_route";
 
 function AppContent() {
@@ -111,7 +110,6 @@ function AppContent() {
             <Route path="/playlists/:id" element={<AuthGuard><PlaylistDetail /></AuthGuard>} />
             <Route path="/play-history" element={<AuthGuard><PlayHistoryPage /></AuthGuard>} />
             <Route path="/admin" element={<AuthGuard><AdminDashboard /></AuthGuard>} />
-            <Route path="/admin/reports" element={<AuthGuard><Reports /></AuthGuard>} />
             <Route path="/settings" element={<AuthGuard><Settings /></AuthGuard>} />
             <Route path="/activity" element={<AuthGuard><Activity /></AuthGuard>} />
             <Route path="/wrapped" element={<AuthGuard><Wrapped /></AuthGuard>} />
