@@ -26,6 +26,13 @@ const fmtDur = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2
 
 const GENRES = ["Afro-Pop","Afro-Folk","Hip-Hop","Afro-Trap","Jazz / Blues","Gospel","Soukous","R&B","Traditionnel","Soul","Afro-Beat"];
 
+const TRACK_STATUS_STYLES: Record<string, { label: string; color: string; bg: string; border: string }> = {
+  published: { label: "Publié", color: "#4caf82", bg: "rgba(76,175,130,0.12)", border: "rgba(76,175,130,0.25)" },
+  pending_review: { label: "En attente", color: "var(--amber)", bg: "rgba(232,96,26,0.12)", border: "rgba(232,96,26,0.3)" },
+  rejected: { label: "Rejeté", color: "#f08080", bg: "rgba(220,50,50,0.1)", border: "rgba(220,50,50,0.25)" },
+  draft: { label: "Brouillon", color: "var(--muted)", bg: "rgba(240,235,227,0.06)", border: "var(--border)" },
+};
+
 interface FreeBannerProps { isFreeTierFull: boolean; freeSlotsLeft: number; publishedCount: number; }
 
 function FreeBanner({ isFreeTierFull, freeSlotsLeft, publishedCount }: FreeBannerProps) {
@@ -121,6 +128,8 @@ export default function ArtistDashboard() {
   const [saveMsg, setSaveMsg] = useState("");
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [coverImgPreview, setCoverImgPreview] = useState<string | null>(null);
+  const [avatarPending, setAvatarPending] = useState(false);
+  const [coverPending, setCoverPending] = useState(false);
 
   const avatarRef = useRef<HTMLInputElement>(null);
   const coverImgRef = useRef<HTMLInputElement>(null);
@@ -170,27 +179,28 @@ export default function ArtistDashboard() {
     } catch { alert("Erreur lors de la suppression"); }
   };
 
-  /* Sauvegarder profil */
+  /* Sauvegarder profil — les modifications passent par une validation admin avant d'être publiées */
   const saveProfile = async () => {
     setSavingProfile(true); setSaveMsg("");
     try {
-      await updateMyArtistProfile({ name: editName, city: editCity, genre: editGenre, bio: editBio });
-      setSaveMsg("Profil sauvegardé ✓"); setTimeout(() => setSaveMsg(""), 3000);
+      const res = await updateMyArtistProfile({ name: editName, city: editCity, genre: editGenre, bio: editBio });
+      setSaveMsg(res.pending_changes ? "Modifications envoyées, en attente de validation par l'équipe E-BIA ⏳" : "Profil sauvegardé ✓");
+      setTimeout(() => setSaveMsg(""), 5000);
       loadProfile();
-    } catch { setSaveMsg("Erreur de sauvegarde"); }
+    } catch (e: unknown) { setSaveMsg(e instanceof Error ? e.message : "Erreur de sauvegarde"); }
     finally { setSavingProfile(false); }
   };
 
-  /* Upload images profil */
+  /* Upload images profil — aperçu local immédiat, mais l'image publique ne change qu'après validation admin */
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0]; if (!f) return;
     const r = new FileReader(); r.onload = ev => setAvatarPreview(ev.target?.result as string); r.readAsDataURL(f);
-    try { await uploadArtistImage("avatar", f); loadProfile(); } catch { /* preview reste */ }
+    try { await uploadArtistImage("avatar", f); setAvatarPending(true); } catch { /* preview reste */ }
   };
   const handleCoverImgChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0]; if (!f) return;
     const r = new FileReader(); r.onload = ev => setCoverImgPreview(ev.target?.result as string); r.readAsDataURL(f);
-    try { await uploadArtistImage("cover", f); loadProfile(); } catch { /* preview reste */ }
+    try { await uploadArtistImage("cover", f); setCoverPending(true); } catch { /* preview reste */ }
   };
 
   const inp: React.CSSProperties = {
@@ -414,7 +424,7 @@ export default function ArtistDashboard() {
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
                 <div>
                   <h1 className="bebas" style={{ fontSize: "36px", color: "var(--text)", lineHeight: 1 }}>Mes titres</h1>
-                  {!loadingTracks && <p style={{ fontSize: "13px", color: "var(--muted)", marginTop: "4px" }}>{publishedCount} publié{publishedCount !== 1 ? "s" : ""} · {tracks.filter(t => t.status === "draft").length} brouillon</p>}
+                  {!loadingTracks && <p style={{ fontSize: "13px", color: "var(--muted)", marginTop: "4px" }}>{publishedCount} publié{publishedCount !== 1 ? "s" : ""} · {tracks.filter(t => t.status === "pending_review").length} en attente · {tracks.filter(t => t.status === "draft").length} brouillon</p>}
                 </div>
                 <button onClick={() => setUploadOpen(true)} disabled={isFreeTierFull} style={{ display: "flex", alignItems: "center", gap: "7px", padding: "10px 18px", borderRadius: "99px", background: isFreeTierFull ? "rgba(240,235,227,0.06)" : "var(--amber)", border: "none", color: isFreeTierFull ? "var(--muted)" : "#fff", fontSize: "12px", fontWeight: 700, cursor: isFreeTierFull ? "not-allowed" : "pointer" }}>
                   {isFreeTierFull ? <Lock size={12} /> : <Plus size={12} />} Nouveau titre
@@ -467,9 +477,15 @@ export default function ArtistDashboard() {
                         <span className="dash-track-secondary" style={{ width: "52px", textAlign: "right", fontSize: "13px", color: "var(--muted)", fontVariantNumeric: "tabular-nums" }}>{fmtDur(track.duration_s)}</span>
 
                         <div style={{ width: "80px", display: "flex", justifyContent: "flex-end" }}>
-                          <span style={{ padding: "4px 9px", borderRadius: "99px", fontSize: "10px", fontWeight: 700, background: track.status === "published" ? "rgba(76,175,130,0.12)" : "rgba(240,235,227,0.06)", color: track.status === "published" ? "#4caf82" : "var(--muted)", border: `1px solid ${track.status === "published" ? "rgba(76,175,130,0.25)" : "var(--border)"}` }}>
-                            {track.status === "published" ? "Publié" : "Brouillon"}
-                          </span>
+                          {(() => {
+                            const s = TRACK_STATUS_STYLES[track.status] ?? TRACK_STATUS_STYLES.draft;
+                            return (
+                              <span title={track.status === "rejected" ? track.rejection_reason : undefined}
+                                style={{ padding: "4px 9px", borderRadius: "99px", fontSize: "10px", fontWeight: 700, background: s.bg, color: s.color, border: `1px solid ${s.border}`, cursor: track.status === "rejected" && track.rejection_reason ? "help" : "default" }}>
+                                {s.label}
+                              </span>
+                            );
+                          })()}
                         </div>
 
                         <button onClick={() => setDeleteModal({ open: true, trackId: track.id, trackTitle: track.title })} style={{ width: "32px", height: "32px", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", background: "none", border: "none", cursor: "pointer", color: "var(--muted)", transition: "all 0.15s" }}
@@ -615,6 +631,11 @@ export default function ArtistDashboard() {
                           </button>
                           <input ref={avatarRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleAvatarChange} />
                         </div>
+                        {(avatarPending || coverPending) && (
+                          <p style={{ fontSize: "11px", color: "var(--amber)", fontWeight: 600, marginTop: "8px" }}>
+                            ⏳ {avatarPending && coverPending ? "Photo de profil et bannière" : avatarPending ? "Photo de profil" : "Bannière"} en attente de validation par l'équipe E-BIA — l'aperçu ci-dessus n'est visible que par vous tant que non validé.
+                          </p>
+                        )}
                       </div>
                     </div>
 

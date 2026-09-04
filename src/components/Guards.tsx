@@ -50,3 +50,12 @@ export const ArtistGuard = ({ children }: { children: React.ReactNode }) => {
   if (!allowed) return <Navigate to="/me" replace />;
   return <>{children}</>;
 };
+
+export const AdminGuard = ({ children }: { children: React.ReactNode }) => {
+  const { user, authReady } = useApp();
+  const { t } = useTranslation();
+  if (!authReady) return <div className="min-h-screen bg-zinc-950 flex items-center justify-center text-zinc-500 uppercase tracking-widest text-xs">{t("guards.loading")}</div>;
+  if (!user) return <Navigate to="/login" replace />;
+  if (user.role !== "admin") return <Navigate to="/me" replace />;
+  return <>{children}</>;
+};

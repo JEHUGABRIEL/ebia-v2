@@ -4,7 +4,7 @@ import { AppProvider } from "./context/AppContext";
 import { QueueProvider } from "./context/QueueContext";
 import { EQProvider } from "./context/EQContext";
 import { CallProvider } from "./context/CallContext";
-import { AuthGuard, ArtistGuard } from "./components/Guards";
+import { AuthGuard, ArtistGuard, AdminGuard } from "./components/Guards";
 import Navbar from "./components/Navbar";
 import Player from "./components/Player";
 import LoginModal from "./components/LoginModal";
@@ -109,7 +109,7 @@ function AppContent() {
             <Route path="/playlists" element={<AuthGuard><Playlists /></AuthGuard>} />
             <Route path="/playlists/:id" element={<AuthGuard><PlaylistDetail /></AuthGuard>} />
             <Route path="/play-history" element={<AuthGuard><PlayHistoryPage /></AuthGuard>} />
-            <Route path="/admin" element={<AuthGuard><AdminDashboard /></AuthGuard>} />
+            <Route path="/admin" element={<AdminGuard><AdminDashboard /></AdminGuard>} />
             <Route path="/settings" element={<AuthGuard><Settings /></AuthGuard>} />
             <Route path="/activity" element={<AuthGuard><Activity /></AuthGuard>} />
             <Route path="/wrapped" element={<AuthGuard><Wrapped /></AuthGuard>} />

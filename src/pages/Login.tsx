@@ -9,7 +9,8 @@ import {
   CalendarDays, Shield
 } from "lucide-react";
 import EbiaLogo from "../components/EbiaLogo";
-import { registerListener, registerArtist, getArtists, type Artist } from "../lib/api";
+import { registerListener, registerArtist, getArtists, canonGenre, type Artist } from "../lib/api";
+import { computeWizardArtists } from "../lib/preferences";
 import { useTranslation } from "react-i18next";
 
 /* ── Données onboarding auditeur ── */
@@ -255,6 +256,8 @@ export default function Login() {
       return t("login.errorExists");
     if (/invalid.*credential|incorrect.*password|wrong.*password|identifiants/i.test(msg))
       return t("login.errorCredentials");
+    if (/attente de validation|a été rejetée/i.test(msg))
+      return msg;
     if (/not found|introuvable/i.test(msg))
       return t("login.errorNotFound");
     if (/network|fetch|connexion|ERR_/i.test(msg))
@@ -291,11 +294,22 @@ export default function Login() {
   const [bio, setBio] = useState("");
   const [phone, setPhone] = useState("");
   const [idFile, setIdFile] = useState<File | null>(null);
+  const [pendingMessage, setPendingMessage] = useState("");
 
   /* Auditeur */
   const [selGenres, setSelGenres] = useState<string[]>([]);
   const [selArtists, setSelArtists] = useState<string[]>([]);
   const [artists, setArtists] = useState<Artist[]>([]);
+  /* Genres « découverts » par une sélection : leurs artistes supplémentaires sont dévoilés */
+  const [revealedGenres, setRevealedGenres] = useState<Set<string>>(new Set());
+
+  // 3 artistes max par genre au départ ; choisir un artiste dévoile le reste de son type.
+  const listenerStep3Artists = computeWizardArtists<Artist>({
+    artists,
+    selectedGenres: selGenres,
+    revealedGenres,
+    initialPerGenre: 3,
+  });
 
   useEffect(() => {
     if (authReady && user) navigate(user.role === "artist" || user.role === "admin" ? "/artist-dashboard" : "/me");
@@ -310,7 +324,7 @@ export default function Login() {
   const TOTAL_STEPS = 3;
 
   const canNext1 = email && password.length >= 8 && firstName && password === confirmPassword;
-  const canNext2Artist = stageName && birthDate && idNumber;
+  const canNext2Artist = stageName && birthDate && idNumber && idFile;
   const canFinishListener = selArtists.length >= 1;
 
   const handleLogin = async () => {
@@ -339,11 +353,12 @@ export default function Login() {
   };
 
   const handleRegisterArtist = async () => {
+    if (!idFile) { setError("La pièce d'identité est requise."); return; }
     setLoading(true); setError("");
     try {
-      await registerArtist({ email, password, firstName, lastName, stageName, birthDate, idType, idNumber, genre: artistGenre, city, bio, phone });
-      await loginWithCredentials(email, password);
-      navigate("/artist-dashboard");
+      const res = await registerArtist({ email, password, firstName, lastName, stageName, birthDate, idType, idNumber, genre: artistGenre, city, bio, phone }, idFile);
+      setPendingMessage(res.message || "Compte créé, en attente de validation par l'équipe E-BIA.");
+      setIsLogin(true); setStep(1);
     } catch (e: unknown) { setError(normalizeError(e)); }
     finally { setLoading(false); }
   };
@@ -376,6 +391,11 @@ export default function Login() {
 
         <SectionTitle title="Bon retour" subtitle="Connectez-vous pour accéder à votre compte E-Bia" />
 
+        {pendingMessage && (
+          <div style={{ padding: "12px 14px", borderRadius: "10px", background: "rgba(76,175,130,0.08)", border: "1px solid rgba(76,175,130,0.25)", marginBottom: "16px" }}>
+            <p style={{ fontSize: "13px", color: "#4caf82", fontWeight: 600 }}>{pendingMessage}</p>
+          </div>
+        )}
         {error && <ErrorBanner message={error} />}
 
         <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
@@ -572,7 +592,7 @@ export default function Login() {
           </div>
 
           <div>
-            <Label>Copie du document (optionnel)</Label>
+            <Label>Copie du document *</Label>
             <label style={{
               display: "flex", alignItems: "center", gap: "10px", padding: "14px 16px", borderRadius: "12px", cursor: "pointer",
               border: `1.5px dashed ${idFile ? "var(--amber)" : "rgba(240,235,227,0.12)"}`,
@@ -590,7 +610,7 @@ export default function Login() {
             background: "rgba(201,147,10,0.05)", border: "1px solid rgba(201,147,10,0.12)",
           }}>
             <Shield size={14} style={{ color: "var(--gold)", flexShrink: 0, marginTop: "1px" }} />
-            <p style={{ fontSize: "11px", color: "rgba(240,235,227,0.5)", lineHeight: 1.6 }}>Vos données sont chiffrées et ne seront jamais partagées avec des tiers.</p>
+            <p style={{ fontSize: "11px", color: "rgba(240,235,227,0.5)", lineHeight: 1.6 }}>Vos données sont chiffrées et ne seront jamais partagées avec des tiers. Votre compte sera activé après validation de ce document par l'équipe E-BIA.</p>
           </div>
 
           <PrimaryButton onClick={() => { setError(""); setStep(3); }} disabled={!canNext2Artist} label="Suivant" />
@@ -640,8 +660,8 @@ export default function Login() {
             <FormTextarea icon={FileText} value={bio} onChange={e => setBio(e.target.value)} placeholder="Parlez de vous à vos futurs auditeurs..." />
           </div>
 
-          <PrimaryButton onClick={handleRegisterArtist} disabled={loading || !artistGenre || !city}
-            label={loading ? "Création du compte..." : "Créer mon compte artiste"} />
+          <PrimaryButton onClick={handleRegisterArtist} disabled={loading || !artistGenre || !city || !idFile}
+            label={loading ? "Envoi en cours..." : "Envoyer pour validation"} />
         </div>
       </div>
     );
@@ -698,12 +718,26 @@ export default function Login() {
               <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
               Chargement des artistes...
             </div>
-          : (
+          : listenerStep3Artists.visible.length === 0 ? (
+            <div style={{ padding: "40px 24px", textAlign: "center", color: "var(--muted)", fontSize: "13px", lineHeight: 1.7 }}>
+              Aucun artiste ne correspond encore aux genres choisis. Revenez à l'étape précédente pour ajuster vos types de musique.
+            </div>
+          ) : (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px", marginBottom: "24px" }}>
-              {artists.map(artist => {
+              {listenerStep3Artists.visible.map(artist => {
                 const sel = selArtists.includes(artist.id);
                 return (
-                  <button key={artist.id} onClick={() => setSelArtists(prev => prev.includes(artist.id) ? prev.filter(x => x !== artist.id) : [...prev, artist.id])} style={{
+                  <button key={artist.id} onClick={() => {
+                    const adding = !selArtists.includes(artist.id);
+                    if (adding) {
+                      const key = canonGenre(artist.genre);
+                      if (key) {
+                        // Découverte : choisir un artiste dévoile les autres artistes du même type
+                        setRevealedGenres(prev => { const next = new Set(prev); next.add(key); return next; });
+                      }
+                    }
+                    setSelArtists(prev => prev.includes(artist.id) ? prev.filter(x => x !== artist.id) : [...prev, artist.id]);
+                  }} style={{
                     padding: "14px 8px", borderRadius: "12px", cursor: "pointer", textAlign: "center",
                     border: `1.5px solid ${sel ? "var(--amber)" : "rgba(240,235,227,0.06)"}`,
                     background: sel ? "rgba(232,96,26,0.08)" : "rgba(240,235,227,0.02)",
@@ -725,6 +759,18 @@ export default function Login() {
             </div>
           )
         }
+
+        {listenerStep3Artists.hidden > 0 && (
+          <p style={{ fontSize: "12px", color: "var(--muted)", textAlign: "center", margin: "-12px 0 18px", lineHeight: 1.6 }}>
+            ✨ Sélectionnez un artiste pour découvrir les autres artistes du même genre
+            ({listenerStep3Artists.hidden} encore à découvrir).
+          </p>
+        )}
+        {selArtists.length > 0 && (
+          <p style={{ fontSize: "12px", color: "rgba(232,96,26,0.9)", textAlign: "center", margin: "-12px 0 18px", fontWeight: 600 }}>
+            {selArtists.length} artiste{selArtists.length > 1 ? "s" : ""} sélectionné{selArtists.length > 1 ? "s" : ""}
+          </p>
+        )}
 
         <div style={{ display: "flex", gap: "10px" }}>
           <div style={{ flex: 1 }}>

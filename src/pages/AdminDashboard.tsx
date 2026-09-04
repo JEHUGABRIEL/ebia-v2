@@ -14,6 +14,7 @@ import {
   LogOut,
   Menu,
   X as XIcon,
+  CheckCircle2,
 } from "lucide-react";
 import {
   getAdminStats,
@@ -24,14 +25,16 @@ import {
   type AdminUser,
 } from "../lib/api";
 import ModerationQueue from "../components/ModerationQueue";
+import ValidationsQueue from "../components/ValidationsQueue";
 import LogoutModal from "../components/LogoutModal";
 import EbiaLogo from "../components/EbiaLogo";
 
-type AdminSection = "stats" | "users" | "moderation";
+type AdminSection = "stats" | "users" | "validations" | "moderation";
 
 const NAV_ITEMS: { key: AdminSection; label: string; icon: typeof Users }[] = [
   { key: "stats", label: "Statistiques", icon: TrendingUp },
   { key: "users", label: "Utilisateurs", icon: Users },
+  { key: "validations", label: "Validations", icon: CheckCircle2 },
   { key: "moderation", label: "Modération", icon: Shield },
 ];
 
@@ -362,6 +365,13 @@ export default function AdminDashboard() {
                   Suivant
                 </button>
               </div>
+            </div>
+          )}
+
+          {/* Validations Section */}
+          {section === "validations" && (
+            <div style={{ maxWidth: "900px" }}>
+              <ValidationsQueue />
             </div>
           )}
 

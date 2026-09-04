@@ -51,6 +51,8 @@ export default function ListenerDashboard() {
   const [artistCity, setArtistCity] = useState("");
   const [artistCreating, setArtistCreating] = useState(false);
   const [artistError, setArtistError] = useState("");
+  const [artistIdDoc, setArtistIdDoc] = useState<File | null>(null);
+  const [artistPendingMessage, setArtistPendingMessage] = useState("");
   const [realArtists, setRealArtists] = useState<Artist[]>([]);
   const [newTracks, setNewTracks] = useState<any[]>([]);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -901,28 +903,36 @@ export default function ListenerDashboard() {
                         onBlur={e => (e.target as HTMLInputElement).style.borderColor = "var(--border)"} />
                     </div>
                   ))}
+                  <div>
+                    <label style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--muted)", display: "block", marginBottom: "8px" }}>Pièce d'identité (CNI ou passeport)</label>
+                    <input type="file" accept="image/*,.pdf" onChange={e => setArtistIdDoc(e.target.files?.[0] ?? null)} style={{ width: "100%", padding: "10px 12px", borderRadius: "10px", background: "var(--bg3)", border: "1px solid var(--border)", color: "var(--text)", fontSize: "12px", boxSizing: "border-box" as const }} />
+                    <p style={{ fontSize: "11px", color: "var(--muted)", marginTop: "6px" }}>Requis pour la validation de votre compte artiste par l'équipe E-BIA.</p>
+                  </div>
                   <div style={{ display: "flex", gap: "8px", marginTop: "4px" }}>
                     <button onClick={() => setArtistStep(1)} style={{ padding: "13px 16px", borderRadius: "10px", background: "transparent", border: "1px solid var(--border)", color: "var(--muted)", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}>← Retour</button>
-                    <button disabled={artistCreating || !artistStageName.trim()} onClick={async () => {
+                    <button disabled={artistCreating || !artistStageName.trim() || !artistIdDoc} onClick={async () => {
                       setArtistCreating(true); setArtistError("");
                       try {
-                        const res = await becomeArtist({ stage_name: artistStageName.trim(), genre: artistGenre.trim(), city: artistCity.trim() });
-                        localStorage.setItem("ebia_token", res.access_token);
-                        updateUser({ role: "artist" });
-                        setHasArtistProfile(true);
+                        const res = await becomeArtist({ stage_name: artistStageName.trim(), genre: artistGenre.trim(), city: artistCity.trim() }, artistIdDoc!);
+                        setArtistPendingMessage(res.message || "Demande envoyée, en attente de validation par l'équipe E-BIA.");
                         setArtistModalOpen(false); setArtistStep(1);
-                        navigate("/artist-dashboard");
                       } catch (e: unknown) {
                         setArtistError(e instanceof Error ? e.message : "Erreur de création");
                       } finally { setArtistCreating(false); }
-                    }} style={{ flex: 1, padding: "13px", borderRadius: "10px", background: artistCreating || !artistStageName.trim() ? "rgba(232,96,26,0.4)" : "var(--amber)", border: "none", color: "#fff", fontSize: "12px", fontWeight: 800, cursor: artistCreating || !artistStageName.trim() ? "not-allowed" : "pointer", letterSpacing: "0.06em", textTransform: "uppercase", opacity: artistCreating ? 0.7 : 1 }}>
-                      {artistCreating ? "Création…" : "Créer mon profil artiste"}
+                    }} style={{ flex: 1, padding: "13px", borderRadius: "10px", background: (artistCreating || !artistStageName.trim() || !artistIdDoc) ? "rgba(232,96,26,0.4)" : "var(--amber)", border: "none", color: "#fff", fontSize: "12px", fontWeight: 800, cursor: (artistCreating || !artistStageName.trim() || !artistIdDoc) ? "not-allowed" : "pointer", letterSpacing: "0.06em", textTransform: "uppercase", opacity: artistCreating ? 0.7 : 1 }}>
+                      {artistCreating ? "Envoi…" : "Envoyer pour validation"}
                     </button>
                   </div>
                 </div>
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {artistPendingMessage && (
+        <div onClick={() => setArtistPendingMessage("")} style={{ position: "fixed", bottom: "24px", left: "50%", transform: "translateX(-50%)", zIndex: 300, maxWidth: "420px", padding: "14px 18px", borderRadius: "12px", background: "var(--bg2)", border: "1px solid rgba(232,96,26,0.3)", boxShadow: "0 12px 40px rgba(0,0,0,0.5)", cursor: "pointer" }}>
+          <p style={{ fontSize: "13px", color: "var(--text)", fontWeight: 600 }}>{artistPendingMessage}</p>
         </div>
       )}
     </div>

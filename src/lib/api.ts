@@ -73,7 +73,8 @@ export type MyTrack = {
   id: string; title: string; genre: string; duration_s: number;
   plays_count: number; likes_count: number;
   album_name?: string; album_cover_url?: string;
-  status: "published" | "draft" | "pending"; published_at?: string;
+  status: "published" | "draft" | "pending_review" | "rejected"; published_at?: string;
+  rejection_reason?: string;
   release_date?: string;
   file_path: string;
 };
@@ -128,23 +129,51 @@ export const searchTracks = (q: string, limit = 10) =>
 export const registerListener = (data: ListenerRegData) =>
   post<{ id: string; message: string }>("/api/v1/auth/register", { ...data, role: "listener" });
 
-export const registerArtist = (data: ArtistRegData) =>
-  post<{ id: string; message: string }>("/api/v1/auth/register/artist", data);
+export const registerArtist = (data: ArtistRegData, idDocFile: File): Promise<{ id: string; message: string }> => {
+  const fd = new FormData();
+  fd.append("email", data.email);
+  fd.append("password", data.password);
+  fd.append("firstName", data.firstName);
+  fd.append("lastName", data.lastName);
+  fd.append("stageName", data.stageName);
+  fd.append("genre", data.genre);
+  fd.append("city", data.city);
+  if (data.bio) fd.append("bio", data.bio);
+  if (data.phone) fd.append("phone", data.phone);
+  fd.append("id_doc", idDocFile);
+  return fetch(`${BASE}/api/v1/auth/register/artist`, { method: "POST", body: fd })
+    .then(async res => {
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
+      return body;
+    });
+};
 
 /* ── Dashboard artiste ── */
 export const getMyArtistProfile = () =>
   get<MyArtistProfile>("/api/v1/artists/me");
 
-export const becomeArtist = (data: { stage_name: string; genre: string; city: string }) =>
-  post<{ access_token: string; token_type: string }>("/api/v1/auth/become-artist", {
-    stageName: data.stage_name,
-    name: data.stage_name,
-    genre: data.genre,
-    city: data.city,
+export const becomeArtist = (data: { stage_name: string; genre: string; city: string }, idDocFile: File): Promise<{ id: string; message: string }> => {
+  const fd = new FormData();
+  fd.append("stageName", data.stage_name);
+  fd.append("name", data.stage_name);
+  fd.append("genre", data.genre);
+  fd.append("city", data.city);
+  fd.append("id_doc", idDocFile);
+  const token = localStorage.getItem('ebia_token') || keycloak.token;
+  return fetch(`${BASE}/api/v1/auth/become-artist`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    body: fd,
+  }).then(async res => {
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
+    return body;
   });
+};
 
 export const updateMyArtistProfile = (data: Partial<MyArtistProfile> & { bio?: string }) =>
-  put<MyArtistProfile>("/api/v1/artists/me", data);
+  put<MyArtistProfile & { pending_changes?: Record<string, unknown> }>("/api/v1/artists/me", data);
 
 export const getMyTracks = () =>
   get<{ data: MyTrack[]; total: number }>("/api/v1/artists/me/tracks");
@@ -177,7 +206,7 @@ export const uploadTrack = (formData: FormData): Promise<MyTrack> =>
   });
 
 /* Upload avatar/cover */
-export const uploadArtistImage = (field: "avatar" | "cover", file: File): Promise<{ url: string }> => {
+export const uploadArtistImage = (field: "avatar" | "cover", file: File): Promise<{ url: string; pending?: boolean; message?: string }> => {
   const fd = new FormData();
   fd.append("field", field);
   fd.append("file", file);
@@ -187,7 +216,7 @@ export const uploadArtistImage = (field: "avatar" | "cover", file: File): Promis
     body: fd,
   }).then(async res => {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return res.json() as Promise<{ url: string }>;
+    return res.json() as Promise<{ url: string; pending?: boolean; message?: string }>;
   });
 };
 
@@ -203,19 +232,6 @@ export const uploadUserAvatar = (file: File): Promise<{ url: string }> => {
   }).then(async res => {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return res.json() as Promise<{ url: string }>;
-  });
-};
-
-export const uploadIdDoc = (file: File): Promise<{ message: string; key: string }> => {
-  const fd = new FormData();
-  fd.append('file', file);
-  return fetch(`${BASE}/api/v1/auth/upload/id-doc`, {
-    method: 'POST',
-    headers: (localStorage.getItem('ebia_token') || keycloak.token) ? { Authorization: `Bearer ${localStorage.getItem('ebia_token') || keycloak.token!}` } : undefined,
-    body: fd,
-  }).then(async res => {
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return res.json() as Promise<{ message: string; key: string }>;
   });
 };
 
@@ -433,7 +449,7 @@ export const toggleFollow = (artistId: string) =>
   post<{ followed: boolean; followers_count: number }>(`/api/v1/artists/${artistId}/follow`, {});
 
 export const updateProfile = (data: { display_name?: string; avatar_url?: string; phone?: string; current_password?: string; new_password?: string }) =>
-  patch<{ access_token: string; user: Record<string, string> }>("/api/v1/auth/profile", data);
+  patch<{ access_token: string; user: Record<string, string>; pending_password_change?: string }>("/api/v1/auth/profile", data);
 
 /* ── Notifications ── */
 export type Notification = {
@@ -570,6 +586,45 @@ export const toggleUserActive = (userId: string) =>
 
 export const changeUserRole = (userId: string, role: string) =>
   put<{ message: string }>(`/api/admin/users/${userId}/role`, { role });
+
+/* ── Admin — Validations (comptes artistes, profils, titres) ── */
+export type ArtistValidation = {
+  id: string; userId: string; email: string; stageName: string;
+  genre: string; city: string; submittedAt: string;
+  rejectionReason?: string; documentUrl?: string;
+};
+
+export type ProfileChangeValidation = {
+  id: string; userId: string; email: string; displayName: string;
+  changeType: "PASSWORD" | "AVATAR" | "COVER" | "ARTIST_PROFILE";
+  payload: Record<string, unknown>; createdAt: string;
+};
+
+export type TrackValidation = {
+  id: string; title: string; genre: string; albumName?: string;
+  artistId: string; artistName: string; createdAt: string; streamUrl?: string;
+};
+
+export const getArtistValidations = (status: "pending" | "approved" | "rejected" = "pending") =>
+  get<ArtistValidation[]>(`/api/admin/validations/artists?status=${status}`);
+export const approveArtist = (id: string) =>
+  post<{ message: string }>(`/api/admin/validations/artists/${id}/approve`, {});
+export const rejectArtist = (id: string, reason?: string) =>
+  post<{ message: string }>(`/api/admin/validations/artists/${id}/reject`, { reason });
+
+export const getProfileChangeValidations = (status: "pending" | "approved" | "rejected" = "pending") =>
+  get<ProfileChangeValidation[]>(`/api/admin/validations/profile-changes?status=${status}`);
+export const approveProfileChange = (id: string) =>
+  post<{ message: string }>(`/api/admin/validations/profile-changes/${id}/approve`, {});
+export const rejectProfileChange = (id: string, reason?: string) =>
+  post<{ message: string }>(`/api/admin/validations/profile-changes/${id}/reject`, { reason });
+
+export const getTrackValidations = () =>
+  get<TrackValidation[]>(`/api/admin/validations/tracks`);
+export const approveTrack = (id: string) =>
+  post<{ message: string }>(`/api/admin/validations/tracks/${id}/approve`, {});
+export const rejectTrack = (id: string, reason?: string) =>
+  post<{ message: string }>(`/api/admin/validations/tracks/${id}/reject`, { reason });
 
 /* ── User Settings ── */
 export type UserSettings = {
