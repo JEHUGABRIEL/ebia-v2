@@ -2,10 +2,12 @@ import { useState, useEffect } from "react";
 import {
   Play, Pause, SkipBack, SkipForward, Volume2, VolumeX,
   Shuffle, Repeat, Repeat1, List, X, Music2, ChevronDown, ChevronUp,
-  Loader, WifiOff, Wifi, Download, DownloadCloud, CheckCircle2, Mic,
+  Loader, WifiOff, Wifi, Download, DownloadCloud, CheckCircle2, Mic, Sliders,
 } from "lucide-react";
 import { useApp, type DownloadableTrack } from "../context/AppContext";
 import LyricsPanel from "./LyricsPanel";
+import EQPanel from "./EQPanel";
+import { useEQ } from "../context/EQContext";
 
 export default function Player() {
   const {
@@ -38,7 +40,9 @@ export default function Player() {
   const [showQueue, setShowQueue] = useState(false);
   const [expanded, setExpanded]   = useState(false);
   const [showLyrics, setShowLyrics] = useState(false);
+  const [showEQ, setShowEQ] = useState(false);
   const [currentTimeSeconds, setCurrentTimeSeconds] = useState(0);
+  const { enabled: eqEnabled, connectAudioElement } = useEQ();
 
   // Écouter les événements de l'élément audio du contexte
   useEffect(() => {
@@ -60,6 +64,14 @@ export default function Player() {
       audio.removeEventListener("loadedmetadata", onMeta);
     };
   }, [currentTrack]);
+
+  // Connecter l'audio à l'égaliseur quand il change
+  useEffect(() => {
+    const audio = audioEl.current;
+    if (audio) {
+      connectAudioElement(audio);
+    }
+  }, [currentTrack, connectAudioElement]);
 
   // Synchroniser le volume avec l'élément audio
   useEffect(() => {
@@ -232,6 +244,24 @@ export default function Player() {
           >
             <Mic size={12} />
             Paroles
+          </button>
+
+          {/* Bouton Égaliseur */}
+          <button
+            onClick={() => setShowEQ(true)}
+            style={{
+              display: "inline-flex", alignItems: "center", gap: "6px",
+              padding: "8px 16px", borderRadius: "99px",
+              background: eqEnabled ? "rgba(232,96,26,0.12)" : "rgba(240,235,227,0.06)",
+              border: `1px solid ${eqEnabled ? "rgba(232,96,26,0.3)" : "rgba(240,235,227,0.12)"}`,
+              color: eqEnabled ? "var(--amber)" : "var(--muted)",
+              fontSize: "11px", fontWeight: 700, cursor: "pointer",
+              marginBottom: "16px",
+              transition: "all 0.15s",
+            }}
+          >
+            <Sliders size={12} />
+            Égaliseur
           </button>
 
           {/* Contrôles */}
@@ -411,6 +441,23 @@ export default function Player() {
             >
               <Mic size={15} />
             </button>
+            {/* Bouton égaliseur */}
+            <button
+              onClick={() => setShowEQ(true)}
+              title="Égaliseur"
+              className="player-shuffle"
+              style={{
+                width: "32px", height: "32px", borderRadius: "8px",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                background: eqEnabled ? "rgba(232,96,26,0.15)" : "transparent",
+                border: `1px solid ${eqEnabled ? "rgba(232,96,26,0.3)" : "transparent"}`,
+                cursor: "pointer",
+                color: eqEnabled ? "var(--amber)" : "var(--muted)",
+                transition: "all 0.15s",
+              }}
+            >
+              <Sliders size={15} />
+            </button>
             {/* Bouton download dans le mini player */}
             {currentDownloadable && (
               <button
@@ -452,6 +499,12 @@ export default function Player() {
         trackId={currentTrack?.id ?? null}
         trackTitle={currentTrack?.title ?? ""}
         currentTime={currentTimeSeconds}
+      />
+
+      {/* ── PANNEAU ÉQUALISEUR ── */}
+      <EQPanel
+        isOpen={showEQ}
+        onClose={() => setShowEQ(false)}
       />
     </>
   );

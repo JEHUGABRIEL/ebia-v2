@@ -2,6 +2,7 @@ import { useEffect, lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import { AppProvider } from "./context/AppContext";
 import { QueueProvider } from "./context/QueueContext";
+import { EQProvider } from "./context/EQContext";
 import { AuthGuard, ArtistGuard } from "./components/Guards";
 import Navbar from "./components/Navbar";
 import Player from "./components/Player";
@@ -122,9 +123,11 @@ export default function App() {
   return (
     <AppProvider>
       <QueueProvider>
-        <BrowserRouter>
-          <AppContent />
-        </BrowserRouter>
+        <EQProvider>
+          <BrowserRouter>
+            <AppContent />
+          </BrowserRouter>
+        </EQProvider>
       </QueueProvider>
     </AppProvider>
   );
