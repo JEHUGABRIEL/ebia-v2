@@ -563,14 +563,33 @@ export type AdminStats = {
   computedAt: string;
 };
 
+export type AdminAccountStatus = "active" | "suspended" | "banned" | "deleted";
+
 export type AdminUser = {
   id: string;
   email: string;
   displayName: string;
   role: string;
   active: boolean;
+  accountStatus: AdminAccountStatus;
   subscription: "free" | "pro";
   createdAt: string;
+};
+
+export type AdminUserDetails = AdminUser & {
+  phone?: string;
+  verificationStatus: string;
+  statusReason?: string;
+  statusChangedAt?: string;
+  pendingProfileChanges: number;
+  artist?: {
+    stageName: string; bio?: string; genre: string; city: string;
+    avatarUrl?: string; coverUrl?: string; verified: boolean;
+    followersCount: number; playsCount: number; tracksCount: number;
+  };
+  identityDocument?: {
+    status: string; submittedAt?: string; rejectionReason?: string;
+  };
 };
 
 export const getAdminStats = () =>
@@ -582,14 +601,26 @@ export const getAdminUsers = (page = 0, size = 20, role?: string) => {
   return get<AdminUser[]>(`/api/admin/users?${params}`);
 };
 
-export const toggleUserActive = (userId: string) =>
-  put<{ message: string }>(`/api/admin/users/${userId}/toggle-active`, {});
+export const getAdminUserDetails = (userId: string) =>
+  get<AdminUserDetails>(`/api/admin/users/${userId}`);
 
 export const changeUserRole = (userId: string, role: string) =>
   put<{ message: string }>(`/api/admin/users/${userId}/role`, { role });
 
 export const changeUserSubscription = (userId: string, plan: "free" | "pro") =>
   put<{ message: string; subscription: string }>(`/api/admin/users/${userId}/subscription`, { plan });
+
+export const suspendUser = (userId: string, reason?: string) =>
+  post<{ message: string; accountStatus: string }>(`/api/admin/users/${userId}/suspend`, { reason });
+
+export const banUser = (userId: string, reason?: string) =>
+  post<{ message: string; accountStatus: string }>(`/api/admin/users/${userId}/ban`, { reason });
+
+export const reactivateUser = (userId: string) =>
+  post<{ message: string; accountStatus: string }>(`/api/admin/users/${userId}/reactivate`, {});
+
+export const deleteUserAccount = (userId: string) =>
+  del<{ message: string }>(`/api/admin/users/${userId}`);
 
 /* ── Admin — Validations (comptes artistes, profils, titres) ── */
 export type ArtistValidation = {

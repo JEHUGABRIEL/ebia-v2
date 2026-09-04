@@ -19,7 +19,6 @@ import {
 import {
   getAdminStats,
   getAdminUsers,
-  toggleUserActive,
   changeUserRole,
   changeUserSubscription,
   type AdminStats,
@@ -30,8 +29,23 @@ import ValidationsQueue from "../components/ValidationsQueue";
 import LogoutModal from "../components/LogoutModal";
 import EbiaLogo from "../components/EbiaLogo";
 import NotificationCenter from "../components/NotificationCenter";
+import UserDetailsModal from "../components/UserDetailsModal";
 
 type AdminSection = "stats" | "users" | "validations" | "moderation";
+
+const ACCOUNT_STATUS_LABELS: Record<string, string> = {
+  active: "Actif",
+  suspended: "Suspendu",
+  banned: "Banni",
+  deleted: "Supprimé",
+};
+
+const ACCOUNT_STATUS_COLORS: Record<string, string> = {
+  active: "#10B981",
+  suspended: "#F59E0B",
+  banned: "#EF4444",
+  deleted: "var(--muted)",
+};
 
 const NAV_ITEMS: { key: AdminSection; label: string; icon: typeof Users }[] = [
   { key: "stats", label: "Statistiques", icon: TrendingUp },
@@ -53,6 +67,7 @@ export default function AdminDashboard() {
   const [section, setSection] = useState<AdminSection>("stats");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
+  const [detailsUserId, setDetailsUserId] = useState<string | null>(null);
 
   const loadStats = async () => {
     try {
@@ -86,17 +101,6 @@ export default function AdminDashboard() {
     loadUsers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, roleFilter]);
-
-  const handleToggleActive = async (userId: string) => {
-    try {
-      await toggleUserActive(userId);
-      setUsers((prev) =>
-        prev.map((u) => (u.id === userId ? { ...u, active: !u.active } : u))
-      );
-    } catch (err) {
-      console.error("Failed to toggle user active:", err);
-    }
-  };
 
   const handleChangeRole = async (userId: string, newRole: string) => {
     try {
@@ -342,9 +346,9 @@ export default function AdminDashboard() {
                           <option value="admin">admin</option>
                         </select>
                       </span>
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "12px", fontWeight: 600, color: u.active ? "#10B981" : "#EF4444" }}>
-                        <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: u.active ? "#10B981" : "#EF4444" }} />
-                        {u.active ? "Actif" : "Inactif"}
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "12px", fontWeight: 600, color: ACCOUNT_STATUS_COLORS[u.accountStatus] || "var(--muted)" }}>
+                        <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: ACCOUNT_STATUS_COLORS[u.accountStatus] || "var(--muted)" }} />
+                        {ACCOUNT_STATUS_LABELS[u.accountStatus] || u.accountStatus}
                       </span>
                       <span>
                         {u.role === "admin" ? (
@@ -368,10 +372,10 @@ export default function AdminDashboard() {
                       </span>
                       <div style={{ textAlign: "right" }}>
                         <button
-                          onClick={() => handleToggleActive(u.id)}
-                          style={{ padding: "6px 12px", borderRadius: "8px", border: "1px solid rgba(240,235,227,0.1)", background: "none", color: u.active ? "#EF4444" : "#10B981", fontSize: "11px", fontWeight: 600, cursor: "pointer" }}
+                          onClick={() => setDetailsUserId(u.id)}
+                          style={{ padding: "6px 12px", borderRadius: "8px", border: "1px solid rgba(240,235,227,0.1)", background: "none", color: "var(--amber)", fontSize: "11px", fontWeight: 600, cursor: "pointer" }}
                         >
-                          {u.active ? "Désactiver" : "Activer"}
+                          Détails
                         </button>
                       </div>
                     </div>
@@ -425,6 +429,14 @@ export default function AdminDashboard() {
       </main>
 
       <LogoutModal open={logoutOpen} onClose={() => setLogoutOpen(false)} />
+
+      {detailsUserId && (
+        <UserDetailsModal
+          userId={detailsUserId}
+          onClose={() => setDetailsUserId(null)}
+          onChanged={loadUsers}
+        />
+      )}
     </div>
   );
 }
