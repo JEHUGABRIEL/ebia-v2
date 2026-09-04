@@ -312,7 +312,7 @@ export default function Login() {
   });
 
   useEffect(() => {
-    if (authReady && user) navigate(user.role === "artist" || user.role === "admin" ? "/artist-dashboard" : "/me");
+    if (authReady && user) navigate(user.role === "admin" ? "/admin" : user.role === "artist" ? "/artist-dashboard" : "/me");
   }, [authReady, user]);
 
   useEffect(() => {
@@ -336,7 +336,7 @@ export default function Login() {
       if (token) {
         const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
         const roles: string[] = payload.realm_access?.roles ?? [];
-        navigate(roles.includes("artist") || roles.includes("admin") ? "/artist-dashboard" : "/me");
+        navigate(roles.includes("admin") ? "/admin" : roles.includes("artist") ? "/artist-dashboard" : "/me");
       }
     } catch (e: unknown) { setError(normalizeError(e)); }
     finally { setLoading(false); }

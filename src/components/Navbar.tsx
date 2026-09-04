@@ -135,7 +135,7 @@ export default function Navbar() {
                       <p style={{ fontSize: "12px", fontWeight: 700, color: "var(--text)" }}>{user.displayName}</p>
                       <p style={{ fontSize: "10px", color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user.email}</p>
                     </div>
-                    <button onClick={() => { navigate(user.role === "artist" || user.role === "admin" ? "/artist-dashboard" : "/me"); setDropdownOpen(false); }} style={{ width: "100%", display: "flex", alignItems: "center", gap: "8px", padding: "10px 14px", fontSize: "12px", color: "var(--muted)", background: "none", border: "none", cursor: "pointer", textAlign: "left", transition: "all 0.1s" }}
+                    <button onClick={() => { navigate(user.role === "admin" ? "/admin" : user.role === "artist" ? "/artist-dashboard" : "/me"); setDropdownOpen(false); }} style={{ width: "100%", display: "flex", alignItems: "center", gap: "8px", padding: "10px 14px", fontSize: "12px", color: "var(--muted)", background: "none", border: "none", cursor: "pointer", textAlign: "left", transition: "all 0.1s" }}
                       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.04)"; (e.currentTarget as HTMLElement).style.color = "var(--text)"; }}
                       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--muted)"; }}
                     ><LayoutDashboard size={13} /> {t("nav.mySpace")}</button>
@@ -249,7 +249,7 @@ export default function Navbar() {
 
                 {user ? (
                   <>
-                    <button onClick={() => { navigate(user.role === "artist" || user.role === "admin" ? "/artist-dashboard" : "/me"); setMobileOpen(false); }} style={{
+                    <button onClick={() => { navigate(user.role === "admin" ? "/admin" : user.role === "artist" ? "/artist-dashboard" : "/me"); setMobileOpen(false); }} style={{
                       width: "100%", display: "flex", alignItems: "center", gap: "14px",
                       padding: "13px 14px", borderRadius: "10px", background: "none",
                       border: "none", cursor: "pointer", color: "var(--muted)",

@@ -559,7 +559,7 @@ export default function Messaging() {
 
   /* Retour vers l'espace (dashboard) — façon application */
   const goBackHome = useCallback(() => {
-    navigate(user?.role === "artist" || user?.role === "admin" ? "/artist-dashboard" : "/me");
+    navigate(user?.role === "admin" ? "/admin" : user?.role === "artist" ? "/artist-dashboard" : "/me");
   }, [navigate, user?.role]);
 
   /* Charger les conversations (triées : plus récente en haut) */
