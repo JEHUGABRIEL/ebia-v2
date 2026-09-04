@@ -15,6 +15,7 @@ import {
 } from "../lib/api";
 import ReleaseScheduler from "../components/ReleaseScheduler";
 import AlbumSection from "../components/AlbumSection";
+import EnhancedStats from "../components/EnhancedStats";
 
 type Section = "accueil" | "titres" | "albums" | "profil" | "stats" | "parametres";
 
@@ -532,6 +533,11 @@ export default function ArtistDashboard() {
                       </div>
                     </div>
                   )}
+
+                  {/* Enhanced Analytics */}
+                  <div style={{ marginTop: "24px" }}>
+                    <EnhancedStats />
+                  </div>
                 </>
               )}
             </div>

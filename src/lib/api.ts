@@ -776,3 +776,26 @@ export const addTrackToAlbum = (albumId: string, trackId: string) =>
 
 export const removeTrackFromAlbum = (albumId: string, trackId: string) =>
   del<{ message: string }>(`/api/albums/${albumId}/tracks/${trackId}`);
+
+/* ── Enhanced Artist Analytics ── */
+export type ArtistAnalytics = {
+  demographics: {
+    totalListeners: number;
+    returningListeners: number;
+    newListeners: number;
+    retentionRate: number;
+  } | null;
+  geography: {
+    topCountry: string;
+    topCity: string;
+    countries: { country: string; listeners: number; percentage: number }[];
+  } | null;
+  peakHours: { hour: number; plays: number; percentage: number }[];
+  retentionCurve: { second: number; retentionPercentage: number }[];
+  skipRates: { trackTitle: string; completionRate: number; skipRate: number }[];
+  topCities: { city: string; listeners: number; percentage: number }[];
+  retention: { day7: number; day30: number; day90: number } | null;
+};
+
+export const getArtistAnalytics = (period = 'all') =>
+  get<ArtistAnalytics>(`/api/analytics?period=${period}`);
