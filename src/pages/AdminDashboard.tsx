@@ -18,6 +18,9 @@ import {
   type AdminStats,
   type AdminUser,
 } from "../lib/api";
+import ModerationQueue from "../components/ModerationQueue";
+
+type AdminSection = "stats" | "users" | "moderation";
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState<AdminStats | null>(null);
@@ -26,6 +29,7 @@ export default function AdminDashboard() {
   const [usersLoading, setUsersLoading] = useState(true);
   const [roleFilter, setRoleFilter] = useState<string>("");
   const [page, setPage] = useState(0);
+  const [section, setSection] = useState<AdminSection>("stats");
 
   useEffect(() => {
     loadStats();
@@ -151,8 +155,34 @@ export default function AdminDashboard() {
       </section>
 
       <div style={{ maxWidth: "1360px", margin: "0 auto", padding: "0 24px" }}>
-        {/* Stats Grid */}
-        {loading ? (
+        {/* Navigation tabs */}
+        <div style={{ display: "flex", gap: "8px", marginBottom: "32px" }}>
+          {([
+            { key: "stats" as AdminSection, label: "Statistiques", icon: TrendingUp },
+            { key: "users" as AdminSection, label: "Utilisateurs", icon: Users },
+            { key: "moderation" as AdminSection, label: "Modération", icon: Shield },
+          ]).map(tab => (
+            <button
+              key={tab.key}
+              onClick={() => setSection(tab.key)}
+              style={{
+                display: "flex", alignItems: "center", gap: "8px",
+                padding: "10px 18px", borderRadius: "99px",
+                background: section === tab.key ? "var(--amber)" : "rgba(240,235,227,0.05)",
+                color: section === tab.key ? "#fff" : "var(--muted)",
+                border: "none", fontSize: "13px", fontWeight: 600, cursor: "pointer",
+                transition: "all 0.15s",
+              }}
+            >
+              <tab.icon size={14} /> {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Stats Section */}
+        {section === "stats" && (
+        <>
+          {loading ? (
           <div
             style={{
               display: "flex",
@@ -166,7 +196,7 @@ export default function AdminDashboard() {
               style={{ color: "var(--amber)", animation: "spin 1s linear infinite" }}
             />
           </div>
-        ) : (
+          ) : (
           <div
             style={{
               display: "grid",
@@ -225,8 +255,11 @@ export default function AdminDashboard() {
             ))}
           </div>
         )}
+        </>
+        )}
 
         {/* Users Section */}
+        {section === "users" && (
         <div style={{ marginBottom: "32px" }}>
           <div
             style={{
@@ -439,6 +472,14 @@ export default function AdminDashboard() {
             </button>
           </div>
         </div>
+        )}
+
+        {/* Moderation Section */}
+        {section === "moderation" && (
+          <div style={{ maxWidth: "800px" }}>
+            <ModerationQueue />
+          </div>
+        )}
       </div>
     </div>
   );

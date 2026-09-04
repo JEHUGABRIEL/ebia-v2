@@ -799,3 +799,32 @@ export type ArtistAnalytics = {
 
 export const getArtistAnalytics = (period = 'all') =>
   get<ArtistAnalytics>(`/api/analytics?period=${period}`);
+
+/* ── Content Moderation ── */
+export type ContentFlag = {
+  id: string;
+  reporterId: string;
+  reporterName: string | null;
+  targetId: string;
+  targetType: string;
+  targetTitle: string | null;
+  flagType: string;
+  reason: string | null;
+  status: string;
+  reviewedBy: string | null;
+  reviewNote: string | null;
+  createdAt: string;
+  reviewedAt: string | null;
+};
+
+export const flagContent = (data: { targetId: string; targetType: string; targetTitle?: string; flagType: string; reason?: string }) =>
+  post<ContentFlag>('/api/moderation/flag', data);
+
+export const getFlaggedContent = (status?: string, limit = 50) =>
+  get<ContentFlag[]>(`/api/moderation/flags?limit=${limit}${status ? `&status=${status}` : ''}`);
+
+export const resolveFlag = (flagId: string, status: string, note?: string) =>
+  put<ContentFlag>(`/api/moderation/flags/${flagId}/resolve`, { status, note });
+
+export const getModerationStats = () =>
+  get<{ pending: number; resolved: number; dismissed: number }>('/api/moderation/stats');
