@@ -590,3 +590,39 @@ export const getReports = (page = 0, size = 20, status?: string) => {
 
 export const updateReportStatus = (reportId: string, status: string) =>
   put<{ message: string }>(`/api/reports/${reportId}/status`, { status });
+
+/* ── User Settings ── */
+export type UserSettings = {
+  displayName: string;
+  email: string;
+  phone: string;
+  avatarUrl: string | null;
+  emailNotifications: boolean;
+  pushNotifications: boolean;
+  weeklyDigest: boolean;
+  language: string;
+  theme: string;
+  updatedAt: string;
+};
+
+export const getUserSettings = () =>
+  get<UserSettings>('/api/settings');
+
+export const updateUserSettings = (data: Partial<UserSettings>) =>
+  put<UserSettings>('/api/settings', data);
+
+export const changePassword = (data: { currentPassword: string; newPassword: string }) =>
+  put<{ message: string }>('/api/settings/password', data);
+
+export const deleteAccount = (password: string) =>
+  fetch(`${BASE}/api/settings`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+    body: JSON.stringify({ password }),
+  }).then(async res => {
+    if (!res.ok) {
+      const e = await res.json().catch(() => ({})) as Record<string, string>;
+      throw new Error(e.error || `HTTP ${res.status}`);
+    }
+    return res.json() as Promise<{ message: string }>;
+  });

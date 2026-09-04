@@ -31,6 +31,7 @@ const PlaylistDetail = lazy(() => import("./pages/PlaylistDetail"));
 const PlayHistoryPage = lazy(() => import("./pages/PlayHistory"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 const Reports = lazy(() => import("./pages/Reports"));
+const Settings = lazy(() => import("./pages/Settings"));
 
 function RouteFallback() {
   return (
@@ -105,6 +106,7 @@ function AppContent() {
             <Route path="/play-history" element={<AuthGuard><PlayHistoryPage /></AuthGuard>} />
             <Route path="/admin" element={<AuthGuard><AdminDashboard /></AuthGuard>} />
             <Route path="/admin/reports" element={<AuthGuard><Reports /></AuthGuard>} />
+            <Route path="/settings" element={<AuthGuard><Settings /></AuthGuard>} />
           </Routes>
         </Suspense>
       </div>
