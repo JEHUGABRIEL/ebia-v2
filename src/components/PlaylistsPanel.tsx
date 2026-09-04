@@ -182,33 +182,42 @@ export default function PlaylistsPanel() {
 
       {/* Create/Edit Modal */}
       {(showCreateModal || editPlaylist) && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "24px" }} onClick={() => { setShowCreateModal(false); setEditPlaylist(null); resetForm(); }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: "var(--surface)", borderRadius: "20px", padding: "32px", width: "100%", maxWidth: "440px", border: "1px solid rgba(240,235,227,0.1)" }}>
-            <h2 style={{ fontSize: "22px", fontWeight: 800, color: "var(--text)", marginBottom: "24px" }}>{editPlaylist ? "Modifier" : "Nouvelle playlist"}</h2>
+        <div
+          onClick={(e) => { if (e.target === e.currentTarget) { setShowCreateModal(false); setEditPlaylist(null); resetForm(); } }}
+          style={{ position: "fixed", inset: 0, zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: "24px", background: "rgba(0,0,0,0.75)", backdropFilter: "blur(12px)" }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ width: "100%", maxWidth: "440px", maxHeight: "90vh", display: "flex", flexDirection: "column", borderRadius: "20px", background: "var(--bg2)", border: "1px solid rgba(240,235,227,0.1)", boxShadow: "0 32px 80px rgba(0,0,0,0.6)", overflow: "hidden", animation: "fadeUp 0.2s ease both" }}
+          >
+            <div style={{ height: "3px", background: "linear-gradient(90deg, var(--amber), var(--gold))" }} />
+            <div style={{ padding: "24px 28px 28px" }}>
+              <h2 className="bebas" style={{ fontSize: "24px", color: "var(--text)", marginBottom: "20px" }}>{editPlaylist ? "Modifier" : "Nouvelle playlist"}</h2>
 
-            <div style={{ marginBottom: "16px" }}>
-              <label style={{ fontSize: "12px", fontWeight: 600, color: "var(--muted)", display: "block", marginBottom: "6px" }}>Nom *</label>
-              <input type="text" value={formName} onChange={e => setFormName(e.target.value)} placeholder="Ma playlist" style={{ width: "100%", padding: "12px 16px", borderRadius: "12px", border: "1px solid rgba(240,235,227,0.1)", background: "rgba(240,235,227,0.03)", color: "var(--text)", fontSize: "14px", outline: "none", boxSizing: "border-box" }} />
-            </div>
+              <div style={{ marginBottom: "16px" }}>
+                <label style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--muted)", display: "block", marginBottom: "6px" }}>Nom *</label>
+                <input type="text" value={formName} onChange={e => setFormName(e.target.value)} placeholder="Ma playlist" style={{ width: "100%", padding: "13px 16px", borderRadius: "10px", border: "1.5px solid rgba(240,235,227,0.1)", background: "rgba(240,235,227,0.05)", color: "var(--text)", fontSize: "14px", outline: "none", boxSizing: "border-box" }} />
+              </div>
 
-            <div style={{ marginBottom: "16px" }}>
-              <label style={{ fontSize: "12px", fontWeight: 600, color: "var(--muted)", display: "block", marginBottom: "6px" }}>Description</label>
-              <textarea value={formDescription} onChange={e => setFormDescription(e.target.value)} placeholder="Description optionnelle..." rows={3} style={{ width: "100%", padding: "12px 16px", borderRadius: "12px", border: "1px solid rgba(240,235,227,0.1)", background: "rgba(240,235,227,0.03)", color: "var(--text)", fontSize: "14px", outline: "none", resize: "vertical", boxSizing: "border-box" }} />
-            </div>
+              <div style={{ marginBottom: "16px" }}>
+                <label style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--muted)", display: "block", marginBottom: "6px" }}>Description</label>
+                <textarea value={formDescription} onChange={e => setFormDescription(e.target.value)} placeholder="Description optionnelle..." rows={3} style={{ width: "100%", padding: "13px 16px", borderRadius: "10px", border: "1.5px solid rgba(240,235,227,0.1)", background: "rgba(240,235,227,0.05)", color: "var(--text)", fontSize: "14px", outline: "none", resize: "vertical", boxSizing: "border-box" }} />
+              </div>
 
-            <div style={{ marginBottom: "24px" }}>
-              <label style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", fontSize: "14px", color: "var(--text)" }}>
-                <input type="checkbox" checked={formIsPublic} onChange={e => setFormIsPublic(e.target.checked)} style={{ width: "18px", height: "18px", accentColor: "var(--amber)" }} />
-                Playlist publique
-              </label>
-            </div>
+              <div style={{ marginBottom: "24px" }}>
+                <label style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", fontSize: "14px", color: "var(--text)" }}>
+                  <input type="checkbox" checked={formIsPublic} onChange={e => setFormIsPublic(e.target.checked)} style={{ width: "18px", height: "18px", accentColor: "var(--amber)" }} />
+                  Playlist publique
+                </label>
+              </div>
 
-            <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end" }}>
-              <button onClick={() => { setShowCreateModal(false); setEditPlaylist(null); resetForm(); }} style={{ padding: "12px 20px", borderRadius: "99px", border: "1px solid rgba(240,235,227,0.1)", background: "none", color: "var(--muted)", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>Annuler</button>
-              <button onClick={editPlaylist ? handleUpdate : handleCreate} disabled={!formName.trim() || saving} style={{ padding: "12px 24px", borderRadius: "99px", background: formName.trim() ? "var(--amber)" : "rgba(240,235,227,0.1)", color: formName.trim() ? "#fff" : "var(--muted)", border: "none", fontWeight: 700, fontSize: "13px", cursor: formName.trim() ? "pointer" : "not-allowed", display: "flex", alignItems: "center", gap: "8px" }}>
-                {saving && <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} />}
-                {editPlaylist ? "Modifier" : "Créer"}
-              </button>
+              <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end" }}>
+                <button onClick={() => { setShowCreateModal(false); setEditPlaylist(null); resetForm(); }} style={{ padding: "12px 20px", borderRadius: "99px", border: "1px solid rgba(240,235,227,0.1)", background: "none", color: "var(--muted)", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>Annuler</button>
+                <button onClick={editPlaylist ? handleUpdate : handleCreate} disabled={!formName.trim() || saving} style={{ padding: "12px 24px", borderRadius: "99px", background: formName.trim() ? "var(--amber)" : "rgba(240,235,227,0.1)", color: formName.trim() ? "#fff" : "var(--muted)", border: "none", fontWeight: 700, fontSize: "13px", cursor: formName.trim() ? "pointer" : "not-allowed", display: "flex", alignItems: "center", gap: "8px" }}>
+                  {saving && <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} />}
+                  {editPlaylist ? "Modifier" : "Créer"}
+                </button>
+              </div>
             </div>
           </div>
         </div>
