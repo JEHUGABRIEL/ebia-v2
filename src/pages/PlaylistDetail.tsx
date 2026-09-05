@@ -21,7 +21,6 @@ import {
   updatePlaylist,
   deletePlaylist,
   removeTrackFromPlaylist,
-  recordPlay,
   type Playlist,
   type PlaylistTrackItem,
 } from "../lib/api";
@@ -66,10 +65,9 @@ export default function PlaylistDetail() {
     }
   };
 
-  const handlePlayTrack = async (track: PlaylistTrackItem) => {
-    try {
-      await recordPlay(track.trackId);
-    } catch {}
+  const handlePlayTrack = (track: PlaylistTrackItem) => {
+    // L'écoute est comptabilisée par le lecteur lui-même (80% de la durée réelle) —
+    // pas d'enregistrement immédiat ici pour éviter un double comptage.
     playTrack({
       id: track.trackId,
       title: track.trackTitle,

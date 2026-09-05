@@ -10,7 +10,6 @@ import {
   getPlayHistory,
   clearPlayHistory,
   deletePlayHistoryEntry,
-  recordPlay,
   type PlayHistoryItem,
 } from "../lib/api";
 import { useApp } from "../context/AppContext";
@@ -41,10 +40,9 @@ export default function PlayHistory() {
     }
   };
 
-  const handlePlayTrack = async (item: PlayHistoryItem) => {
-    try {
-      await recordPlay(item.trackId);
-    } catch {}
+  const handlePlayTrack = (item: PlayHistoryItem) => {
+    // L'écoute est comptabilisée par le lecteur lui-même (80% de la durée réelle) —
+    // pas d'enregistrement immédiat ici pour éviter un double comptage.
     playTrack({
       id: item.trackId,
       title: item.trackTitle,

@@ -189,6 +189,31 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     const fallbackUrl = currentTrack.audioUrl;
     let retrying = false;
     let cancelled = false;
+    let isOffline = false;
+    let listenedSeconds = 0;
+    let lastTime = 0;
+    let playRecorded = false;
+
+    /* Écoute comptabilisée à partir de 80% de la durée réelle du titre, en streaming
+       uniquement — jamais pour une lecture depuis le cache hors-ligne (déjà créditée
+       une fois au moment du téléchargement, cf. downloadTrack). */
+    const maybeRecordPlay = () => {
+      if (playRecorded || isOffline) return;
+      const dur = audio.duration;
+      if (!isFinite(dur) || dur <= 0) return;
+      if (listenedSeconds >= dur * 0.8) {
+        playRecorded = true;
+        const token = localStorage.getItem("ebia_token") || keycloak.token;
+        fetch(`${BASE}/api/v1/tracks/${trackId}/play`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({ listenedS: Math.round(listenedSeconds) }),
+        }).catch(() => {});
+      }
+    };
 
     /* Libère l'ancien blob URL */
     if (blobUrlRef.current) {
@@ -205,8 +230,10 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
         const blobUrl = URL.createObjectURL(offline.audioBlob);
         blobUrlRef.current = blobUrl;
         audio.src = blobUrl;
+        isOffline = true;
         setIsOfflinePlaying(true);
       } else {
+        isOffline = false;
         setIsOfflinePlaying(false);
         /* 2. Récupérer l'URL pré-signée depuis le backend */
         try {
@@ -231,6 +258,15 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     audio.onwaiting  = () => setIsBuffering(true);
     audio.onplaying  = () => { setIsBuffering(false); };
     audio.oncanplay  = () => setIsBuffering(false);
+
+    /* ── Progression réelle d'écoute (ignore les sauts en avant type seek) ── */
+    audio.ontimeupdate = () => {
+      const current = audio.currentTime;
+      const delta = current - lastTime;
+      if (delta > 0 && delta < 2) listenedSeconds += delta;
+      lastTime = current;
+      maybeRecordPlay();
+    };
 
     /* ── Récupération sur coupure réseau ── */
     audio.onerror = () => {
@@ -260,6 +296,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       audio.onwaiting = null;
       audio.onplaying = null;
       audio.oncanplay = null;
+      audio.ontimeupdate = null;
     };
   }, [currentTrack]);
 
@@ -304,10 +341,8 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     if (q) { setQueue(q); setQueueIndex(q.findIndex(t => t.id === track.id)); }
     setIsPlaying(true);
     setCurrentTrack(track);
-    fetch(`${BASE}/api/v1/tracks/${track.id}/play`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ offline: false }),
-    }).catch(() => {});
+    // L'écoute n'est comptabilisée qu'après 80% de la durée réelle, en streaming —
+    // cf. le suivi de progression (ontimeupdate) dans l'effet de lecture ci-dessous.
   };
 
   const addToQueue = (track: Track) => {

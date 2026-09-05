@@ -510,8 +510,9 @@ export const isLoggedListener = (role?: string | null) =>
   role !== "artist" && role !== "admin";
 
 /* ── Social ── */
-export const recordPlay = (trackId: string) =>
-  post<{ plays_count: number }>(`/api/v1/tracks/${trackId}/play`, {});
+// L'enregistrement d'écoute (POST /api/v1/tracks/{id}/play) est géré directement par le
+// lecteur (AppContext.tsx, via ontimeupdate) une fois 80% de la durée réelle atteinte —
+// il n'y a pas de fonction d'aide ici pour éviter tout appel qui contournerait ce seuil.
 
 export const toggleLike = (trackId: string) =>
   post<{ liked: boolean; likes_count: number }>(`/api/v1/tracks/${trackId}/like`, {});
