@@ -65,10 +65,9 @@ const HERO_SLIDES = [
     img: "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=1920&q=70&auto=format&fit=crop",
     badge: "Concerts & festivals",
     lines: [
-      { text: "Vivez la", color: "var(--text)" },
-      { text: "scène", color: "var(--amber)" },
-      { text: "en", color: "var(--text)" },
-      { text: "direct.", color: "var(--gold)" },
+      { text: "Vivez", color: "var(--text)" },
+      { text: "la scène", color: "var(--amber)" },
+      { text: "en direct.", color: "var(--gold)" },
     ],
     description: "Ne manquez plus aucun concert, festival ou événement musical près de chez vous.",
   },
@@ -77,8 +76,7 @@ const HERO_SLIDES = [
     badge: "Espace artiste",
     lines: [
       { text: "Ta voix.", color: "var(--text)" },
-      { text: "Ton", color: "var(--amber)" },
-      { text: "public", color: "var(--text)" },
+      { text: "Ton public", color: "var(--amber)" },
       { text: "t'attend.", color: "var(--gold)" },
     ],
     description: "Publiez votre musique, suivez vos statistiques et connectez-vous à vos auditeurs.",
