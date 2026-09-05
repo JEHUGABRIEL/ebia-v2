@@ -515,7 +515,30 @@ export const isLoggedListener = (role?: string | null) =>
 // il n'y a pas de fonction d'aide ici pour éviter tout appel qui contournerait ce seuil.
 
 export const toggleLike = (trackId: string) =>
-  post<{ liked: boolean; likes_count: number }>(`/api/v1/tracks/${trackId}/like`, {});
+  post<{ liked: boolean; likes_count: number; dislikes_count: number }>(`/api/v1/tracks/${trackId}/like`, {});
+
+export const toggleDislike = (trackId: string) =>
+  post<{ disliked: boolean; dislikes_count: number; likes_count: number }>(`/api/v1/tracks/${trackId}/dislike`, {});
+
+export const getReactionStatus = (trackId: string) =>
+  get<{ liked: boolean; disliked: boolean }>(`/api/v1/tracks/${trackId}/liked`);
+
+export type TrackComment = {
+  id: string; trackId: string; userId: string;
+  userName: string; userAvatar: string | null;
+  content: string; createdAt: string;
+};
+
+export const getTrackComments = (trackId: string, page = 0, size = 20) =>
+  get<{ data: TrackComment[]; total: number; page: number; size: number }>(
+    `/api/v1/tracks/${trackId}/comments?page=${page}&size=${size}`
+  );
+
+export const postTrackComment = (trackId: string, content: string) =>
+  post<TrackComment>(`/api/v1/tracks/${trackId}/comments`, { content });
+
+export const deleteTrackComment = (trackId: string, commentId: string) =>
+  del<{ deleted: boolean }>(`/api/v1/tracks/${trackId}/comments/${commentId}`);
 
 export const toggleFollow = (artistId: string) =>
   post<{ followed: boolean; followers_count: number }>(`/api/v1/artists/${artistId}/follow`, {});

@@ -7,6 +7,7 @@ import {
 import { useApp, type DownloadableTrack } from "../context/AppContext";
 import LyricsPanel from "./LyricsPanel";
 import EQPanel from "./EQPanel";
+import TrackReactions from "./TrackReactions";
 import { useEQ } from "../context/EQContext";
 
 export default function Player() {
@@ -215,6 +216,11 @@ export default function Player() {
                 )}
               </button>
             )}
+          </div>
+
+          {/* Réactions : like / dislike / commentaires */}
+          <div style={{ marginBottom: "20px" }}>
+            <TrackReactions trackId={currentTrack.id} />
           </div>
 
           {/* Barre de progression */}
