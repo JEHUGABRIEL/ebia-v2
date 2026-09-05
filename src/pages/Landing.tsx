@@ -288,7 +288,7 @@ export default function Landing() {
         }} />
         <div className="section-pad" style={{ maxWidth: "1360px", margin: "0 auto", width: "100%", position: "relative", zIndex: 1 }}>
           <div className="hero-grid">
-            <div key={heroSlide} style={{ maxWidth: "820px", margin: "0 auto" }}>
+            <div key={heroSlide}>
               <div className="fade-up" style={{
                 display: "inline-flex", alignItems: "center", gap: "8px",
                 padding: "6px 14px", borderRadius: "99px",
