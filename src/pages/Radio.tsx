@@ -10,8 +10,32 @@ import { getListenerPreferredGenres, getRadios, getTracks, type Track } from "..
 import { orderByPreferredGenres } from "../lib/preferences";
 import { useApp } from "../context/AppContext";
 import RadioQueuePanel from "../components/RadioQueuePanel";
+import HeroCarousel, { type HeroSlide } from "../components/HeroCarousel";
 
 type StationStatus = "idle" | "loading" | "playing" | "error";
+
+const RADIO_SLIDES: HeroSlide[] = [
+  {
+    img: "https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=1600&q=70&auto=format&fit=crop",
+    tag: "En direct", titleTop: "Radios", titleAccent: "Centrafricaines",
+    description: "Écoutez les radios de la République Centrafricaine en direct, depuis partout dans le monde.",
+  },
+  {
+    img: "https://images.unsplash.com/photo-1590602847861-f357a9332bbc?w=1600&q=70&auto=format&fit=crop",
+    tag: "Studio live", titleTop: "La voix", titleAccent: "de la RCA",
+    description: "Des animateurs passionnés, des voix qui rassemblent tout un pays autour des ondes.",
+  },
+  {
+    img: "https://images.unsplash.com/photo-1594623930572-300a3011d9ae?w=1600&q=70&auto=format&fit=crop",
+    tag: "Mix & Ambiance", titleTop: "Le son qui", titleAccent: "fait vibrer",
+    description: "Des playlists non-stop, du gospel à l'afro-pop, pensées pour tous les goûts.",
+  },
+  {
+    img: "https://images.unsplash.com/photo-1471478331149-c72f17e33c73?w=1600&q=70&auto=format&fit=crop",
+    tag: "Session acoustique", titleTop: "La musique", titleAccent: "en direct",
+    description: "Vivez des sessions live exclusives diffusées directement sur nos radios partenaires.",
+  },
+];
 
 export default function RadioPage() {
   const { t } = useTranslation();
@@ -122,73 +146,31 @@ export default function RadioPage() {
     <div style={{ minHeight: "100vh", background: "var(--bg)", paddingBottom: currentStation ? "140px" : "120px" }}>
 
       {/* ── HERO ── */}
-      <section style={{
-        position: "relative", overflow: "hidden",
-        minHeight: "560px", display: "flex", alignItems: "flex-end",
-      }}>
-        <img
-          src="https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=1600&q=70&auto=format&fit=crop"
-          alt=""
-          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
-        />
-        <div style={{
-          position: "absolute", inset: 0,
-          background: "linear-gradient(180deg, rgba(8,8,8,0.35) 0%, rgba(8,8,8,0.8) 60%, #080808 100%), linear-gradient(90deg, rgba(8,8,8,0.95) 0%, rgba(8,8,8,0.55) 45%, rgba(8,8,8,0.15) 100%)",
-        }} />
-        <div style={{
-          position: "absolute", top: "-20%", left: "-15%",
-          width: "600px", height: "600px", borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(16,185,129,0.14) 0%, transparent 65%)",
-          pointerEvents: "none",
-        }} />
-
-        <div style={{ position: "relative", zIndex: 1, maxWidth: "1360px", margin: "0 auto", width: "100%", padding: "160px 24px 64px" }}>
-          <div style={{
-            display: "inline-flex", alignItems: "center", gap: "8px",
-            padding: "5px 14px", borderRadius: "99px",
-            border: "1px solid rgba(16,185,129,0.3)", marginBottom: "20px",
-            fontSize: "11px", fontWeight: 700, letterSpacing: "0.15em",
-            textTransform: "uppercase", color: "#4caf82",
-            background: "rgba(8,8,8,0.4)", backdropFilter: "blur(8px)",
-          }}>
-            <span style={{
-              width: "6px", height: "6px", borderRadius: "50%",
-              background: "#4CAF50", display: "inline-block",
-              animation: "radioPulse 1.5s infinite",
-            }} />
-            {t("radio.liveTag")}
-          </div>
-
-          <h1 className="bebas" style={{
-            fontSize: "clamp(48px, 8vw, 96px)", color: "var(--text)",
-            lineHeight: 0.92, marginBottom: "16px",
-          }}>
-            {t("radio.title")}<br />
-            <span style={{ color: "#4caf82" }}>{t("radio.titleAccent")}</span>
-          </h1>
-
-          <p style={{
-            fontSize: "16px", color: "var(--muted)", maxWidth: "520px",
-            lineHeight: 1.7, marginBottom: "24px",
-          }}>
-            {t("radio.description")}
-          </p>
-
-          {/* Stats */}
-          <div style={{ display: "flex", gap: "32px", flexWrap: "wrap" }}>
-            {[
-              { value: stations.length, label: t("radio.statStations") },
-              { value: "24/7", label: t("radio.statLive") },
-              { value: "2", label: t("radio.statLang") },
-            ].map((stat, i) => (
-              <div key={i} style={{ display: "flex", alignItems: "baseline", gap: "6px" }}>
-                <span style={{ fontSize: "24px", fontWeight: 800, color: "var(--text)" }}>{stat.value}</span>
-                <span style={{ fontSize: "12px", color: "var(--muted)", fontWeight: 500 }}>{stat.label}</span>
-              </div>
-            ))}
-          </div>
+      <HeroCarousel
+        slides={RADIO_SLIDES}
+        accentColor="#4caf82"
+        glowColor="rgba(16,185,129,0.14)"
+        glowSide="left"
+        badgeIcon={<span style={{
+          width: "6px", height: "6px", borderRadius: "50%",
+          background: "#4CAF50", display: "inline-block",
+          animation: "radioPulse 1.5s infinite",
+        }} />}
+      >
+        {/* Stats */}
+        <div style={{ display: "flex", gap: "32px", flexWrap: "wrap" }}>
+          {[
+            { value: stations.length, label: t("radio.statStations") },
+            { value: "24/7", label: t("radio.statLive") },
+            { value: "2", label: t("radio.statLang") },
+          ].map((stat, i) => (
+            <div key={i} style={{ display: "flex", alignItems: "baseline", gap: "6px" }}>
+              <span style={{ fontSize: "24px", fontWeight: 800, color: "var(--text)" }}>{stat.value}</span>
+              <span style={{ fontSize: "12px", color: "var(--muted)", fontWeight: 500 }}>{stat.label}</span>
+            </div>
+          ))}
         </div>
-      </section>
+      </HeroCarousel>
 
       <div style={{ maxWidth: "1360px", margin: "0 auto", padding: "0 24px" }}>
 

@@ -6,6 +6,30 @@ import { getEvents, getListenerPreferredGenres, type EventItem } from "../lib/ap
 import { orderByPreferredGenres } from "../lib/preferences";
 import { eventColor, fmtEventDate } from "../lib/eventColors";
 import { useApp } from "../context/AppContext";
+import HeroCarousel, { type HeroSlide } from "../components/HeroCarousel";
+
+const EVENT_SLIDES: HeroSlide[] = [
+  {
+    img: "https://images.unsplash.com/photo-1521337581100-8ca9a73a5f79?w=1600&q=70&auto=format&fit=crop",
+    tag: "Concerts", titleTop: "Prochains", titleAccent: "Événements",
+    description: "Ne manquez aucun concert, festival ou événement musical en République Centrafricaine. Inscrivez-vous pour être notifié des prochaines sorties.",
+  },
+  {
+    img: "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=1600&q=70&auto=format&fit=crop",
+    tag: "Festivals", titleTop: "Vivez", titleAccent: "l'ambiance",
+    description: "Des milliers de festivaliers rassemblés pour une même passion : la musique centrafricaine.",
+  },
+  {
+    img: "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=1600&q=70&auto=format&fit=crop",
+    tag: "En direct", titleTop: "Ne manquez", titleAccent: "aucun show",
+    description: "Des scènes qui vibrent, des artistes en feu. Suivez tous les concerts près de chez vous.",
+  },
+  {
+    img: "https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?w=1600&q=70&auto=format&fit=crop",
+    tag: "Communauté", titleTop: "Partagez", titleAccent: "l'émotion",
+    description: "Chaque concert est un moment unique à vivre ensemble, entre fans et artistes.",
+  },
+];
 
 export default function Concerts() {
   const { t } = useTranslation();
@@ -34,74 +58,32 @@ export default function Concerts() {
     <div style={{ minHeight: "100vh", background: "var(--bg)", paddingBottom: "120px" }}>
 
       {/* ── HERO ── */}
-      <section style={{
-        position: "relative", overflow: "hidden",
-        minHeight: "560px", display: "flex", alignItems: "flex-end",
-      }}>
-        <img
-          src="https://images.unsplash.com/photo-1521337581100-8ca9a73a5f79?w=1600&q=70&auto=format&fit=crop"
-          alt=""
-          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
-        />
-        <div style={{
-          position: "absolute", inset: 0,
-          background: "linear-gradient(180deg, rgba(8,8,8,0.35) 0%, rgba(8,8,8,0.8) 60%, #080808 100%), linear-gradient(90deg, rgba(8,8,8,0.95) 0%, rgba(8,8,8,0.55) 45%, rgba(8,8,8,0.15) 100%)",
-        }} />
-        <div style={{
-          position: "absolute", top: "-20%", right: "-15%",
-          width: "600px", height: "600px", borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(232,96,26,0.14) 0%, transparent 65%)",
-          pointerEvents: "none",
-        }} />
-
-        <div style={{ position: "relative", zIndex: 1, maxWidth: "1360px", margin: "0 auto", width: "100%", padding: "160px 24px 64px" }}>
-          <div style={{
-            display: "inline-flex", alignItems: "center", gap: "8px",
-            padding: "5px 12px", borderRadius: "99px",
-            border: "1px solid rgba(232,96,26,0.3)", marginBottom: "20px",
-            fontSize: "11px", fontWeight: 700, letterSpacing: "0.15em",
-            textTransform: "uppercase", color: "var(--amber)",
-            background: "rgba(8,8,8,0.4)", backdropFilter: "blur(8px)",
-          }}>
-            <Calendar size={12} />
-            {t("concerts.title")}
-          </div>
-
-          <h1 className="bebas" style={{
-            fontSize: "clamp(48px, 8vw, 96px)", color: "var(--text)",
-            lineHeight: 0.92, marginBottom: "16px",
-          }}>
-            {t("concerts.heroTitle")}<br />
-            <span style={{ color: "var(--amber)" }}>{t("concerts.heroAccent")}</span>
-          </h1>
-
-          <p style={{
-            fontSize: "16px", color: "var(--muted)", maxWidth: "500px",
-            lineHeight: 1.7, marginBottom: "32px",
-          }}>
-            {t("concerts.heroDescription")}
-          </p>
-
-          <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-            <button
-              onClick={() => setSubscribed(true)}
-              style={{
-                display: "inline-flex", alignItems: "center", gap: "8px",
-                padding: "13px 24px", borderRadius: "99px",
-                background: subscribed ? "rgba(16,185,129,0.15)" : "var(--amber)",
-                color: subscribed ? "#10B981" : "#fff",
-                border: subscribed ? "1px solid rgba(16,185,129,0.3)" : "none",
-                fontWeight: 700, fontSize: "13px", cursor: "pointer",
-                transition: "all 0.2s",
-              }}
-              onMouseEnter={e => { if (!subscribed) { (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 24px rgba(232,96,26,0.4)"; }}}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}
-            >
-              {subscribed ? <><CheckCircle2 size={14} /> {t("concerts.subscribed")}</> : <><Bell size={14} /> {t("concerts.subscribe")}</>}
-            </button>
-          </div>
+      <HeroCarousel
+        slides={EVENT_SLIDES}
+        accentColor="#E8601A"
+        glowColor="rgba(232,96,26,0.14)"
+        glowSide="right"
+        badgeIcon={<Calendar size={12} />}
+      >
+        <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+          <button
+            onClick={() => setSubscribed(true)}
+            style={{
+              display: "inline-flex", alignItems: "center", gap: "8px",
+              padding: "13px 24px", borderRadius: "99px",
+              background: subscribed ? "rgba(16,185,129,0.15)" : "var(--amber)",
+              color: subscribed ? "#10B981" : "#fff",
+              border: subscribed ? "1px solid rgba(16,185,129,0.3)" : "none",
+              fontWeight: 700, fontSize: "13px", cursor: "pointer",
+              transition: "all 0.2s",
+            }}
+            onMouseEnter={e => { if (!subscribed) { (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 24px rgba(232,96,26,0.4)"; }}}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}
+          >
+            {subscribed ? <><CheckCircle2 size={14} /> {t("concerts.subscribed")}</> : <><Bell size={14} /> {t("concerts.subscribe")}</>}
+          </button>
         </div>
-      </section>
+      </HeroCarousel>
 
       <div style={{ maxWidth: "1360px", margin: "0 auto", padding: "0 24px" }}>
 
