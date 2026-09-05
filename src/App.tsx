@@ -40,6 +40,7 @@ const AdminUsers = lazy(() => import("./pages/admin/AdminUsers"));
 const AdminSubscriptions = lazy(() => import("./pages/admin/AdminSubscriptions"));
 const AdminValidations = lazy(() => import("./pages/admin/AdminValidations"));
 const AdminModeration = lazy(() => import("./pages/admin/AdminModeration"));
+const AdminRadios = lazy(() => import("./pages/admin/AdminRadios"));
 const Settings = lazy(() => import("./pages/Settings"));
 const Activity = lazy(() => import("./pages/Activity"));
 const Wrapped = lazy(() => import("./pages/Wrapped"));
@@ -134,6 +135,7 @@ function AppContent() {
               <Route path="validations/:tab" element={<AdminValidations />} />
               <Route path="moderation" element={<Navigate to="/admin/moderation/pending" replace />} />
               <Route path="moderation/:filter" element={<AdminModeration />} />
+              <Route path="radios" element={<AdminRadios />} />
             </Route>
             <Route path="/settings" element={<AuthGuard><Settings /></AuthGuard>} />
             <Route path="/activity" element={<AuthGuard><Activity /></AuthGuard>} />

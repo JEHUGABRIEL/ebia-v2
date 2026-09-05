@@ -214,6 +214,37 @@ export const submitEventRequest = (formData: FormData): Promise<EventItem> =>
     return body as EventItem;
   });
 
+/* ── Radios ── */
+export type RadioStationApi = {
+  id: string; name: string; freq: string | null;
+  description: string | null; longDescription: string | null;
+  lang: string | null; color: string; iconKey: string;
+  homepage: string | null; streamUrl: string | null; category: string;
+  listeners: number | null;
+  schedule: { day: string; time: string; show: string }[] | null;
+  tags: string[] | null;
+  active: boolean; sortOrder: number; createdAt: string;
+};
+
+export const getRadios = () =>
+  get<{ data: RadioStationApi[]; total: number }>("/api/v1/radios");
+
+export type RadioStationInput = {
+  name?: string; freq?: string; description?: string; longDescription?: string;
+  lang?: string; color?: string; iconKey?: string; homepage?: string;
+  streamUrl?: string; category?: string; listeners?: number;
+  active?: boolean; sortOrder?: number;
+};
+
+export const getAdminRadios = () =>
+  get<RadioStationApi[]>("/api/admin/radios");
+export const createAdminRadio = (data: RadioStationInput) =>
+  post<RadioStationApi>("/api/admin/radios", data);
+export const updateAdminRadio = (id: string, data: RadioStationInput) =>
+  put<RadioStationApi>(`/api/admin/radios/${id}`, data);
+export const deleteAdminRadio = (id: string) =>
+  del<{ message: string }>(`/api/admin/radios/${id}`);
+
 /* ── Titres tendances & rétro ── */
 export const getTrendingTracks = (limit = 20) =>
   get<Track[]>(`/api/v1/tracks/trending?limit=${limit}`);

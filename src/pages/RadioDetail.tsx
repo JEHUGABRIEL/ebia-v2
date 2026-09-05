@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -6,7 +6,8 @@ import {
   Radio as RadioIcon, ArrowLeft, Heart, Share2,
   Globe, Zap, Calendar, ChevronRight,
 } from "lucide-react";
-import { STATIC_STATIONS, CATEGORY_CONFIG } from "../data/radios";
+import { CATEGORY_CONFIG, toStation, type Station } from "../data/radios";
+import { getRadios } from "../lib/api";
 
 type StationStatus = "idle" | "loading" | "playing" | "error";
 
@@ -20,9 +21,15 @@ export default function RadioDetail() {
   const [volume] = useState(0.8);
   // muted/volume are read-only here — volume controls are in the list page's now-playing bar
   const [liked, setLiked] = useState(false);
+  const [allStations, setAllStations] = useState<Station[]>([]);
+  const [loading, setLoading] = useState(true);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const station = STATIC_STATIONS.find(s => s.id === id);
+  useEffect(() => {
+    getRadios().then(r => setAllStations(r.data.map(toStation))).catch(() => setAllStations([])).finally(() => setLoading(false));
+  }, []);
+
+  const station = allStations.find(s => s.id === id);
 
   const playStation = useCallback(() => {
     if (!station) return;
@@ -57,6 +64,14 @@ export default function RadioDetail() {
     }, 10000);
   }, [station, isPlaying, muted, volume]);
 
+  if (loading) {
+    return (
+      <div style={{ minHeight: "100vh", background: "var(--bg)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <Loader size={28} style={{ color: "var(--muted)", animation: "spin 1s linear infinite" }} />
+      </div>
+    );
+  }
+
   if (!station) {
     return (
       <div style={{ minHeight: "100vh", background: "var(--bg)", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -84,7 +99,7 @@ export default function RadioDetail() {
     );
   }
 
-  const otherStations = STATIC_STATIONS.filter(s => s.id !== station.id).slice(0, 3);
+  const otherStations = allStations.filter(s => s.id !== station.id).slice(0, 3);
   const CatIcon = CATEGORY_CONFIG[station.category]?.icon || RadioIcon;
 
   return (

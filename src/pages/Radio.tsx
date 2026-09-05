@@ -5,8 +5,8 @@ import {
   Radio as RadioIcon, Headphones, Globe, Zap, Heart, ListMusic,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { STATIC_STATIONS, CATEGORY_CONFIG, type StationCategory, type Station } from "../data/radios";
-import { getListenerPreferredGenres, getTracks, type Track } from "../lib/api";
+import { CATEGORY_CONFIG, toStation, type StationCategory, type Station } from "../data/radios";
+import { getListenerPreferredGenres, getRadios, getTracks, type Track } from "../lib/api";
 import { orderByPreferredGenres } from "../lib/preferences";
 import { useApp } from "../context/AppContext";
 import RadioQueuePanel from "../components/RadioQueuePanel";
@@ -17,6 +17,8 @@ export default function RadioPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { user } = useApp();
+  const [allStations, setAllStations] = useState<Station[]>([]);
+  const [loadingStations, setLoadingStations] = useState(true);
   const [preferredGenres, setPreferredGenres] = useState<string[]>([]);
   const [currentId, setCurrentId] = useState<string | null>(null);
   const [statuses, setStatuses] = useState<Record<string, StationStatus>>({});
@@ -28,6 +30,10 @@ export default function RadioPage() {
   const [showRadioQueue, setShowRadioQueue] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
+  useEffect(() => {
+    getRadios().then(r => setAllStations(r.data.map(toStation))).catch(() => setAllStations([])).finally(() => setLoadingStations(false));
+  }, []);
+
   // Stations dont le programme (tags) correspond aux genres de l'auditeur → en tête.
   useEffect(() => {
     if (!user || user.role === "artist" || user.role === "admin") return;
@@ -36,8 +42,8 @@ export default function RadioPage() {
   }, [user?.id]);
 
   const stations = preferredGenres.length > 0
-    ? orderByPreferredGenres(STATIC_STATIONS, preferredGenres)
-    : STATIC_STATIONS;
+    ? orderByPreferredGenres(allStations, preferredGenres)
+    : allStations;
   const filteredStations = activeCategory === "all"
     ? stations
     : stations.filter(s => s.category === activeCategory);
@@ -332,6 +338,9 @@ export default function RadioPage() {
           display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
           gap: "16px", marginBottom: "48px",
         }}>
+          {loadingStations && [...Array(3)].map((_, i) => (
+            <div key={i} style={{ height: "180px", borderRadius: "16px", background: "rgba(240,235,227,0.03)", animation: "pulse 1.5s infinite" }} />
+          ))}
           {filteredStations.map(station => {
             const status = statuses[station.id] ?? "idle";
             const isActive = currentId === station.id;

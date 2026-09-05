@@ -12,6 +12,7 @@ import {
   TrendingUp,
   ChevronDown,
   Crown,
+  Radio,
 } from "lucide-react";
 import LogoutModal from "../components/LogoutModal";
 import EbiaLogo from "../components/EbiaLogo";
@@ -47,6 +48,7 @@ const NAV_ITEMS: NavGroup[] = [
       { to: "/admin/validations/events", label: "Événements" },
     ],
   },
+  { key: "radios", label: "Radios", icon: Radio, to: "/admin/radios" },
   {
     key: "moderation", label: "Modération", icon: Shield, base: "/admin/moderation",
     children: [
