@@ -268,16 +268,47 @@ export default function Landing() {
               <div style={{
                 width: "380px", height: "380px", borderRadius: "50%",
                 border: "1px solid rgba(232,96,26,0.18)",
-                background: "radial-gradient(circle at 35% 35%, rgba(232,96,26,0.1), rgba(201,147,10,0.06) 60%, transparent)",
                 display: "flex", alignItems: "center", justifyContent: "center", position: "relative",
               }}>
-                {[280, 200, 130].map((s, i) => (
-                  <div key={i} style={{ position: "absolute", width: s, height: s, borderRadius: "50%", border: `1px solid rgba(232,96,26,${0.06 + i * 0.06})` }} />
-                ))}
-                <div style={{ textAlign: "center", position: "relative", zIndex: 1 }}>
-                  <div className="bebas" style={{ fontSize: "68px", color: "var(--amber)", lineHeight: 1, letterSpacing: "0.08em" }}>E-BIA</div>
-                  <div style={{ fontSize: "10px", color: "var(--muted)", letterSpacing: "0.22em", textTransform: "uppercase", marginTop: "6px" }}>Music Platform · RCA</div>
+                <div style={{ position: "absolute", width: "440px", height: "440px", borderRadius: "50%", border: "1px solid rgba(232,96,26,0.08)" }} />
+
+                <div style={{ position: "absolute", inset: 0, borderRadius: "50%", overflow: "hidden" }}>
+                  <img
+                    src="https://images.unsplash.com/photo-1508973379184-7517410fb0bc?w=800&q=70&auto=format&fit=crop"
+                    alt=""
+                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  />
+                  <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(8,8,8,0.05) 35%, rgba(8,8,8,0.9) 100%)" }} />
                 </div>
+
+                <div style={{ position: "absolute", bottom: "30px", textAlign: "center", zIndex: 1 }}>
+                  <div className="bebas" style={{ fontSize: "34px", color: "#fff", lineHeight: 1, letterSpacing: "0.08em" }}>E-BIA</div>
+                  <div style={{ fontSize: "9px", color: "rgba(255,255,255,0.65)", letterSpacing: "0.2em", textTransform: "uppercase", marginTop: "5px" }}>Music Platform · RCA</div>
+                </div>
+
+                <div style={{
+                  position: "absolute", top: "-20px", left: "-20px",
+                  width: "76px", height: "76px", borderRadius: "50%", overflow: "hidden",
+                  border: "3px solid var(--bg)", boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
+                }}>
+                  <img
+                    src="https://images.unsplash.com/photo-1516280440614-37939bbacd81?w=200&q=70&auto=format&fit=crop"
+                    alt=""
+                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  />
+                </div>
+                <div style={{
+                  position: "absolute", bottom: "-16px", right: "8px",
+                  width: "62px", height: "62px", borderRadius: "50%", overflow: "hidden",
+                  border: "3px solid var(--bg)", boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
+                }}>
+                  <img
+                    src="https://images.unsplash.com/photo-1483412033650-1015ddeb83d1?w=200&q=70&auto=format&fit=crop"
+                    alt=""
+                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  />
+                </div>
+
                 <div style={{ position: "absolute", top: "32px", right: "-44px", background: "var(--bg3)", border: "1px solid var(--border)", borderRadius: "12px", padding: "10px 14px", display: "flex", alignItems: "center", gap: "10px", boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }}>
                   <div style={{ width: "28px", height: "28px", borderRadius: "50%", background: "var(--amber)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <Play size={10} fill="white" color="white" />
