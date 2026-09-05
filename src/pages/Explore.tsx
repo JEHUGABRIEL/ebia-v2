@@ -1,56 +1,150 @@
 import { useEffect, useState, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { getArtists, getTracks, searchTracks, getTrendingTracks, getRetroTracks, type Artist, type Track } from "../lib/api";
-import { MapPin, Search, CheckCircle, Pause, Music2, Clock, Headphones, Mic2, ArrowRight } from "lucide-react";
+import {
+  getArtists, getTracks, searchTracks, getTrendingTracks, getRetroTracks,
+  getDiscoverArtists, getDiscoverTracks, canonGenre,
+  type DiscoverArtist, type DiscoverMode,
+} from "../lib/api";
+import { filterFeedByQuery } from "../lib/preferences";
+import { MapPin, Search, CheckCircle, Pause, Music2, Clock, Headphones, Mic2, ArrowRight, Sparkles } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useApp } from "../context/AppContext";
 
-type Tab = "artists" | "tracks";
 type TrackFilter = "all" | "trending" | "new" | "retro";
 
-const GENRES = [
-  "Afro-Pop", "Hip-Hop", "Afro-Trap", "Gospel", "Soukous",
-  "R&B", "Jazz", "Afro-Folk", "Traditionnel", "Afro-Beat", "Ndombolo",
-];
+/**
+ * Forme normalisée d'un titre affiché dans la liste (catalogue ou flux
+ * personnalisé) — le lecteur et la ligne n'ont besoin que de ces champs.
+ */
+type RowTrack = {
+  id: string; title: string; genre: string; duration_s: number;
+  plays_count: number; likes_count: number;
+  artist_name?: string; artist_id?: string; artist_avatar?: string;
+  audioUrl?: string; coverUrl?: string; createdAt?: string;
+};
 
 const fmtDur = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+
+/* Libellé court du mode de personnalisation en cours. */
+const MODE_LABEL: Record<DiscoverMode | "catalog", string> = {
+  explicit: "Selon vos genres musicaux",
+  implicit: "Adapté à vos écoutes et à votre activité",
+  none: "Découverte du jour — mélangée pour vous",
+  catalog: "Catalogue complet",
+};
 
 export default function Explore() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { playTrack, currentTrack, isPlaying } = useApp();
-  const [tab, setTab] = useState<Tab>("artists");
-  const [artists, setArtists] = useState<Artist[]>([]);
-  const [tracks, setTracks] = useState<Track[]>([]);
+  const { user, playTrack, currentTrack, isPlaying } = useApp();
+  const [artists, setArtists] = useState<DiscoverArtist[]>([]);
+  const [tracks, setTracks] = useState<RowTrack[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [genre, setGenre] = useState<string | null>(null);
   const [trackFilter, setTrackFilter] = useState<TrackFilter>("all");
   const [searching, setSearching] = useState(false);
+  /* Personnalisation */
+  const [artistsMode, setArtistsMode] = useState<DiscoverMode | "catalog">("catalog");
+  const [tracksMode, setTracksMode] = useState<DiscoverMode | "catalog">("catalog");
+  const [prefGenres, setPrefGenres] = useState<string[]>([]);
 
-  useEffect(() => {
-    getArtists().then(r => setArtists(r.data)).finally(() => setLoading(false));
-  }, []);
+  /* Restreint la personnalisation aux auditeurs connectés. */
+  const personalized = !!user && user.role !== "artist" && user.role !== "admin";
 
-  // Load tracks based on filter
-  const loadTracks = useCallback(async (filter: TrackFilter) => {
-    setSearching(true);
+  /* ── Chargement du flux d'artistes personnalisé ── */
+  const loadArtistsFeed = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
-      let data: Track[] = [];
+      if (personalized) {
+        const res = await getDiscoverArtists();
+        setArtists(res.data);
+        setArtistsMode(res.mode);
+        setPrefGenres(res.genres);
+      } else {
+        const res = await getArtists();
+        setArtists(res.data.map(a => ({
+          id: a.id, slug: a.slug, name: a.name, genre: a.genre, city: a.city,
+          avatar_url: a.avatar_url, cover_url: a.cover_url, verified: a.verified,
+          plays_count: a.plays_count, followers_count: a.followers_count,
+        })));
+        setArtistsMode("catalog");
+        setPrefGenres([]);
+      }
+    } catch {
+      /* Repli : catalogue public en cas d'échec */
+      const res = await getArtists().catch(() => ({ data: [] }));
+      setArtists(res.data.map(a => ({
+        id: a.id, slug: a.slug, name: a.name, genre: a.genre, city: a.city,
+        avatar_url: a.avatar_url, cover_url: a.cover_url, verified: a.verified,
+        plays_count: a.plays_count, followers_count: a.followers_count,
+      })));
+      setArtistsMode("catalog");
+    } finally {
+      if (!silent) setLoading(false);
+    }
+  }, [personalized]);
+
+  /* ── Chargement du flux de titres ── */
+  const toRow = (d: {
+    id: string; title: string; genre: string; duration_s: number;
+    plays_count: number; likes_count: number;
+    artist_name?: string | null; artist_id?: string | null; artist_avatar?: string | null;
+    audio_url?: string | null; cover_url?: string | null; createdAt?: string | null;
+  }): RowTrack => ({
+    id: d.id, title: d.title, genre: d.genre, duration_s: d.duration_s,
+    plays_count: d.plays_count, likes_count: d.likes_count,
+    artist_name: d.artist_name ?? undefined,
+    artist_id: d.artist_id ?? undefined,
+    artist_avatar: d.artist_avatar ?? undefined,
+    audioUrl: d.audio_url ?? undefined,
+    coverUrl: d.cover_url ?? undefined,
+    createdAt: d.createdAt ?? undefined,
+  });
+
+  const loadTracksFeed = useCallback(async (silent = false) => {
+    if (!silent) setSearching(true);
+    try {
+      if (personalized) {
+        const res = await getDiscoverTracks();
+        setTracks(res.data.map(toRow));
+        setTracksMode(res.mode);
+        if (res.genres.length) setPrefGenres(res.genres);
+      } else {
+        const res = await getTracks();
+        setTracks(res.data.map(toRow));
+        setTracksMode("catalog");
+      }
+    } catch {
+      const res = await getTracks().catch(() => ({ data: [] }));
+      setTracks(res.data.map(toRow));
+      setTracksMode("catalog");
+    } finally {
+      if (!silent) setSearching(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [personalized]);
+
+  /* ── Chargement du catalogue complet (tendances / nouveautés / rétro) ── */
+  const loadCatalogTracks = useCallback(async (filter: TrackFilter) => {
+    setSearching(true);
+    setTracksMode("catalog");
+    try {
+      let data: RowTrack[] = [];
       if (filter === "trending") {
         const res = await getTrendingTracks(50);
-        data = Array.isArray(res) ? res : [];
+        data = (Array.isArray(res) ? res : []).map(toRow);
       } else if (filter === "retro") {
         const res = await getRetroTracks(50);
-        data = Array.isArray(res) ? res : [];
+        data = (Array.isArray(res) ? res : []).map(toRow);
       } else if (filter === "new") {
         const res = await getTracks();
-        data = (res.data || []).sort((a, b) =>
+        data = (res.data || []).map(toRow).sort((a, b) =>
           new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
         );
       } else {
-        const res = await getTracks();
-        data = res.data || [];
+        await loadTracksFeed(true);
+        return;
       }
       setTracks(data);
     } catch {
@@ -58,61 +152,66 @@ export default function Explore() {
     } finally {
       setSearching(false);
     }
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadTracksFeed]);
 
-  // Search tracks by query
+  // Search tracks by query (catalogue complet)
   const doSearch = useCallback(async (q: string) => {
-    if (tab !== "tracks") return;
-    if (q.length < 2) { loadTracks(trackFilter); return; }
+    if (q.length < 2) { loadCatalogTracks(trackFilter); return; }
     setSearching(true);
     try {
       const results = await searchTracks(q, 50);
-      setTracks(results);
+      setTracks(results.map(toRow));
     } catch {
       setTracks([]);
     } finally {
       setSearching(false);
     }
-  }, [tab, loadTracks, trackFilter]);
+  }, [loadCatalogTracks, trackFilter]);
 
-  // When switching to tracks tab, load tracks
+  /* ── Chargement initial : artistes + titres ── */
   useEffect(() => {
-    if (tab !== "tracks") return;
+    loadArtistsFeed();
+    loadCatalogTracks(trackFilter);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Debounced search when typing (filtre les artistes côté client, cherche les titres côté serveur)
+  useEffect(() => {
     if (search.length >= 2) {
       const timer = setTimeout(() => doSearch(search), 300);
       return () => clearTimeout(timer);
     }
-    loadTracks(trackFilter);
-  }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Debounced search when typing
-  useEffect(() => {
-    if (tab !== "tracks") return;
-    if (search.length >= 2) {
-      const timer = setTimeout(() => doSearch(search), 300);
-      return () => clearTimeout(timer);
-    }
-    loadTracks(trackFilter);
+    loadCatalogTracks(trackFilter);
   }, [search]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Reload tracks when filter changes
   useEffect(() => {
-    if (tab !== "tracks") return;
     if (search.length >= 2) return; // don't override search results
-    loadTracks(trackFilter);
+    loadCatalogTracks(trackFilter);
   }, [trackFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const filteredArtists = artists.filter(a => {
-    const matchSearch = !search || a.name.toLowerCase().includes(search.toLowerCase()) ||
-      (a.genre || "").toLowerCase().includes(search.toLowerCase());
-    const matchGenre = !genre || (a.genre || "") === genre;
-    return matchSearch && matchGenre;
-  });
+  /* ── L'activité (une écoute) affine le feed implicite/aléatoire ── */
+  const lastPlayedRef = { id: currentTrack?.id };
+  useEffect(() => {
+    if (!personalized) return;
+    if (!currentTrack?.id) return;
+    if (artistsMode === "explicit" && tracksMode === "explicit") return;
+    // Rafraîchit discrètement les flux non explicites après une écoute.
+    loadArtistsFeed(true);
+    loadTracksFeed(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lastPlayedRef.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const filteredTracks = tracks.filter(t => {
-    const matchGenre = !genre || t.genre === genre;
-    return matchGenre;
-  });
+  const feedGenres = prefGenres.length > 0
+    ? prefGenres
+    : Array.from(new Set([...artists.map(a => a.genre), ...tracks.map(t => t.genre)].filter(Boolean)));
+
+  const filteredArtists = filterFeedByQuery(artists, search, genre);
+  const filteredTracks = filterFeedByQuery(tracks, "", genre);
+
+  const showArtistModeBanner = personalized && artistsMode !== "catalog";
+  const showTrackModeBanner = personalized && trackFilter === "all" && search.length < 2 && tracksMode !== "catalog";
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg)", paddingBottom: "120px" }}>
@@ -151,32 +250,9 @@ export default function Explore() {
 
       <div style={{ maxWidth: "1360px", margin: "0 auto", padding: "0 24px" }}>
 
-        {/* ── TABS + SEARCH ── */}
-        <div style={{
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-          gap: "16px", marginBottom: "24px", flexWrap: "wrap",
-        }}>
-          {/* Tabs */}
-          <div style={{ display: "flex", gap: "4px", padding: "4px", borderRadius: "14px", background: "rgba(240,235,227,0.04)" }}>
-            {([
-              { key: "artists" as Tab, icon: Headphones, label: t("explore.tabArtists") },
-              { key: "tracks" as Tab, icon: Music2, label: t("explore.tabTracks") },
-            ]).map(item => (
-              <button key={item.key} onClick={() => { setTab(item.key); setSearch(""); setGenre("Tous"); setTrackFilter("all"); }} style={{
-                display: "inline-flex", alignItems: "center", gap: "8px",
-                padding: "10px 20px", borderRadius: "10px",
-                background: tab === item.key ? "rgba(232,96,26,0.15)" : "transparent",
-                color: tab === item.key ? "var(--amber)" : "var(--muted)",
-                fontSize: "13px", fontWeight: 600, border: "none", cursor: "pointer",
-                transition: "all 0.2s",
-              }}>
-                <item.icon size={15} /> {item.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Search */}
-          <div style={{ position: "relative", minWidth: "280px", maxWidth: "380px", flex: 1 }}>
+        {/* ── SEARCH ── */}
+        <div style={{ marginBottom: "24px" }}>
+          <div style={{ position: "relative", minWidth: "280px", maxWidth: "480px" }}>
             <Search size={15} style={{
               position: "absolute", left: "16px", top: "50%",
               transform: "translateY(-50%)", color: "var(--muted)",
@@ -184,7 +260,7 @@ export default function Explore() {
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder={tab === "artists" ? t("explore.searchPlaceholder") : t("explore.searchTracksPlaceholder")}
+              placeholder={t("explore.searchAllPlaceholder")}
               style={{
                 width: "100%", padding: "14px 18px 14px 44px", borderRadius: "99px",
                 background: "rgba(240,235,227,0.05)", border: "1px solid rgba(240,235,227,0.1)",
@@ -197,60 +273,58 @@ export default function Explore() {
           </div>
         </div>
 
-        {/* ── TRACK FILTERS (trending/new/retro) ── */}
-        {tab === "tracks" && (
-          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "20px" }}>
-            {([
-              { key: "all" as TrackFilter, label: "Tous", icon: "🎵" },
-              { key: "trending" as TrackFilter, label: "Tendances", icon: "🔥" },
-              { key: "new" as TrackFilter, label: "Nouveautés", icon: "✨" },
-              { key: "retro" as TrackFilter, label: "Rétro", icon: "💿" },
-            ]).map(f => (
-              <button key={f.key} onClick={() => { setTrackFilter(f.key); setSearch(""); }} style={{
-                padding: "8px 18px", borderRadius: "99px", cursor: "pointer",
-                fontSize: "12px", fontWeight: 600, letterSpacing: "0.05em",
-                border: `1px solid ${trackFilter === f.key ? "var(--amber)" : "rgba(240,235,227,0.1)"}`,
-                background: trackFilter === f.key ? "rgba(232,96,26,0.15)" : "transparent",
-                color: trackFilter === f.key ? "var(--amber)" : "var(--muted)",
-                transition: "all 0.15s",
-              }}
-                onMouseEnter={e => { if (trackFilter !== f.key) { (e.currentTarget as HTMLElement).style.borderColor = "rgba(240,235,227,0.25)"; (e.currentTarget as HTMLElement).style.color = "var(--text)"; }}}
-                onMouseLeave={e => { if (trackFilter !== f.key) { (e.currentTarget as HTMLElement).style.borderColor = "rgba(240,235,227,0.1)"; (e.currentTarget as HTMLElement).style.color = "var(--muted)"; }}}
-              >{f.icon} {f.label}</button>
-            ))}
+        {/* ── GENRE FILTERS (genres présents dans les flux affichés) ── */}
+        {feedGenres.length > 0 && (
+          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "40px" }}>
+            {feedGenres.map(g => {
+              const sel = genre !== null && canonGenre(genre) === canonGenre(g);
+              return (
+                <button key={g} onClick={() => setGenre(sel ? null : g)} style={{
+                  padding: "8px 18px", borderRadius: "99px", cursor: "pointer",
+                  fontSize: "12px", fontWeight: 600, letterSpacing: "0.05em",
+                  border: `1px solid ${sel ? "var(--amber)" : "rgba(240,235,227,0.1)"}`,
+                  background: sel ? "rgba(232,96,26,0.15)" : "transparent",
+                  color: sel ? "var(--amber)" : "var(--muted)",
+                  transition: "all 0.15s",
+                }}
+                  onMouseEnter={e => { if (!sel) { (e.currentTarget as HTMLElement).style.borderColor = "rgba(240,235,227,0.25)"; (e.currentTarget as HTMLElement).style.color = "var(--text)"; } }}
+                  onMouseLeave={e => { if (!sel) { (e.currentTarget as HTMLElement).style.borderColor = "rgba(240,235,227,0.1)"; (e.currentTarget as HTMLElement).style.color = "var(--muted)"; } }}
+                >{g}</button>
+              );
+            })}
           </div>
         )}
 
-        {/* ── GENRE FILTERS ── */}
-        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "32px" }}>
-          {GENRES.map(g => (
-            <button key={g} onClick={() => setGenre(genre === g ? null : g)} style={{
-              padding: "8px 18px", borderRadius: "99px", cursor: "pointer",
-              fontSize: "12px", fontWeight: 600, letterSpacing: "0.05em",
-              border: `1px solid ${genre === g ? "var(--amber)" : "rgba(240,235,227,0.1)"}`,
-              background: genre === g ? "rgba(232,96,26,0.15)" : "transparent",
-              color: genre === g ? "var(--amber)" : "var(--muted)",
-              transition: "all 0.15s",
-            }}
-              onMouseEnter={e => { if (genre !== g) { (e.currentTarget as HTMLElement).style.borderColor = "rgba(240,235,227,0.25)"; (e.currentTarget as HTMLElement).style.color = "var(--text)"; }}}
-              onMouseLeave={e => { if (genre !== g) { (e.currentTarget as HTMLElement).style.borderColor = "rgba(240,235,227,0.1)"; (e.currentTarget as HTMLElement).style.color = "var(--muted)"; }}}
-            >{g}</button>
-          ))}
-        </div>
+        {/* ══════════ SECTION ARTISTES ══════════ */}
+        <div style={{ marginBottom: "56px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px", flexWrap: "wrap", gap: "10px" }}>
+            <h2 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "22px", fontWeight: 800, color: "var(--text)" }}>
+              <Headphones size={19} style={{ color: "var(--amber)" }} /> {t("explore.tabArtists")}
+            </h2>
+            {!loading && (
+              <p style={{ fontSize: "12px", color: "var(--muted)" }}>
+                {t("explore.artistCount", { count: filteredArtists.length, defaultValue: filteredArtists.length + " artistes" })}
+              </p>
+            )}
+          </div>
 
-        {/* ── COUNT ── */}
-        {!loading && (
-          <p style={{ fontSize: "12px", color: "var(--muted)", marginBottom: "24px" }}>
-            {tab === "artists"
-              ? t("explore.artistCount", { count: filteredArtists.length, defaultValue: filteredArtists.length + " artistes" })
-              : t("explore.trackCount", { count: filteredTracks.length, defaultValue: filteredTracks.length + " titres" })
-            }
-          </p>
-        )}
+          {showArtistModeBanner && (
+            <div style={{
+              display: "flex", alignItems: "center", gap: "10px",
+              marginBottom: "18px", padding: "10px 16px", borderRadius: "12px",
+              background: "rgba(232,96,26,0.06)", border: "1px solid rgba(232,96,26,0.15)",
+              color: "var(--amber)", fontSize: "12.5px", fontWeight: 600,
+            }}>
+              <Sparkles size={14} style={{ flexShrink: 0 }} />
+              <span>
+                {MODE_LABEL[artistsMode]}{artistsMode === "explicit" && prefGenres.length > 0
+                  ? ` — ${prefGenres.join(", ")}`
+                  : ""}
+              </span>
+            </div>
+          )}
 
-        {/* ── ARTISTS GRID ── */}
-        {tab === "artists" && (
-          loading ? (
+          {loading ? (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "20px" }}>
               {[...Array(8)].map((_, i) => (
                 <div key={i} style={{ borderRadius: "16px", overflow: "hidden", background: "rgba(240,235,227,0.04)" }}>
@@ -263,8 +337,8 @@ export default function Explore() {
               ))}
             </div>
           ) : filteredArtists.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "80px 0" }}>
-              <div className="bebas" style={{ fontSize: "32px", color: "var(--muted)" }}>{t("explore.noArtists")}</div>
+            <div style={{ textAlign: "center", padding: "60px 0" }}>
+              <div className="bebas" style={{ fontSize: "28px", color: "var(--muted)" }}>{t("explore.noArtists")}</div>
               <p style={{ color: "var(--muted)", fontSize: "14px", marginTop: "8px" }}>{t("explore.noArtistsHint")}</p>
             </div>
           ) : (
@@ -315,53 +389,96 @@ export default function Explore() {
                 </Link>
               ))}
             </div>
-          )
-        )}
+          )}
+        </div>
 
         {/* ── CTA: Devenir artiste ── */}
-        {tab === "artists" && (
-          <div style={{
-            marginTop: "48px", marginBottom: "48px", padding: "40px 48px",
-            borderRadius: "20px", background: "linear-gradient(135deg, rgba(232,96,26,0.08), rgba(201,147,10,0.04))",
-            border: "1px solid rgba(232,96,26,0.15)",
-            display: "flex", alignItems: "center", justifyContent: "space-between",
-            flexWrap: "wrap", gap: "24px",
-          }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
-              <div style={{
-                width: "56px", height: "56px", borderRadius: "16px",
-                background: "rgba(232,96,26,0.15)", display: "flex",
-                alignItems: "center", justifyContent: "center", flexShrink: 0,
-              }}>
-                <Mic2 size={26} style={{ color: "var(--amber)" }} />
-              </div>
-              <div>
-                <p style={{ fontSize: "20px", fontWeight: 800, color: "var(--text)", marginBottom: "4px" }}>
-                  Vous êtes artiste ?
-                </p>
-                <p style={{ fontSize: "14px", color: "var(--muted)", maxWidth: "420px" }}>
-                  Publiez votre musique, touchez des milliers d'auditeurs et construisez votre communauté en RCA.
-                </p>
-              </div>
+        <div style={{
+          marginBottom: "56px", padding: "40px 48px",
+          borderRadius: "20px", background: "linear-gradient(135deg, rgba(232,96,26,0.08), rgba(201,147,10,0.04))",
+          border: "1px solid rgba(232,96,26,0.15)",
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          flexWrap: "wrap", gap: "24px",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
+            <div style={{
+              width: "56px", height: "56px", borderRadius: "16px",
+              background: "rgba(232,96,26,0.15)", display: "flex",
+              alignItems: "center", justifyContent: "center", flexShrink: 0,
+            }}>
+              <Mic2 size={26} style={{ color: "var(--amber)" }} />
             </div>
-            <button onClick={() => navigate("/login")} style={{
-              display: "inline-flex", alignItems: "center", gap: "8px",
-              padding: "14px 28px", borderRadius: "99px",
-              background: "var(--amber)", color: "#fff",
-              fontWeight: 700, fontSize: "14px", border: "none", cursor: "pointer",
-              transition: "box-shadow 0.2s",
-            }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 24px rgba(232,96,26,0.4)"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}
-            >
-              Devenir artiste <ArrowRight size={16} />
-            </button>
+            <div>
+              <p style={{ fontSize: "20px", fontWeight: 800, color: "var(--text)", marginBottom: "4px" }}>
+                Vous êtes artiste ?
+              </p>
+              <p style={{ fontSize: "14px", color: "var(--muted)", maxWidth: "420px" }}>
+                Publiez votre musique, touchez des milliers d'auditeurs et construisez votre communauté en RCA.
+              </p>
+            </div>
           </div>
-        )}
+          <button onClick={() => navigate("/login")} style={{
+            display: "inline-flex", alignItems: "center", gap: "8px",
+            padding: "14px 28px", borderRadius: "99px",
+            background: "var(--amber)", color: "#fff",
+            fontWeight: 700, fontSize: "14px", border: "none", cursor: "pointer",
+            transition: "box-shadow 0.2s",
+          }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 24px rgba(232,96,26,0.4)"; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}
+          >
+            Devenir artiste <ArrowRight size={16} />
+          </button>
+        </div>
 
-        {/* ── TRACKS LIST ── */}
-        {tab === "tracks" && (
-          searching ? (
+        {/* ══════════ SECTION TITRES ══════════ */}
+        <div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px", flexWrap: "wrap", gap: "10px" }}>
+            <h2 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "22px", fontWeight: 800, color: "var(--text)" }}>
+              <Music2 size={19} style={{ color: "var(--amber)" }} /> {t("explore.tabTracks")}
+            </h2>
+            {!searching && (
+              <p style={{ fontSize: "12px", color: "var(--muted)" }}>
+                {t("explore.trackCount", { count: filteredTracks.length, defaultValue: filteredTracks.length + " titres" })}
+              </p>
+            )}
+          </div>
+
+          {/* Track filters (trending/new/retro) */}
+          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "16px" }}>
+            {([
+              { key: "all" as TrackFilter, label: "Pour vous", icon: "🎯" },
+              { key: "trending" as TrackFilter, label: "Tendances", icon: "🔥" },
+              { key: "new" as TrackFilter, label: "Nouveautés", icon: "✨" },
+              { key: "retro" as TrackFilter, label: "Rétro", icon: "💿" },
+            ]).map(f => (
+              <button key={f.key} onClick={() => { setTrackFilter(f.key); setSearch(""); }} style={{
+                padding: "8px 18px", borderRadius: "99px", cursor: "pointer",
+                fontSize: "12px", fontWeight: 600, letterSpacing: "0.05em",
+                border: `1px solid ${trackFilter === f.key ? "var(--amber)" : "rgba(240,235,227,0.1)"}`,
+                background: trackFilter === f.key ? "rgba(232,96,26,0.15)" : "transparent",
+                color: trackFilter === f.key ? "var(--amber)" : "var(--muted)",
+                transition: "all 0.15s",
+              }}
+                onMouseEnter={e => { if (trackFilter !== f.key) { (e.currentTarget as HTMLElement).style.borderColor = "rgba(240,235,227,0.25)"; (e.currentTarget as HTMLElement).style.color = "var(--text)"; } }}
+                onMouseLeave={e => { if (trackFilter !== f.key) { (e.currentTarget as HTMLElement).style.borderColor = "rgba(240,235,227,0.1)"; (e.currentTarget as HTMLElement).style.color = "var(--muted)"; } }}
+              >{f.icon} {f.label}</button>
+            ))}
+          </div>
+
+          {showTrackModeBanner && (
+            <div style={{
+              display: "flex", alignItems: "center", gap: "10px",
+              marginBottom: "18px", padding: "10px 16px", borderRadius: "12px",
+              background: "rgba(232,96,26,0.06)", border: "1px solid rgba(232,96,26,0.15)",
+              color: "var(--amber)", fontSize: "12.5px", fontWeight: 600,
+            }}>
+              <Sparkles size={14} style={{ flexShrink: 0 }} />
+              <span>{MODE_LABEL[tracksMode]}</span>
+            </div>
+          )}
+
+          {searching ? (
             <div style={{ textAlign: "center", padding: "60px 0" }}>
               <div style={{
                 width: "36px", height: "36px", borderRadius: "50%",
@@ -370,14 +487,8 @@ export default function Explore() {
               }} />
               <p style={{ fontSize: "14px", color: "var(--muted)" }}>{t("explore.searching")}</p>
             </div>
-          ) : search.length < 2 && trackFilter === "all" ? (
-            <div style={{ textAlign: "center", padding: "80px 0" }}>
-              <Search size={40} style={{ color: "var(--muted)", opacity: 0.3, marginBottom: "16px" }} />
-              <p style={{ fontSize: "16px", fontWeight: 600, color: "var(--muted)" }}>{t("explore.typeToSearch")}</p>
-              <p style={{ fontSize: "13px", color: "var(--muted)", marginTop: "6px" }}>{t("explore.typeToSearchHint")}</p>
-            </div>
           ) : filteredTracks.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "80px 0" }}>
+            <div style={{ textAlign: "center", padding: "60px 0" }}>
               <Music2 size={40} style={{ color: "var(--muted)", opacity: 0.3, marginBottom: "16px" }} />
               <p style={{ fontSize: "16px", fontWeight: 600, color: "var(--text)" }}>{t("explore.noTracks")}</p>
               <p style={{ fontSize: "13px", color: "var(--muted)", marginTop: "6px" }}>{t("explore.noTracksHint")}</p>
@@ -388,7 +499,16 @@ export default function Explore() {
                 const isCurrentTrack = currentTrack?.id === track.id;
                 return (
                   <div key={track.id}
-                    onClick={() => playTrack({ id: track.id, title: track.title, artist: (track as Record<string, unknown> & { artistName?: string }).artistName || "", audioUrl: (track as Record<string, unknown> & { audioUrl?: string }).audioUrl || "", duration: track.duration_s })}
+                    onClick={() => playTrack({
+                      id: track.id, title: track.title,
+                      artist: track.artist_name || "",
+                      audioUrl: track.audioUrl || "",
+                      coverUrl: track.coverUrl,
+                      duration: track.duration_s,
+                    }, filteredTracks.map(rt => ({
+                      id: rt.id, title: rt.title, artist: rt.artist_name || "",
+                      audioUrl: rt.audioUrl || "", coverUrl: rt.coverUrl, duration: rt.duration_s,
+                    })))}
                     style={{
                       display: "grid", gridTemplateColumns: "48px 1fr auto auto",
                       gap: "16px", alignItems: "center",
@@ -422,7 +542,7 @@ export default function Explore() {
                       <p style={{
                         fontSize: "12px", color: "var(--muted)",
                         overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                      }}>{(track as Record<string, unknown> & { artist_name?: string }).artist_name || "Artiste inconnu"}</p>
+                      }}>{track.artist_name || "Artiste inconnu"}</p>
                     </div>
 
                     {/* Genre badge */}
@@ -442,8 +562,8 @@ export default function Explore() {
                 );
               })}
             </div>
-          )
-        )}
+          )}
+        </div>
       </div>
 
       <style>{`

@@ -101,6 +101,7 @@
     "tabTracks": "Titres",
     "searchPlaceholder": "Artiste, genre...",
     "searchTracksPlaceholder": "Titre, artiste, genre...",
+    "searchAllPlaceholder": "Artiste, titre, genre...",
     "all": "Tous",
     "artistCount": "{{count}} artiste",
     "artistCount_plural": "{{count}} artistes",
