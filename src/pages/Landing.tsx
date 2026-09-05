@@ -38,6 +38,53 @@ const UPCOMING_CONCERTS = [
   { title: "Gospel Fest RCA", location: "Berberati", date: "2026", genre: "Gospel", status: "Bientôt" },
 ];
 
+const HERO_SLIDES = [
+  {
+    img: "https://images.unsplash.com/photo-1508973379184-7517410fb0bc?w=1920&q=70&auto=format&fit=crop",
+    badge: "République Centrafricaine",
+    lines: [
+      { text: "La", color: "var(--text)" },
+      { text: "musique", color: "var(--amber)" },
+      { text: "de chez", color: "var(--text)" },
+      { text: "nous.", color: "var(--gold)" },
+    ],
+    description: "Découvrez, écoutez et soutenez les artistes qui définissent le son de la République Centrafricaine.",
+  },
+  {
+    img: "https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=1920&q=70&auto=format&fit=crop",
+    badge: "Radios en direct",
+    lines: [
+      { text: "Toutes", color: "var(--text)" },
+      { text: "les radios", color: "var(--amber)" },
+      { text: "de la", color: "var(--text)" },
+      { text: "RCA.", color: "var(--gold)" },
+    ],
+    description: "Écoutez vos stations préférées en direct, 24h/24, où que vous soyez dans le monde.",
+  },
+  {
+    img: "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=1920&q=70&auto=format&fit=crop",
+    badge: "Concerts & festivals",
+    lines: [
+      { text: "Vivez la", color: "var(--text)" },
+      { text: "scène", color: "var(--amber)" },
+      { text: "en", color: "var(--text)" },
+      { text: "direct.", color: "var(--gold)" },
+    ],
+    description: "Ne manquez plus aucun concert, festival ou événement musical près de chez vous.",
+  },
+  {
+    img: "https://images.unsplash.com/photo-1520523839897-bd0b52f945a0?w=1920&q=70&auto=format&fit=crop",
+    badge: "Espace artiste",
+    lines: [
+      { text: "Ta voix.", color: "var(--text)" },
+      { text: "Ton", color: "var(--amber)" },
+      { text: "public", color: "var(--text)" },
+      { text: "t'attend.", color: "var(--gold)" },
+    ],
+    description: "Publiez votre musique, suivez vos statistiques et connectez-vous à vos auditeurs.",
+  },
+];
+
 /* ── Horizontal scroll row ── */
 function ScrollRow({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -176,6 +223,12 @@ export default function Landing() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const full = [...TICKER,...TICKER,...TICKER,...TICKER];
+  const [heroSlide, setHeroSlide] = useState(0);
+
+  useEffect(() => {
+    const id = setInterval(() => setHeroSlide(s => (s + 1) % HERO_SLIDES.length), 6000);
+    return () => clearInterval(id);
+  }, []);
   const [stats, setStats] = useState({ artists: 0, tracks: 0, total_plays: 0, total_likes: 0 });
   const [artists, setArtists] = useState<Artist[]>([]);
   const [tracks, setTracks] = useState<Track[]>([]);
@@ -207,11 +260,22 @@ export default function Landing() {
         minHeight: "100vh", display: "flex", alignItems: "center",
         padding: "100px 0 60px", position: "relative", overflow: "hidden",
       }}>
-        <img
-          src="https://images.unsplash.com/photo-1508973379184-7517410fb0bc?w=1920&q=70&auto=format&fit=crop"
-          alt=""
-          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
-        />
+        {HERO_SLIDES.map((s, i) => (
+          <div key={i} style={{
+            position: "absolute", inset: 0,
+            opacity: i === heroSlide ? 1 : 0,
+            transition: "opacity 1.2s ease",
+          }}>
+            <img
+              src={s.img}
+              alt=""
+              style={{
+                width: "100%", height: "100%", objectFit: "cover",
+                animation: i === heroSlide ? "heroKenBurns 6500ms ease-out forwards" : "none",
+              }}
+            />
+          </div>
+        ))}
         <div style={{
           position: "absolute", inset: 0,
           background: "linear-gradient(90deg, rgba(8,8,8,0.97) 0%, rgba(8,8,8,0.9) 45%, rgba(8,8,8,0.55) 75%, rgba(8,8,8,0.35) 100%), linear-gradient(180deg, rgba(8,8,8,0.2) 0%, rgba(8,8,8,0.6) 100%)",
@@ -225,30 +289,31 @@ export default function Landing() {
         <div className="section-pad" style={{ maxWidth: "1360px", margin: "0 auto", width: "100%", position: "relative", zIndex: 1 }}>
           <div className="hero-grid">
             <div>
-              <div className="fade-up" style={{
-                display: "inline-flex", alignItems: "center", gap: "8px",
-                padding: "6px 14px", borderRadius: "99px",
-                border: "1px solid rgba(232,96,26,0.3)", marginBottom: "36px",
-                fontSize: "11px", fontWeight: 600, letterSpacing: "0.18em",
-                textTransform: "uppercase", color: "var(--amber)",
-              }}>
-                <span style={{ width: "5px", height: "5px", borderRadius: "50%", background: "var(--amber)", display: "inline-block" }} />
-                République Centrafricaine
+              <div key={heroSlide}>
+                <div className="fade-up" style={{
+                  display: "inline-flex", alignItems: "center", gap: "8px",
+                  padding: "6px 14px", borderRadius: "99px",
+                  border: "1px solid rgba(232,96,26,0.3)", marginBottom: "36px",
+                  fontSize: "11px", fontWeight: 600, letterSpacing: "0.18em",
+                  textTransform: "uppercase", color: "var(--amber)",
+                }}>
+                  <span style={{ width: "5px", height: "5px", borderRadius: "50%", background: "var(--amber)", display: "inline-block" }} />
+                  {HERO_SLIDES[heroSlide].badge}
+                </div>
+                <h1 className="bebas fade-up-2" style={{
+                  fontSize: "clamp(72px, 11vw, 148px)", lineHeight: 0.9, letterSpacing: "0.02em", marginBottom: "36px",
+                }}>
+                  {HERO_SLIDES[heroSlide].lines.map((line, i) => (
+                    <span key={i} style={{ display: "block", color: line.color }}>{line.text}</span>
+                  ))}
+                </h1>
+                <p className="fade-up-3" style={{
+                  color: "var(--muted)", fontSize: "17px", lineHeight: 1.7,
+                  maxWidth: "460px", marginBottom: "44px", fontWeight: 400,
+                }}>
+                  {HERO_SLIDES[heroSlide].description}
+                </p>
               </div>
-              <h1 className="bebas fade-up-2" style={{
-                fontSize: "clamp(72px, 11vw, 148px)", lineHeight: 0.9, letterSpacing: "0.02em", marginBottom: "36px",
-              }}>
-                <span style={{ display: "block", color: "var(--text)" }}>La</span>
-                <span style={{ display: "block", color: "var(--amber)" }}>musique</span>
-                <span style={{ display: "block", color: "var(--text)" }}>de chez</span>
-                <span style={{ display: "block", color: "var(--gold)" }}>nous.</span>
-              </h1>
-              <p className="fade-up-3" style={{
-                color: "var(--muted)", fontSize: "17px", lineHeight: 1.7,
-                maxWidth: "460px", marginBottom: "44px", fontWeight: 400,
-              }}>
-                Découvrez, écoutez et soutenez les artistes qui définissent le son de la République Centrafricaine.
-              </p>
               <div className="fade-up-4" style={{ display: "flex", gap: "14px", flexWrap: "wrap" }}>
                 <Link to="/explore" style={{
                   display: "inline-flex", alignItems: "center", gap: "10px",
@@ -751,6 +816,7 @@ export default function Landing() {
         .comments-track:hover { animation-play-state: paused; }
         .comment-card { width: calc((100vw - 96px) / 3 - 8px); flex-shrink: 0; }
         @keyframes scrollComments { 0% { transform: translateX(0); } 100% { transform: translateX(-33.3333%); } }
+        @keyframes heroKenBurns { from { transform: scale(1); } to { transform: scale(1.08); } }
         @media (max-width: 1024px) { .comment-card { width: calc((100vw - 96px) / 2 - 8px); } }
         @media (max-width: 640px) { .comment-card { width: calc(100vw - 64px); } }
       `}</style>
