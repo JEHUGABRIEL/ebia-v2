@@ -288,83 +288,64 @@ export default function Landing() {
         }} />
         <div className="section-pad" style={{ maxWidth: "1360px", margin: "0 auto", width: "100%", position: "relative", zIndex: 1 }}>
           <div className="hero-grid">
-            <div>
-              <div key={heroSlide}>
-                <div className="fade-up" style={{
-                  display: "inline-flex", alignItems: "center", gap: "8px",
-                  padding: "6px 14px", borderRadius: "99px",
-                  border: "1px solid rgba(232,96,26,0.3)", marginBottom: "36px",
-                  fontSize: "11px", fontWeight: 600, letterSpacing: "0.18em",
-                  textTransform: "uppercase", color: "var(--amber)",
-                }}>
-                  <span style={{ width: "5px", height: "5px", borderRadius: "50%", background: "var(--amber)", display: "inline-block" }} />
-                  {HERO_SLIDES[heroSlide].badge}
-                </div>
-                <h1 className="bebas fade-up-2" style={{
-                  fontSize: "clamp(72px, 11vw, 148px)", lineHeight: 0.9, letterSpacing: "0.02em", marginBottom: "36px",
-                }}>
-                  {HERO_SLIDES[heroSlide].lines.map((line, i) => (
-                    <span key={i} style={{ display: "block", color: line.color }}>{line.text}</span>
-                  ))}
-                </h1>
-                <p className="fade-up-3" style={{
-                  color: "var(--muted)", fontSize: "17px", lineHeight: 1.7,
-                  maxWidth: "460px", marginBottom: "44px", fontWeight: 400,
-                }}>
-                  {HERO_SLIDES[heroSlide].description}
-                </p>
-              </div>
-              <div className="fade-up-4" style={{ display: "flex", gap: "14px", flexWrap: "wrap" }}>
-                <Link to="/explore" style={{
-                  display: "inline-flex", alignItems: "center", gap: "10px",
-                  padding: "15px 30px", borderRadius: "99px",
-                  background: "var(--amber)", color: "#fff",
-                  fontWeight: 700, fontSize: "13px", letterSpacing: "0.04em",
-                  textDecoration: "none", transition: "transform 0.2s, box-shadow 0.2s",
-                }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = "scale(1.04)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 16px 48px rgba(232,96,26,0.4)"; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = "scale(1)"; (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}
-                ><Play size={14} fill="white" /> Écouter maintenant</Link>
-                {!user && (
-                  <button onClick={() => navigate("/login")} style={{
-                    padding: "15px 30px", borderRadius: "99px",
-                    background: "transparent", border: "1px solid rgba(240,235,227,0.18)",
-                    color: "var(--text)", fontWeight: 600, fontSize: "13px",
-                    cursor: "pointer", transition: "background 0.2s, border-color 0.2s",
-                  }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.06)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(240,235,227,0.35)"; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(240,235,227,0.18)"; }}
-                  >Rejoindre E-Bia <ArrowRight size={13} style={{ display: "inline", marginLeft: "4px", verticalAlign: "-2px" }} /></button>
-                )}
-              </div>
-            </div>
-            <div style={{ flexShrink: 0 }} className="hero-orb hidden md:block">
-              <div style={{
-                width: "380px", height: "380px", borderRadius: "50%",
-                border: "1px solid rgba(232,96,26,0.18)",
-                background: "radial-gradient(circle at 35% 35%, rgba(232,96,26,0.1), rgba(201,147,10,0.06) 60%, transparent)",
-                display: "flex", alignItems: "center", justifyContent: "center", position: "relative",
+            <div key={heroSlide} style={{ maxWidth: "820px", margin: "0 auto" }}>
+              <div className="fade-up" style={{
+                display: "inline-flex", alignItems: "center", gap: "8px",
+                padding: "6px 14px", borderRadius: "99px",
+                border: "1px solid rgba(232,96,26,0.3)", marginBottom: "36px",
+                fontSize: "11px", fontWeight: 600, letterSpacing: "0.18em",
+                textTransform: "uppercase", color: "var(--amber)",
               }}>
-                {[280, 200, 130].map((s, i) => (
-                  <div key={i} style={{ position: "absolute", width: s, height: s, borderRadius: "50%", border: `1px solid rgba(232,96,26,${0.06 + i * 0.06})` }} />
-                ))}
-                <div style={{ textAlign: "center", position: "relative", zIndex: 1 }}>
-                  <div className="bebas" style={{ fontSize: "68px", color: "var(--amber)", lineHeight: 1, letterSpacing: "0.08em" }}>E-BIA</div>
-                  <div style={{ fontSize: "10px", color: "var(--muted)", letterSpacing: "0.22em", textTransform: "uppercase", marginTop: "6px" }}>Music Platform · RCA</div>
-                </div>
-                <div style={{ position: "absolute", top: "32px", right: "-44px", background: "var(--bg3)", border: "1px solid var(--border)", borderRadius: "12px", padding: "10px 14px", display: "flex", alignItems: "center", gap: "10px", boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }}>
-                  <div style={{ width: "28px", height: "28px", borderRadius: "50%", background: "var(--amber)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <Play size={10} fill="white" color="white" />
-                  </div>
-                  <div>
-                    <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text)" }}>En cours</div>
-                    <div style={{ fontSize: "10px", color: "var(--muted)" }}>Idylle Mamba</div>
-                  </div>
-                </div>
-                <div style={{ position: "absolute", bottom: "48px", left: "-52px", background: "var(--bg3)", border: "1px solid var(--border)", borderRadius: "10px", padding: "10px 14px", fontSize: "11px", fontWeight: 700, color: "var(--gold)", boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }}>
-                  ♪ {stats.artists || 5} artistes RCA
-                </div>
+                <span style={{ width: "5px", height: "5px", borderRadius: "50%", background: "var(--amber)", display: "inline-block" }} />
+                {HERO_SLIDES[heroSlide].badge}
               </div>
+              <h1 className="bebas fade-up-2" style={{
+                fontSize: "clamp(72px, 11vw, 148px)", lineHeight: 0.9, letterSpacing: "0.02em", marginBottom: "36px", textAlign: "center",
+              }}>
+                {HERO_SLIDES[heroSlide].lines.map((line, i) => (
+                  <span key={i} style={{ display: "block", color: line.color }}>{line.text}</span>
+                ))}
+              </h1>
+              <p className="fade-up-3" style={{
+                color: "var(--muted)", fontSize: "17px", lineHeight: 1.7,
+                maxWidth: "620px", margin: "0 auto 44px", fontWeight: 400, textAlign: "center",
+              }}>
+                {HERO_SLIDES[heroSlide].description}
+              </p>
+            </div>
+            <div className="fade-up-4" style={{ display: "flex", gap: "16px", flexWrap: "wrap", justifyContent: "center" }}>
+              <Link to="/explore" style={{
+                display: "inline-flex", alignItems: "center", gap: "12px",
+                padding: "8px 30px 8px 8px", borderRadius: "99px",
+                background: "linear-gradient(135deg, var(--amber), var(--gold))", color: "#fff",
+                fontWeight: 700, fontSize: "14px", letterSpacing: "0.02em",
+                textDecoration: "none", boxShadow: "0 12px 32px rgba(232,96,26,0.28)",
+                transition: "transform 0.2s, box-shadow 0.2s",
+              }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = "scale(1.04)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 16px 48px rgba(232,96,26,0.5)"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = "scale(1)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 12px 32px rgba(232,96,26,0.28)"; }}
+              >
+                <span style={{
+                  width: "36px", height: "36px", borderRadius: "50%", background: "rgba(255,255,255,0.2)",
+                  display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                }}>
+                  <Play size={14} fill="white" />
+                </span>
+                Écouter maintenant
+              </Link>
+              {!user && (
+                <button onClick={() => navigate("/login")} style={{
+                  display: "inline-flex", alignItems: "center", gap: "8px",
+                  padding: "17px 30px", borderRadius: "99px",
+                  background: "rgba(240,235,227,0.04)", backdropFilter: "blur(8px)",
+                  border: "1px solid rgba(240,235,227,0.2)",
+                  color: "var(--text)", fontWeight: 600, fontSize: "14px",
+                  cursor: "pointer", transition: "background 0.2s, border-color 0.2s, transform 0.2s",
+                }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.09)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(240,235,227,0.4)"; (e.currentTarget as HTMLElement).style.transform = "scale(1.04)"; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.04)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(240,235,227,0.2)"; (e.currentTarget as HTMLElement).style.transform = "scale(1)"; }}
+                >Rejoindre E-Bia <ArrowRight size={14} /></button>
+              )}
             </div>
           </div>
         </div>
