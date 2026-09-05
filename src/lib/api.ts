@@ -448,6 +448,20 @@ export const toggleLike = (trackId: string) =>
 export const toggleFollow = (artistId: string) =>
   post<{ followed: boolean; followers_count: number }>(`/api/v1/artists/${artistId}/follow`, {});
 
+export type LikedTrack = {
+  id: string; title: string; slug?: string;
+  artistId?: string; artistName?: string;
+  audioUrl: string; coverUrl?: string | null;
+  genre?: string; durationSeconds?: number;
+  playCount?: number; likeCount?: number;
+};
+
+export const getLikedTracks = () =>
+  get<LikedTrack[]>("/api/v1/tracks/liked");
+
+export const getFollowedArtists = () =>
+  get<{ data: Artist[]; total: number }>("/api/v1/artists/followed");
+
 export const updateProfile = (data: { display_name?: string; avatar_url?: string; phone?: string; current_password?: string; new_password?: string }) =>
   patch<{ access_token: string; user: Record<string, string>; pending_password_change?: string }>("/api/v1/auth/profile", data);
 

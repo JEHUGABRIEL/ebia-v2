@@ -4,7 +4,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { Home, Search, Library, Heart, Users, Settings, Plus, ChevronRight, LogOut, Camera, Mic2, Music2, Loader, Menu, X as XIcon, Download, DownloadCloud, CheckCircle2, Trash2, WifiOff, Star, Upload, BarChart2, Mic, DollarSign, TrendingUp, ListMusic, History, Rss, BarChart3 } from "lucide-react";
 import LogoutModal from "../components/LogoutModal";
 import EbiaLogo from "../components/EbiaLogo";
-import { getArtists, getTracks, getMyArtistProfile, updateProfile, uploadUserAvatar, becomeArtist, getDiscoverArtists, type Artist, type DiscoverArtist } from "../lib/api";
+import { getArtists, getTracks, getMyArtistProfile, updateProfile, uploadUserAvatar, becomeArtist, getDiscoverArtists, getLikedTracks, getFollowedArtists, type Artist, type DiscoverArtist, type LikedTrack } from "../lib/api";
 import PlayHistory from "../components/PlayHistory";
 import ActivityFeed from "../components/ActivityFeed";
 import Wrapped from "../pages/Wrapped";
@@ -13,19 +13,13 @@ import { daysLeft, type OfflineTrack } from "../lib/offline";
 
 type Section = "accueil" | "recherche" | "bibliotheque" | "favoris" | "suivis" | "parametres" | "decouvrir" | "telechargements" | "playlists" | "play-history" | "activity" | "wrapped";
 
-const MOCK_ARTISTS = [
-  { id: "1", name: "Idylle Mamba", genre: "Afro-Folk", slug: "idylle-mamba", avatar: "https://images.unsplash.com/photo-1516585427167-9f4af9627e6c?w=200" },
-  { id: "2", name: "Cool Fawa", genre: "Hip-Hop", slug: "cool-fawa", avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200" },
-  { id: "3", name: "Ley Kartel", genre: "Afro-Pop", slug: "ley-kartel", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200" },
-  { id: "4", name: "KT Pop", genre: "Pop", slug: "kt-pop", avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200" },
-  { id: "5", name: "Mansdou", genre: "Afro-Trap", slug: "mansdou", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200" },
-];
-const MOCK_FAVORITES = [
-  { id: "1", title: "One Africa", artist: "Cool Fawa", duration: "4:20" },
-  { id: "2", title: "Faro Faro", artist: "Idylle Mamba", duration: "3:55" },
-  { id: "3", title: "Regal", artist: "Mansdou", duration: "3:30" },
-  { id: "4", title: "Mawa", artist: "Ley Kartel", duration: "4:10" },
-];
+const formatDuration = (seconds?: number) => {
+  if (!seconds || seconds <= 0) return "--:--";
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${s.toString().padStart(2, "0")}`;
+};
+
 const GENRES = [
   { label: "Afro-Pop", bg: "#7B2200" }, { label: "Hip-Hop", bg: "#3B1A5C" },
   { label: "Afro-Trap", bg: "#5C3000" }, { label: "Folk", bg: "#0F3D22" },
@@ -61,6 +55,8 @@ export default function ListenerDashboard() {
   const [offlineTracks, setOfflineTracks] = useState<OfflineTrack[]>([]);
   const [popularTracks, setPopularTracks] = useState<any[]>([]);
   const [discoverArtists, setDiscoverArtists] = useState<DiscoverArtist[] | null>(null);
+  const [likedTracks, setLikedTracks] = useState<LikedTrack[]>([]);
+  const [followedArtists, setFollowedArtists] = useState<Artist[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -77,6 +73,9 @@ export default function ListenerDashboard() {
         setDiscoverArtists(r.data);
       }
     }).catch(() => {});
+    /* Bibliothèque perso — titres likés et artistes suivis */
+    getLikedTracks().then(setLikedTracks).catch(() => {});
+    getFollowedArtists().then(r => setFollowedArtists(r.data)).catch(() => {});
   }, []);
 
   /* Rafraîchir la liste hors-ligne quand on entre dans la section */
@@ -551,7 +550,7 @@ export default function ListenerDashboard() {
             <div>
               <h1 className="bebas" style={{ fontSize: "36px", color: "var(--text)", marginBottom: "22px" }}>Ma bibliothèque</h1>
               <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                {[{ label: "Titres favoris", count: MOCK_FAVORITES.length, icon: Heart, color: "var(--amber)", id: "favoris" as Section }, { label: "Artistes suivis", count: MOCK_ARTISTS.length, icon: Users, color: "var(--gold)", id: "suivis" as Section }].map(item => (
+                {[{ label: "Titres favoris", count: likedTracks.length, icon: Heart, color: "var(--amber)", id: "favoris" as Section }, { label: "Artistes suivis", count: followedArtists.length, icon: Users, color: "var(--gold)", id: "suivis" as Section }].map(item => (
                   <button key={item.label} onClick={() => setSection(item.id)} style={{ display: "flex", alignItems: "center", gap: "14px", padding: "14px 18px", borderRadius: "12px", textAlign: "left", background: "rgba(240,235,227,0.03)", border: "1px solid var(--border)", cursor: "pointer", transition: "background 0.15s" }}
                     onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.06)"}
                     onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.03)"}>
@@ -579,29 +578,34 @@ export default function ListenerDashboard() {
                 <div>
                   <p style={{ fontSize: "10px", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.15em", marginBottom: "6px" }}>Playlist</p>
                   <h1 className="bebas" style={{ fontSize: "44px", color: "var(--text)", lineHeight: 1, marginBottom: "6px" }}>Titres favoris</h1>
-                  <p style={{ fontSize: "13px", color: "var(--muted)" }}>{user.displayName} · {MOCK_FAVORITES.length} titres</p>
+                  <p style={{ fontSize: "13px", color: "var(--muted)" }}>{user.displayName} · {likedTracks.length} titres</p>
                 </div>
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "14px", padding: "0 14px 10px", fontSize: "10px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--muted)", borderBottom: "1px solid var(--border)" }}>
-                  <span style={{ width: "22px", textAlign: "center" }}>#</span><span style={{ flex: 1 }}>Titre</span><span>Durée</span>
-                </div>
-                {MOCK_FAVORITES.map((track, i) => (
-                  <div key={track.id} style={{ display: "flex", alignItems: "center", gap: "14px", padding: "11px 14px", borderRadius: "8px", transition: "background 0.15s", cursor: "pointer" }}
-                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.04)"}
-                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}>
-                    <span style={{ width: "22px", textAlign: "center", fontSize: "12px", color: "var(--muted)" }}>{i + 1}</span>
-                    <div style={{ width: "34px", height: "34px", borderRadius: "6px", flexShrink: 0, background: "rgba(232,96,26,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <Music2 size={13} style={{ color: "var(--amber)" }} />
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontSize: "13px", fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{track.title}</p>
-                      <p style={{ fontSize: "11px", color: "var(--muted)" }}>{track.artist}</p>
-                    </div>
-                    <span style={{ fontSize: "12px", color: "var(--muted)" }}>{track.duration}</span>
+              {likedTracks.length === 0 ? (
+                <p style={{ fontSize: "13px", color: "var(--muted)", padding: "14px" }}>Aucun titre liké pour l'instant. Explorez le catalogue et likez vos morceaux préférés.</p>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "14px", padding: "0 14px 10px", fontSize: "10px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--muted)", borderBottom: "1px solid var(--border)" }}>
+                    <span style={{ width: "22px", textAlign: "center" }}>#</span><span style={{ flex: 1 }}>Titre</span><span>Durée</span>
                   </div>
-                ))}
-              </div>
+                  {likedTracks.map((track, i) => (
+                    <div key={track.id} onClick={() => playTrack({ id: track.id, title: track.title, artist: track.artistName ?? "", artistId: track.artistId, audioUrl: track.audioUrl, coverUrl: track.coverUrl ?? undefined })}
+                      style={{ display: "flex", alignItems: "center", gap: "14px", padding: "11px 14px", borderRadius: "8px", transition: "background 0.15s", cursor: "pointer" }}
+                      onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.04)"}
+                      onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}>
+                      <span style={{ width: "22px", textAlign: "center", fontSize: "12px", color: "var(--muted)" }}>{i + 1}</span>
+                      <div style={{ width: "34px", height: "34px", borderRadius: "6px", flexShrink: 0, background: "rgba(232,96,26,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <Music2 size={13} style={{ color: "var(--amber)" }} />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontSize: "13px", fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{track.title}</p>
+                        <p style={{ fontSize: "11px", color: "var(--muted)" }}>{track.artistName}</p>
+                      </div>
+                      <span style={{ fontSize: "12px", color: "var(--muted)" }}>{formatDuration(track.durationSeconds)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -609,17 +613,21 @@ export default function ListenerDashboard() {
           {section === "suivis" && (
             <div>
               <h1 className="bebas" style={{ fontSize: "36px", color: "var(--text)", marginBottom: "24px" }}>Artistes suivis</h1>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "16px" }}>
-                {MOCK_ARTISTS.map(artist => (
-                  <button key={artist.id} onClick={() => navigate(`/artist/${artist.slug}`)} style={{ padding: "14px 10px", borderRadius: "12px", textAlign: "center", background: "transparent", border: "none", cursor: "pointer", transition: "background 0.15s" }}
-                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.04)"}
-                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}>
-                    <img src={artist.avatar} alt={artist.name} style={{ width: "72px", height: "72px", borderRadius: "50%", objectFit: "cover", display: "block", margin: "0 auto 10px" }} />
-                    <p style={{ fontSize: "12px", fontWeight: 700, color: "var(--text)" }}>{artist.name}</p>
-                    <p style={{ fontSize: "10px", color: "var(--muted)", marginTop: "2px" }}>Artiste</p>
-                  </button>
-                ))}
-              </div>
+              {followedArtists.length === 0 ? (
+                <p style={{ fontSize: "13px", color: "var(--muted)" }}>Vous ne suivez aucun artiste pour l'instant.</p>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "16px" }}>
+                  {followedArtists.map(artist => (
+                    <button key={artist.id} onClick={() => navigate(`/artist/${artist.slug}`)} style={{ padding: "14px 10px", borderRadius: "12px", textAlign: "center", background: "transparent", border: "none", cursor: "pointer", transition: "background 0.15s" }}
+                      onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.04)"}
+                      onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}>
+                      <img src={artist.avatar_url} alt={artist.name} style={{ width: "72px", height: "72px", borderRadius: "50%", objectFit: "cover", display: "block", margin: "0 auto 10px" }} />
+                      <p style={{ fontSize: "12px", fontWeight: 700, color: "var(--text)" }}>{artist.name}</p>
+                      <p style={{ fontSize: "10px", color: "var(--muted)", marginTop: "2px" }}>Artiste</p>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
