@@ -1,6 +1,6 @@
 import { useEffect, lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
-import { AppProvider } from "./context/AppContext";
+import { AppProvider, useApp } from "./context/AppContext";
 import { QueueProvider } from "./context/QueueContext";
 import { EQProvider } from "./context/EQContext";
 import { CallProvider } from "./context/CallContext";
@@ -58,6 +58,7 @@ const ROUTE_STORAGE_KEY = "ebia_last_route";
 function AppContent() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user, authReady } = useApp();
   const hideChrome = NO_CHROME.some(p => location.pathname.startsWith(p));
 
   // Persister la route pour la reprise après mise en fond
@@ -91,6 +92,13 @@ function AppContent() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Un admin ne peut pas naviguer sur le site tout en restant connecté :
+  // pour redevenir auditeur/artiste il doit se déconnecter et utiliser un
+  // compte distinct. Renvoie immédiatement vers le BO sinon.
+  if (authReady && user?.role === "admin" && !location.pathname.startsWith("/admin")) {
+    return <Navigate to="/admin" replace />;
+  }
 
   return (
     <>

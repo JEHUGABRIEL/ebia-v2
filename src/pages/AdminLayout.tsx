@@ -1,10 +1,9 @@
 import { useState } from "react";
-import { useNavigate, useLocation, Link, Outlet } from "react-router-dom";
+import { useLocation, Link, Outlet } from "react-router-dom";
 import { useApp } from "../context/AppContext";
 import {
   LayoutDashboard,
   Users,
-  Music2,
   Shield,
   LogOut,
   Menu,
@@ -59,7 +58,6 @@ const NAV_ITEMS: NavGroup[] = [
 
 export default function AdminLayout() {
   const { user } = useApp();
-  const navigate = useNavigate();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
@@ -159,13 +157,6 @@ export default function AdminLayout() {
           );
         })}
 
-        <button onClick={() => { navigate("/"); }} style={{ marginTop: "4px", display: "flex", alignItems: "center", gap: "10px", padding: "9px 12px", borderRadius: "8px", cursor: "pointer", background: "transparent", border: "1px solid rgba(240,235,227,0.07)", color: "var(--muted)", transition: "all 0.15s", textAlign: "left", width: "100%" }}
-          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(76,175,130,0.35)"; (e.currentTarget as HTMLElement).style.color = "#4caf82"; }}
-          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(240,235,227,0.07)"; (e.currentTarget as HTMLElement).style.color = "var(--muted)"; }}>
-          <Music2 size={14} style={{ flexShrink: 0 }} />
-          <span style={{ fontSize: "12px", fontWeight: 600 }}>Retour à E-BIA</span>
-        </button>
-
         {/* Profil bas */}
         <div style={{ marginTop: "auto", paddingTop: "12px", borderTop: "1px solid var(--border)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "4px 6px" }}>
@@ -215,7 +206,7 @@ export default function AdminLayout() {
           <button onClick={() => setMobileMenuOpen(true)} style={{ background: "none", border: "none", color: "var(--text)", cursor: "pointer", padding: "4px", display: "flex" }}>
             <Menu size={22} />
           </button>
-          <Link to="/" style={{ display: "flex", alignItems: "center", gap: "6px", textDecoration: "none" }}>
+          <Link to="/admin" style={{ display: "flex", alignItems: "center", gap: "6px", textDecoration: "none" }}>
             <EbiaLogo size={22} />
             <span className="bebas" style={{ fontSize: "14px", color: "var(--text)", letterSpacing: "0.1em" }}>E-BIA</span>
           </Link>
