@@ -37,6 +37,21 @@ export default function Navbar() {
   // Fermer le menu mobile au changement de route
   useEffect(() => { setMobileOpen(false); }, [location.pathname]);
 
+  // Bloque le scroll de la page tant que le menu mobile est ouvert (html ET body :
+  // selon le reset CSS, c'est parfois <html> qui porte le scroll de la fenêtre).
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const html = document.documentElement;
+    const prevHtmlOverflow = html.style.overflow;
+    const prevBodyOverflow = document.body.style.overflow;
+    html.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+    return () => {
+      html.style.overflow = prevHtmlOverflow;
+      document.body.style.overflow = prevBodyOverflow;
+    };
+  }, [mobileOpen]);
+
   const navLinks = [
     { to: "/explore", label: t("nav.artists") },
     { to: "/concerts", label: t("nav.events") },

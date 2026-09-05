@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   getTracks, searchTracks, getTrendingTracks, getRetroTracks, getDiscoverTracks,
@@ -28,6 +28,124 @@ const MODE_LABEL: Record<DiscoverMode | "catalog", string> = {
   none: "Découverte du jour — mélangée pour vous",
   catalog: "Catalogue complet",
 };
+
+const prefersReducedMotion = () =>
+  typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
+/**
+ * Rangée de titres à défilement horizontal, avec un auto-défilement continu
+ * propre à chaque section (vitesse + sens) : c'est ce qui donne à chaque
+ * section de /explore une "signature" de défilement différente, en plus de
+ * son animation d'entrée. Se met en pause au survol / au toucher pour ne
+ * pas gêner un choix manuel, et rebondit en douceur aux extrémités.
+ */
+function TrackRow({
+  list, isLoading, coverRadius = "12px", currentTrackId, isPlaying, onPlay,
+  autoScrollSpeed = 0, autoScrollDirection = 1,
+}: {
+  list: RowTrack[]; isLoading: boolean; coverRadius?: string;
+  currentTrackId?: string; isPlaying: boolean;
+  onPlay: (track: RowTrack, list: RowTrack[]) => void;
+  autoScrollSpeed?: number; autoScrollDirection?: 1 | -1;
+}) {
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const pausedRef = useRef(false);
+  const dirRef = useRef<1 | -1>(autoScrollDirection);
+
+  useEffect(() => {
+    if (!autoScrollSpeed || isLoading || list.length === 0 || prefersReducedMotion()) return;
+    const el = scrollerRef.current;
+    if (!el) return;
+    dirRef.current = autoScrollDirection;
+    if (autoScrollDirection === -1) el.scrollLeft = el.scrollWidth;
+
+    let raf = 0;
+    let last = performance.now();
+    const step = (now: number) => {
+      const dt = now - last;
+      last = now;
+      if (!pausedRef.current && el.scrollWidth > el.clientWidth + 1) {
+        el.scrollLeft += dirRef.current * autoScrollSpeed * (dt / 16.67);
+        if (el.scrollLeft <= 0) { el.scrollLeft = 0; dirRef.current = 1; }
+        else if (el.scrollLeft + el.clientWidth >= el.scrollWidth - 1) { el.scrollLeft = el.scrollWidth - el.clientWidth; dirRef.current = -1; }
+      }
+      raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [autoScrollSpeed, autoScrollDirection, isLoading, list.length]);
+
+  const pause = () => { pausedRef.current = true; };
+  const resume = () => { pausedRef.current = false; };
+
+  return (
+    <div ref={scrollerRef}
+      onMouseEnter={pause} onMouseLeave={resume}
+      onPointerDown={pause} onPointerUp={resume} onPointerCancel={resume}
+      style={{ display: "flex", gap: "16px", overflowX: "auto", paddingBottom: "8px", scrollbarWidth: "none" }}
+    >
+      {isLoading
+        ? [...Array(6)].map((_, i) => (
+          <div key={i} style={{ width: "170px", flexShrink: 0 }}>
+            <div style={{ aspectRatio: "1", borderRadius: coverRadius, background: "rgba(240,235,227,0.06)", animation: "pulse 1.5s infinite", marginBottom: "10px" }} />
+            <div style={{ height: "12px", width: "80%", borderRadius: "99px", background: "rgba(240,235,227,0.06)", marginBottom: "6px" }} />
+            <div style={{ height: "10px", width: "50%", borderRadius: "99px", background: "rgba(240,235,227,0.04)" }} />
+          </div>
+        ))
+        : list.length === 0 ? (
+          <p style={{ fontSize: "13px", color: "var(--muted)", padding: "16px 0" }}>Rien à afficher pour l'instant.</p>
+        ) : list.map(track => {
+          const isCurrentTrack = currentTrackId === track.id;
+          const isCircular = coverRadius === "9999px";
+          return (
+            <div key={track.id} className="track-card" style={{ width: "170px", flexShrink: 0, cursor: "pointer" }}
+              onClick={() => onPlay(track, list)}
+            >
+              <div style={{
+                position: "relative", aspectRatio: "1", borderRadius: coverRadius, overflow: "hidden", marginBottom: "10px",
+                background: "linear-gradient(135deg, rgba(232,96,26,0.18), rgba(201,147,10,0.08))",
+                transition: "transform 0.3s ease",
+              }}>
+                {track.coverUrl ? (
+                  <img src={track.coverUrl} alt={track.title} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                ) : (
+                  <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Music2 size={32} style={{ color: "var(--amber)", opacity: 0.5 }} />
+                  </div>
+                )}
+                <div style={{
+                  position: "absolute", inset: 0,
+                  background: "linear-gradient(180deg, transparent 55%, rgba(0,0,0,0.55) 100%)",
+                }} />
+                <div style={isCircular ? {
+                  position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)",
+                  width: "38px", height: "38px", borderRadius: "50%",
+                  background: "var(--amber)", display: "flex", alignItems: "center", justifyContent: "center",
+                  boxShadow: "0 6px 16px rgba(232,96,26,0.4)",
+                } : {
+                  position: "absolute", bottom: "10px", right: "10px",
+                  width: "34px", height: "34px", borderRadius: "50%",
+                  background: "var(--amber)", display: "flex", alignItems: "center", justifyContent: "center",
+                  boxShadow: "0 6px 16px rgba(232,96,26,0.4)",
+                }}>
+                  {isCurrentTrack && isPlaying
+                    ? <Pause size={13} fill="white" color="white" />
+                    : <Play size={13} fill="white" color="white" style={{ marginLeft: "1px" }} />}
+                </div>
+              </div>
+              <p style={{
+                fontSize: "13px", fontWeight: 700, color: isCurrentTrack ? "var(--amber)" : "var(--text)",
+                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: "3px",
+              }}>{track.title}</p>
+              <p style={{ fontSize: "11px", color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {track.artist_name || "Artiste inconnu"}
+              </p>
+            </div>
+          );
+        })}
+    </div>
+  );
+}
 
 export default function Explore() {
   const { t } = useTranslation();
@@ -181,65 +299,6 @@ export default function Explore() {
       .slice(0, 6);
   }, [recTracks, recGenres]);
 
-  /* ── Rendu d'une rangée de titres à défilement horizontal (réutilisé pour Tendances / Nouveautés / Rétro) ── */
-  const renderTrackRow = (list: RowTrack[], isLoading: boolean, coverRadius: string = "12px") => (
-    <div style={{ display: "flex", gap: "16px", overflowX: "auto", paddingBottom: "8px", scrollbarWidth: "none" }}>
-      {isLoading
-        ? [...Array(6)].map((_, i) => (
-          <div key={i} style={{ width: "170px", flexShrink: 0 }}>
-            <div style={{ aspectRatio: "1", borderRadius: coverRadius, background: "rgba(240,235,227,0.06)", animation: "pulse 1.5s infinite", marginBottom: "10px" }} />
-            <div style={{ height: "12px", width: "80%", borderRadius: "99px", background: "rgba(240,235,227,0.06)", marginBottom: "6px" }} />
-            <div style={{ height: "10px", width: "50%", borderRadius: "99px", background: "rgba(240,235,227,0.04)" }} />
-          </div>
-        ))
-        : list.length === 0 ? (
-          <p style={{ fontSize: "13px", color: "var(--muted)", padding: "16px 0" }}>Rien à afficher pour l'instant.</p>
-        ) : list.map(track => {
-          const isCurrentTrack = currentTrack?.id === track.id;
-          return (
-            <div key={track.id} className="track-card" style={{ width: "170px", flexShrink: 0, cursor: "pointer" }}
-              onClick={() => playTrack(toPlayable(track), list.map(toPlayable))}
-            >
-              <div style={{
-                position: "relative", aspectRatio: "1", borderRadius: coverRadius, overflow: "hidden", marginBottom: "10px",
-                background: "linear-gradient(135deg, rgba(232,96,26,0.18), rgba(201,147,10,0.08))",
-                transition: "transform 0.3s ease",
-              }}>
-                {track.coverUrl ? (
-                  <img src={track.coverUrl} alt={track.title} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                ) : (
-                  <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <Music2 size={32} style={{ color: "var(--amber)", opacity: 0.5 }} />
-                  </div>
-                )}
-                <div style={{
-                  position: "absolute", inset: 0,
-                  background: "linear-gradient(180deg, transparent 55%, rgba(0,0,0,0.55) 100%)",
-                }} />
-                <div style={{
-                  position: "absolute", bottom: "10px", right: "10px",
-                  width: "34px", height: "34px", borderRadius: "50%",
-                  background: "var(--amber)", display: "flex", alignItems: "center", justifyContent: "center",
-                  boxShadow: "0 6px 16px rgba(232,96,26,0.4)",
-                }}>
-                  {isCurrentTrack && isPlaying
-                    ? <Pause size={13} fill="white" color="white" />
-                    : <Play size={13} fill="white" color="white" style={{ marginLeft: "1px" }} />}
-                </div>
-              </div>
-              <p style={{
-                fontSize: "13px", fontWeight: 700, color: isCurrentTrack ? "var(--amber)" : "var(--text)",
-                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: "3px",
-              }}>{track.title}</p>
-              <p style={{ fontSize: "11px", color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {track.artist_name || "Artiste inconnu"}
-              </p>
-            </div>
-          );
-        })}
-    </div>
-  );
-
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg)", paddingBottom: "120px" }}>
 
@@ -377,7 +436,10 @@ export default function Explore() {
               <h2 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "22px", fontWeight: 800, color: "var(--text)", marginBottom: "16px" }}>
                 ✨ Nouveautés
               </h2>
-              {renderTrackRow(newList, catalogLoading, "9999px")}
+              <TrackRow list={newList} isLoading={catalogLoading} coverRadius="9999px"
+                currentTrackId={currentTrack?.id} isPlaying={isPlaying}
+                onPlay={(t, l) => playTrack(toPlayable(t), l.map(toPlayable))}
+                autoScrollSpeed={0.3} autoScrollDirection={1} />
             </div>
 
             {/* ══════════ TENDANCES ══════════ */}
@@ -385,7 +447,10 @@ export default function Explore() {
               <h2 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "22px", fontWeight: 800, color: "var(--text)", marginBottom: "16px" }}>
                 <TrendingUp size={19} style={{ color: "var(--amber)" }} /> Tendances
               </h2>
-              {renderTrackRow(trendingList, catalogLoading)}
+              <TrackRow list={trendingList} isLoading={catalogLoading}
+                currentTrackId={currentTrack?.id} isPlaying={isPlaying}
+                onPlay={(t, l) => playTrack(toPlayable(t), l.map(toPlayable))}
+                autoScrollSpeed={0.55} autoScrollDirection={-1} />
             </div>
 
             {/* ══════════ RECOMMANDATIONS ══════════ */}
@@ -407,7 +472,10 @@ export default function Explore() {
                   </div>
                 )}
 
-                {renderTrackRow(recTracks.slice(0, 14), recLoading)}
+                <TrackRow list={recTracks.slice(0, 14)} isLoading={recLoading}
+                  currentTrackId={currentTrack?.id} isPlaying={isPlaying}
+                  onPlay={(t, l) => playTrack(toPlayable(t), l.map(toPlayable))}
+                  autoScrollSpeed={0.65} autoScrollDirection={1} />
               </div>
             )}
 
@@ -474,7 +542,10 @@ export default function Explore() {
               <h2 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "22px", fontWeight: 800, color: "var(--text)", marginBottom: "16px" }}>
                 <Disc size={19} style={{ color: "var(--amber)" }} /> Rétro
               </h2>
-              {renderTrackRow(retroList, catalogLoading)}
+              <TrackRow list={retroList} isLoading={catalogLoading}
+                currentTrackId={currentTrack?.id} isPlaying={isPlaying}
+                onPlay={(t, l) => playTrack(toPlayable(t), l.map(toPlayable))}
+                autoScrollSpeed={0.4} autoScrollDirection={-1} />
             </div>
 
             {/* ── CTA: Devenir artiste ── */}
