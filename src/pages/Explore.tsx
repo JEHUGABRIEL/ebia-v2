@@ -181,13 +181,13 @@ export default function Explore() {
       .slice(0, 6);
   }, [recTracks, recGenres]);
 
-  /* ── Rendu d'une rangée de titres à défilement horizontal (réutilisé pour Pour vous / Tendances / Nouveautés / Rétro) ── */
-  const renderTrackRow = (list: RowTrack[], isLoading: boolean) => (
+  /* ── Rendu d'une rangée de titres à défilement horizontal (réutilisé pour Tendances / Nouveautés / Rétro) ── */
+  const renderTrackRow = (list: RowTrack[], isLoading: boolean, coverRadius: string = "12px") => (
     <div style={{ display: "flex", gap: "16px", overflowX: "auto", paddingBottom: "8px", scrollbarWidth: "none" }}>
       {isLoading
         ? [...Array(6)].map((_, i) => (
           <div key={i} style={{ width: "170px", flexShrink: 0 }}>
-            <div style={{ aspectRatio: "1", borderRadius: "12px", background: "rgba(240,235,227,0.06)", animation: "pulse 1.5s infinite", marginBottom: "10px" }} />
+            <div style={{ aspectRatio: "1", borderRadius: coverRadius, background: "rgba(240,235,227,0.06)", animation: "pulse 1.5s infinite", marginBottom: "10px" }} />
             <div style={{ height: "12px", width: "80%", borderRadius: "99px", background: "rgba(240,235,227,0.06)", marginBottom: "6px" }} />
             <div style={{ height: "10px", width: "50%", borderRadius: "99px", background: "rgba(240,235,227,0.04)" }} />
           </div>
@@ -197,12 +197,13 @@ export default function Explore() {
         ) : list.map(track => {
           const isCurrentTrack = currentTrack?.id === track.id;
           return (
-            <div key={track.id} style={{ width: "170px", flexShrink: 0, cursor: "pointer" }}
+            <div key={track.id} className="track-card" style={{ width: "170px", flexShrink: 0, cursor: "pointer" }}
               onClick={() => playTrack(toPlayable(track), list.map(toPlayable))}
             >
               <div style={{
-                position: "relative", aspectRatio: "1", borderRadius: "12px", overflow: "hidden", marginBottom: "10px",
+                position: "relative", aspectRatio: "1", borderRadius: coverRadius, overflow: "hidden", marginBottom: "10px",
                 background: "linear-gradient(135deg, rgba(232,96,26,0.18), rgba(201,147,10,0.08))",
+                transition: "transform 0.3s ease",
               }}>
                 {track.coverUrl ? (
                   <img src={track.coverUrl} alt={track.title} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
@@ -372,15 +373,15 @@ export default function Explore() {
         ) : (
           <>
             {/* ══════════ NOUVEAUTÉS ══════════ */}
-            <div style={{ marginBottom: "56px" }}>
+            <div className="explore-section anim-fade-up" style={{ marginBottom: "56px" }}>
               <h2 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "22px", fontWeight: 800, color: "var(--text)", marginBottom: "16px" }}>
                 ✨ Nouveautés
               </h2>
-              {renderTrackRow(newList, catalogLoading)}
+              {renderTrackRow(newList, catalogLoading, "9999px")}
             </div>
 
             {/* ══════════ TENDANCES ══════════ */}
-            <div style={{ marginBottom: "56px" }}>
+            <div className="explore-section anim-slide-left" style={{ marginBottom: "56px" }}>
               <h2 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "22px", fontWeight: 800, color: "var(--text)", marginBottom: "16px" }}>
                 <TrendingUp size={19} style={{ color: "var(--amber)" }} /> Tendances
               </h2>
@@ -389,7 +390,7 @@ export default function Explore() {
 
             {/* ══════════ RECOMMANDATIONS ══════════ */}
             {(recLoading || recTracks.length > 0) && (
-              <div style={{ marginBottom: "56px" }}>
+              <div className="explore-section anim-zoom-in" style={{ marginBottom: "56px" }}>
                 <h2 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "22px", fontWeight: 800, color: "var(--text)", marginBottom: "16px" }}>
                   <Sparkles size={19} style={{ color: "var(--amber)" }} /> Recommandations
                 </h2>
@@ -412,7 +413,7 @@ export default function Explore() {
 
             {/* ══════════ MIXÉS POUR VOUS (playlists par genre, façon Daily Mix) ══════════ */}
             {genreMixes.length > 0 && (
-              <div style={{ marginBottom: "56px" }}>
+              <div className="explore-section anim-slide-right" style={{ marginBottom: "56px" }}>
                 <h2 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "22px", fontWeight: 800, color: "var(--text)", marginBottom: "16px" }}>
                   <ListMusic size={19} style={{ color: "var(--amber)" }} /> Mixés pour vous
                 </h2>
@@ -469,7 +470,7 @@ export default function Explore() {
             )}
 
             {/* ══════════ RÉTRO ══════════ */}
-            <div style={{ marginBottom: "56px" }}>
+            <div className="explore-section anim-flip-in" style={{ marginBottom: "56px" }}>
               <h2 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "22px", fontWeight: 800, color: "var(--text)", marginBottom: "16px" }}>
                 <Disc size={19} style={{ color: "var(--amber)" }} /> Rétro
               </h2>
@@ -477,7 +478,7 @@ export default function Explore() {
             </div>
 
             {/* ── CTA: Devenir artiste ── */}
-            <div style={{
+            <div className="explore-section anim-fade-up" style={{
               marginBottom: "56px", padding: "40px 48px",
               borderRadius: "20px", background: "linear-gradient(135deg, rgba(232,96,26,0.08), rgba(201,147,10,0.04))",
               border: "1px solid rgba(232,96,26,0.15)",
@@ -514,14 +515,6 @@ export default function Explore() {
                 Devenir artiste <ArrowRight size={16} />
               </button>
             </div>
-
-            {/* ══════════ POUR VOUS ══════════ */}
-            <div>
-              <h2 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "22px", fontWeight: 800, color: "var(--text)", marginBottom: "16px" }}>
-                🎯 Pour vous
-              </h2>
-              {renderTrackRow(recTracks, recLoading)}
-            </div>
           </>
         )}
       </div>
@@ -529,6 +522,21 @@ export default function Explore() {
       <style>{`
         @keyframes pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.8; } }
         @keyframes spin { to { transform: rotate(360deg); } }
+
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(28px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideLeft { from { opacity: 0; transform: translateX(-40px); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes slideRight { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes zoomIn { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
+        @keyframes flipIn { from { opacity: 0; transform: perspective(800px) rotateX(-12deg); } to { opacity: 1; transform: perspective(800px) rotateX(0deg); } }
+
+        .explore-section { animation-duration: 0.7s; animation-timing-function: ease-out; animation-fill-mode: both; }
+        .anim-fade-up { animation-name: fadeUp; }
+        .anim-slide-left { animation-name: slideLeft; }
+        .anim-slide-right { animation-name: slideRight; }
+        .anim-zoom-in { animation-name: zoomIn; animation-duration: 0.6s; }
+        .anim-flip-in { animation-name: flipIn; animation-duration: 0.8s; }
+
+        .track-card:hover > div:first-child { transform: scale(1.045); }
       `}</style>
     </div>
   );
