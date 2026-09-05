@@ -156,21 +156,7 @@ export default function RadioPage() {
           background: "#4CAF50", display: "inline-block",
           animation: "radioPulse 1.5s infinite",
         }} />}
-      >
-        {/* Stats */}
-        <div style={{ display: "flex", gap: "32px", flexWrap: "wrap" }}>
-          {[
-            { value: stations.length, label: t("radio.statStations") },
-            { value: "24/7", label: t("radio.statLive") },
-            { value: "2", label: t("radio.statLang") },
-          ].map((stat, i) => (
-            <div key={i} style={{ display: "flex", alignItems: "baseline", gap: "6px" }}>
-              <span style={{ fontSize: "24px", fontWeight: 800, color: "var(--text)" }}>{stat.value}</span>
-              <span style={{ fontSize: "12px", color: "var(--muted)", fontWeight: 500 }}>{stat.label}</span>
-            </div>
-          ))}
-        </div>
-      </HeroCarousel>
+      />
 
       <div style={{ maxWidth: "1360px", margin: "0 auto", padding: "0 24px" }}>
 

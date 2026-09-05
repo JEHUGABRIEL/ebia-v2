@@ -97,23 +97,6 @@ export default function HeroCarousel({
         </div>
 
         {children}
-
-        {slides.length > 1 && (
-          <div style={{ display: "flex", gap: "6px", marginTop: "32px" }}>
-            {slides.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setCurrent(i)}
-                aria-label={`Slide ${i + 1}`}
-                style={{
-                  width: i === current ? "22px" : "6px", height: "6px", borderRadius: "99px",
-                  background: i === current ? accentColor : "rgba(240,235,227,0.3)",
-                  border: "none", cursor: "pointer", padding: 0, transition: "all 0.3s",
-                }}
-              />
-            ))}
-          </div>
-        )}
       </div>
 
       <style>{`
