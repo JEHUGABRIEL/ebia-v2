@@ -43,6 +43,8 @@ export default function ListenerDashboard() {
   const [artistStageName, setArtistStageName] = useState("");
   const [artistGenre, setArtistGenre] = useState("");
   const [artistCity, setArtistCity] = useState("");
+  const [artistContactPhone, setArtistContactPhone] = useState("");
+  const [artistMobileMoneyPhone, setArtistMobileMoneyPhone] = useState("");
   const [artistCreating, setArtistCreating] = useState(false);
   const [artistError, setArtistError] = useState("");
   const [artistIdDoc, setArtistIdDoc] = useState<File | null>(null);
@@ -903,6 +905,8 @@ export default function ListenerDashboard() {
                     { label: "Nom d'artiste", ph: "Ex: Idylle Mamba", val: artistStageName, set: setArtistStageName },
                     { label: "Genre musical", ph: "Ex: Afro-Folk, Hip-Hop...", val: artistGenre, set: setArtistGenre },
                     { label: "Ville", ph: "Ex: Bangui", val: artistCity, set: setArtistCity },
+                    { label: "Téléphone de contact (optionnel)", ph: "+236 XX XX XX XX", val: artistContactPhone, set: setArtistContactPhone },
+                    { label: "Numéro Mobile Money (optionnel)", ph: "+236 XX XX XX XX", val: artistMobileMoneyPhone, set: setArtistMobileMoneyPhone },
                   ].map(f => (
                     <div key={f.label}>
                       <label style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--muted)", display: "block", marginBottom: "8px" }}>{f.label}</label>
@@ -911,6 +915,9 @@ export default function ListenerDashboard() {
                         onBlur={e => (e.target as HTMLInputElement).style.borderColor = "var(--border)"} />
                     </div>
                   ))}
+                  <p style={{ fontSize: "11px", color: "var(--muted)", margin: "-4px 0 0" }}>
+                    Ces deux numéros pourront être renseignés plus tard, mais seront nécessaires avant de publier votre premier titre.
+                  </p>
                   <div>
                     <label style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--muted)", display: "block", marginBottom: "8px" }}>Pièce d'identité (CNI ou passeport)</label>
                     <input type="file" accept="image/*,.pdf" onChange={e => setArtistIdDoc(e.target.files?.[0] ?? null)} style={{ width: "100%", padding: "10px 12px", borderRadius: "10px", background: "var(--bg3)", border: "1px solid var(--border)", color: "var(--text)", fontSize: "12px", boxSizing: "border-box" as const }} />
@@ -921,7 +928,7 @@ export default function ListenerDashboard() {
                     <button disabled={artistCreating || !artistStageName.trim() || !artistIdDoc} onClick={async () => {
                       setArtistCreating(true); setArtistError("");
                       try {
-                        const res = await becomeArtist({ stage_name: artistStageName.trim(), genre: artistGenre.trim(), city: artistCity.trim() }, artistIdDoc!);
+                        const res = await becomeArtist({ stage_name: artistStageName.trim(), genre: artistGenre.trim(), city: artistCity.trim(), contact_phone: artistContactPhone.trim(), mobile_money_phone: artistMobileMoneyPhone.trim() }, artistIdDoc!);
                         setArtistPendingMessage(res.message || "Demande envoyée, en attente de validation par l'équipe E-BIA.");
                         setArtistModalOpen(false); setArtistStep(1);
                       } catch (e: unknown) {

@@ -89,6 +89,7 @@ export type MyArtistProfile = {
   id: string; slug: string; name: string; stage_name: string;
   bio: string; genre: string; city: string;
   avatar_url: string; cover_url: string;
+  contact_phone: string | null; mobile_money_phone: string | null; phone_complete: boolean;
   verified: boolean; plan: "free" | "pro";
   free_tracks_used: number; free_tracks_limit: number;
 };
@@ -107,6 +108,7 @@ export type ArtistRegData = {
   idType: "cni" | "passport";
   idNumber: string;
   genre: string; city: string; bio?: string; phone?: string;
+  contactPhone?: string; mobileMoneyPhone?: string;
 };
 
 /* ── API publique ── */
@@ -140,6 +142,8 @@ export const registerArtist = (data: ArtistRegData, idDocFile: File): Promise<{ 
   fd.append("city", data.city);
   if (data.bio) fd.append("bio", data.bio);
   if (data.phone) fd.append("phone", data.phone);
+  if (data.contactPhone) fd.append("contact_phone", data.contactPhone);
+  if (data.mobileMoneyPhone) fd.append("mobile_money_phone", data.mobileMoneyPhone);
   fd.append("id_doc", idDocFile);
   return fetch(`${BASE}/api/v1/auth/register/artist`, { method: "POST", body: fd })
     .then(async res => {
@@ -153,12 +157,14 @@ export const registerArtist = (data: ArtistRegData, idDocFile: File): Promise<{ 
 export const getMyArtistProfile = () =>
   get<MyArtistProfile>("/api/v1/artists/me");
 
-export const becomeArtist = (data: { stage_name: string; genre: string; city: string }, idDocFile: File): Promise<{ id: string; message: string }> => {
+export const becomeArtist = (data: { stage_name: string; genre: string; city: string; contact_phone?: string; mobile_money_phone?: string }, idDocFile: File): Promise<{ id: string; message: string }> => {
   const fd = new FormData();
   fd.append("stageName", data.stage_name);
   fd.append("name", data.stage_name);
   fd.append("genre", data.genre);
   fd.append("city", data.city);
+  if (data.contact_phone) fd.append("contact_phone", data.contact_phone);
+  if (data.mobile_money_phone) fd.append("mobile_money_phone", data.mobile_money_phone);
   fd.append("id_doc", idDocFile);
   const token = localStorage.getItem('ebia_token') || keycloak.token;
   return fetch(`${BASE}/api/v1/auth/become-artist`, {
@@ -174,6 +180,10 @@ export const becomeArtist = (data: { stage_name: string; genre: string; city: st
 
 export const updateMyArtistProfile = (data: Partial<MyArtistProfile> & { bio?: string }) =>
   put<MyArtistProfile & { pending_changes?: Record<string, unknown> }>("/api/v1/artists/me", data);
+
+/** Contact + Mobile Money : application immédiate, pas de validation admin. */
+export const updateContactInfo = (data: { contactPhone?: string; mobileMoneyPhone?: string }) =>
+  put<MyArtistProfile>("/api/v1/artists/me/contact", data);
 
 export const getMyTracks = () =>
   get<{ data: MyTrack[]; total: number }>("/api/v1/artists/me/tracks");

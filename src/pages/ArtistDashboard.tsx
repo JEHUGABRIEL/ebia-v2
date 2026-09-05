@@ -12,7 +12,7 @@ import UploadTrackModal from "../components/UploadTrackModal";
 import SubmitEventModal from "../components/SubmitEventModal";
 import {
   getMyArtistProfile, getMyTracks, getMyStats, deleteMyTrack,
-  updateMyArtistProfile, uploadArtistImage, getMyEventRequests,
+  updateMyArtistProfile, uploadArtistImage, getMyEventRequests, updateContactInfo,
   type MyArtistProfile, type MyTrack, type ArtistStats, type EventItem
 } from "../lib/api";
 import ReleaseScheduler from "../components/ReleaseScheduler";
@@ -139,6 +139,10 @@ export default function ArtistDashboard() {
   const [editBio, setEditBio] = useState("");
   const [savingProfile, setSavingProfile] = useState(false);
   const [saveMsg, setSaveMsg] = useState("");
+  const [editContactPhone, setEditContactPhone] = useState("");
+  const [editMobileMoneyPhone, setEditMobileMoneyPhone] = useState("");
+  const [savingContact, setSavingContact] = useState(false);
+  const [contactMsg, setContactMsg] = useState("");
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [coverImgPreview, setCoverImgPreview] = useState<string | null>(null);
   const [avatarPending, setAvatarPending] = useState(false);
@@ -151,7 +155,7 @@ export default function ArtistDashboard() {
   const loadProfile = useCallback(() => {
     setLoadingProfile(true);
     getMyArtistProfile()
-      .then(p => { setProfile(p); setEditName(p.name || p.stage_name || ""); setEditCity(p.city || ""); setEditGenre(p.genre || ""); setEditBio(p.bio || ""); })
+      .then(p => { setProfile(p); setEditName(p.name || p.stage_name || ""); setEditCity(p.city || ""); setEditGenre(p.genre || ""); setEditBio(p.bio || ""); setEditContactPhone(p.contact_phone || ""); setEditMobileMoneyPhone(p.mobile_money_phone || ""); })
       .catch(() => {
         /* Backend pas encore prêt — fallback sur données Keycloak */
         setProfile(null);
@@ -210,6 +214,18 @@ export default function ArtistDashboard() {
       loadProfile();
     } catch (e: unknown) { setSaveMsg(e instanceof Error ? e.message : "Erreur de sauvegarde"); }
     finally { setSavingProfile(false); }
+  };
+
+  /* Coordonnées (contact + Mobile Money) — application immédiate, pas de validation admin. */
+  const saveContactInfo = async () => {
+    setSavingContact(true); setContactMsg("");
+    try {
+      await updateContactInfo({ contactPhone: editContactPhone, mobileMoneyPhone: editMobileMoneyPhone });
+      setContactMsg("Coordonnées enregistrées ✓");
+      setTimeout(() => setContactMsg(""), 5000);
+      loadProfile();
+    } catch (e: unknown) { setContactMsg(e instanceof Error ? e.message : "Erreur de sauvegarde"); }
+    finally { setSavingContact(false); }
   };
 
   /* Upload images profil — aperçu local immédiat, mais l'image publique ne change qu'après validation admin */
@@ -752,6 +768,36 @@ export default function ArtistDashboard() {
                         </button>
                       </div>
                     </div>
+
+                    {/* Coordonnées — contact + Mobile Money, non publiques, immédiat */}
+                    <div style={{ padding: "26px 28px", borderRadius: "16px", background: "rgba(240,235,227,0.03)", border: "1px solid var(--border)" }}>
+                      <h2 className="bebas" style={{ fontSize: "22px", color: "var(--text)", marginBottom: "4px" }}>Coordonnées</h2>
+                      <p style={{ fontSize: "12px", color: "var(--muted)", marginBottom: "16px" }}>
+                        Non publiques — utilisées pour vous contacter et pour vos paiements. Requises avant de publier un titre.
+                      </p>
+                      {contactMsg && <div style={{ padding: "10px 12px", borderRadius: "8px", background: contactMsg.includes("Erreur") ? "rgba(220,50,50,0.08)" : "rgba(76,175,130,0.1)", border: `1px solid ${contactMsg.includes("Erreur") ? "rgba(220,50,50,0.2)" : "rgba(76,175,130,0.25)"}`, color: contactMsg.includes("Erreur") ? "#f08080" : "#4caf82", fontSize: "12px", marginBottom: "16px" }}>{contactMsg}</div>}
+                      {!profile?.phone_complete && (
+                        <div style={{ padding: "10px 12px", borderRadius: "8px", background: "rgba(232,96,26,0.08)", border: "1px solid rgba(232,96,26,0.2)", color: "var(--amber)", fontSize: "12px", marginBottom: "16px" }}>
+                          ⚠️ Ajoutez ces deux numéros pour pouvoir publier vos titres.
+                        </div>
+                      )}
+                      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                        {[
+                          { label: "Téléphone de contact", val: editContactPhone, set: setEditContactPhone, ph: "+236 XX XX XX XX" },
+                          { label: "Numéro Mobile Money", val: editMobileMoneyPhone, set: setEditMobileMoneyPhone, ph: "+236 XX XX XX XX" },
+                        ].map(f => (
+                          <div key={f.label}>
+                            <label style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--muted)", display: "block", marginBottom: "5px" }}>{f.label}</label>
+                            <input value={f.val} onChange={e => f.set(e.target.value)} placeholder={f.ph} type="tel" style={inp} onFocus={fa} onBlur={fb} />
+                          </div>
+                        ))}
+                        <button onClick={saveContactInfo} disabled={savingContact} style={{ alignSelf: "flex-start", padding: "11px 22px", borderRadius: "99px", background: savingContact ? "rgba(232,96,26,0.4)" : "var(--amber)", border: "none", color: "#fff", fontSize: "11px", fontWeight: 700, cursor: savingContact ? "not-allowed" : "pointer", transition: "box-shadow 0.2s" }}
+                          onMouseEnter={e => { if (!savingContact) (e.currentTarget as HTMLElement).style.boxShadow = "0 6px 24px rgba(232,96,26,0.4)"; }}
+                          onMouseLeave={e => (e.currentTarget as HTMLElement).style.boxShadow = "none"}>
+                          {savingContact ? "Sauvegarde…" : "Enregistrer les coordonnées"}
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 )
               }
@@ -808,9 +854,11 @@ export default function ArtistDashboard() {
         open={uploadOpen}
         isFreeTierFull={isFreeTierFull}
         freeSlotsLeft={freeSlotsLeft}
+        phoneComplete={profile?.phone_complete ?? false}
         onClose={() => setUploadOpen(false)}
         onUploaded={() => { loadTracks(); loadStats(); loadProfile(); }}
         onViewTracks={() => { setUploadOpen(false); setSection("titres"); }}
+        onGoToProfile={() => { setUploadOpen(false); setSection("profil"); }}
       />
 
       <SubmitEventModal

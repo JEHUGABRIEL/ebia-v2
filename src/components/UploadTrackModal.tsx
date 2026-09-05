@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Upload, FileAudio, X, AlertCircle, Check, Camera, Crown } from "lucide-react";
+import { Upload, FileAudio, X, AlertCircle, Check, Camera, Crown, Phone } from "lucide-react";
 import { uploadTrack } from "../lib/api";
 
 const GENRES = ["Afro-Pop","Afro-Folk","Hip-Hop","Afro-Trap","Jazz / Blues","Gospel","Soukous","R&B","Traditionnel","Soul","Afro-Beat"];
@@ -8,12 +8,14 @@ interface UploadTrackModalProps {
   open: boolean;
   isFreeTierFull: boolean;
   freeSlotsLeft: number;
+  phoneComplete: boolean;
   onClose: () => void;
   onUploaded: () => void;
   onViewTracks: () => void;
+  onGoToProfile: () => void;
 }
 
-export default function UploadTrackModal({ open, isFreeTierFull, freeSlotsLeft, onClose, onUploaded, onViewTracks }: UploadTrackModalProps) {
+export default function UploadTrackModal({ open, isFreeTierFull, freeSlotsLeft, phoneComplete, onClose, onUploaded, onViewTracks, onGoToProfile }: UploadTrackModalProps) {
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
@@ -117,7 +119,18 @@ export default function UploadTrackModal({ open, isFreeTierFull, freeSlotsLeft, 
         {/* Body */}
         <div style={{ padding: "20px 28px 28px", overflowY: "auto" }}>
 
-          {isFreeTierFull ? (
+          {!phoneComplete ? (
+            <div style={{ padding: "32px 16px", borderRadius: "16px", textAlign: "center", background: "rgba(232,96,26,0.05)", border: "1px solid rgba(232,96,26,0.2)" }}>
+              <Phone size={40} style={{ color: "var(--amber)", margin: "0 auto 16px" }} />
+              <h2 className="bebas" style={{ fontSize: "26px", color: "var(--text)", marginBottom: "8px" }}>Coordonnées requises</h2>
+              <p style={{ fontSize: "14px", color: "var(--muted)", marginBottom: "24px", lineHeight: 1.65 }}>
+                Ajoutez votre numéro de contact et votre numéro Mobile Money dans votre profil avant de publier un titre — ils nous permettent de vous contacter et de vous payer.
+              </p>
+              <button onClick={onGoToProfile} style={{ padding: "14px 28px", borderRadius: "99px", background: "var(--amber)", border: "none", color: "#fff", fontSize: "13px", fontWeight: 800, cursor: "pointer" }}>
+                Compléter mon profil →
+              </button>
+            </div>
+          ) : isFreeTierFull ? (
             <div style={{ padding: "32px 16px", borderRadius: "16px", textAlign: "center", background: "rgba(232,96,26,0.05)", border: "1px solid rgba(232,96,26,0.2)" }}>
               <Crown size={40} style={{ color: "var(--amber)", margin: "0 auto 16px" }} />
               <h2 className="bebas" style={{ fontSize: "26px", color: "var(--text)", marginBottom: "8px" }}>Passez en Pro</h2>

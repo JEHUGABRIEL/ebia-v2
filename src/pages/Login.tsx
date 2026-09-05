@@ -6,7 +6,7 @@ import {
   Headphones, Mic, Music2, Drum, Flame, Wind, Cross,
   Globe, Radio, Sparkles, Disc, CircleDot,
   Mail, Lock, User, Phone, MapPin, FileText, ArrowRight,
-  CalendarDays, Shield
+  CalendarDays, Shield, Wallet
 } from "lucide-react";
 import EbiaLogo from "../components/EbiaLogo";
 import { registerListener, registerArtist, getArtists, canonGenre, type Artist } from "../lib/api";
@@ -293,6 +293,8 @@ export default function Login() {
   const [city, setCity] = useState("");
   const [bio, setBio] = useState("");
   const [phone, setPhone] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
+  const [mobileMoneyPhone, setMobileMoneyPhone] = useState("");
   const [idFile, setIdFile] = useState<File | null>(null);
   const [pendingMessage, setPendingMessage] = useState("");
 
@@ -356,7 +358,7 @@ export default function Login() {
     if (!idFile) { setError("La pièce d'identité est requise."); return; }
     setLoading(true); setError("");
     try {
-      const res = await registerArtist({ email, password, firstName, lastName, stageName, birthDate, idType, idNumber, genre: artistGenre, city, bio, phone }, idFile);
+      const res = await registerArtist({ email, password, firstName, lastName, stageName, birthDate, idType, idNumber, genre: artistGenre, city, bio, phone, contactPhone, mobileMoneyPhone }, idFile);
       setPendingMessage(res.message || "Compte créé, en attente de validation par l'équipe E-BIA.");
       setIsLogin(true); setStep(1);
     } catch (e: unknown) { setError(normalizeError(e)); }
@@ -575,6 +577,19 @@ export default function Login() {
           <div>
             <Label>Téléphone</Label>
             <FormInput icon={Phone} type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+236 XX XX XX XX" />
+          </div>
+
+          <div>
+            <Label>Téléphone de contact <span style={{ fontWeight: 400, color: "var(--muted)" }}>(optionnel pour l'instant)</span></Label>
+            <FormInput icon={Phone} type="tel" value={contactPhone} onChange={e => setContactPhone(e.target.value)} placeholder="+236 XX XX XX XX" />
+          </div>
+
+          <div>
+            <Label>Numéro Mobile Money <span style={{ fontWeight: 400, color: "var(--muted)" }}>(optionnel pour l'instant)</span></Label>
+            <FormInput icon={Wallet} type="tel" value={mobileMoneyPhone} onChange={e => setMobileMoneyPhone(e.target.value)} placeholder="+236 XX XX XX XX" />
+            <p style={{ fontSize: "11px", color: "var(--muted)", marginTop: "6px" }}>
+              Ces deux numéros pourront être renseignés plus tard, mais seront nécessaires avant de publier votre premier titre.
+            </p>
           </div>
 
           <div>
