@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useApp } from "../context/AppContext";
-import { ArrowRight, Play, Star, Quote, ChevronRight, Music2, TrendingUp, Disc, Radio } from "lucide-react";
+import { ArrowRight, Play, Star, Quote, ChevronRight, Music2, TrendingUp, Disc, Radio, Mouse } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { getArtists, getTracks, getTrendingTracks, getRetroTracks, BASE, type Artist, type Track } from "../lib/api";
@@ -41,29 +41,24 @@ const UPCOMING_CONCERTS = [
 const HERO_SLIDES = [
   {
     img: "https://images.unsplash.com/photo-1508973379184-7517410fb0bc?w=1920&q=70&auto=format&fit=crop",
-    badge: "République Centrafricaine",
     lines: [
       { text: "La", color: "var(--text)" },
       { text: "musique", color: "var(--amber)" },
-      { text: "de chez", color: "var(--text)" },
-      { text: "nous.", color: "var(--gold)" },
+      { text: "de chez nous.", color: "var(--gold)" },
     ],
     description: "Découvrez, écoutez et soutenez les artistes qui définissent le son de la République Centrafricaine.",
   },
   {
     img: "https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=1920&q=70&auto=format&fit=crop",
-    badge: "Radios en direct",
     lines: [
       { text: "Toutes", color: "var(--text)" },
       { text: "les radios", color: "var(--amber)" },
-      { text: "de la", color: "var(--text)" },
-      { text: "RCA.", color: "var(--gold)" },
+      { text: "de la RCA.", color: "var(--gold)" },
     ],
     description: "Écoutez vos stations préférées en direct, 24h/24, où que vous soyez dans le monde.",
   },
   {
     img: "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=1920&q=70&auto=format&fit=crop",
-    badge: "Concerts & festivals",
     lines: [
       { text: "Vivez", color: "var(--text)" },
       { text: "la scène", color: "var(--amber)" },
@@ -73,7 +68,6 @@ const HERO_SLIDES = [
   },
   {
     img: "https://images.unsplash.com/photo-1520523839897-bd0b52f945a0?w=1920&q=70&auto=format&fit=crop",
-    badge: "Espace artiste",
     lines: [
       { text: "Ta voix.", color: "var(--text)" },
       { text: "Ton public", color: "var(--amber)" },
@@ -287,16 +281,6 @@ export default function Landing() {
         <div className="section-pad" style={{ maxWidth: "1360px", margin: "0 auto", width: "100%", position: "relative", zIndex: 1 }}>
           <div className="hero-grid">
             <div key={heroSlide}>
-              <div className="fade-up" style={{
-                display: "inline-flex", alignItems: "center", gap: "8px",
-                padding: "6px 14px", borderRadius: "99px",
-                border: "1px solid rgba(232,96,26,0.3)", marginBottom: "36px",
-                fontSize: "11px", fontWeight: 600, letterSpacing: "0.18em",
-                textTransform: "uppercase", color: "var(--amber)",
-              }}>
-                <span style={{ width: "5px", height: "5px", borderRadius: "50%", background: "var(--amber)", display: "inline-block" }} />
-                {HERO_SLIDES[heroSlide].badge}
-              </div>
               <h1 className="bebas fade-up-2" style={{
                 fontSize: "clamp(72px, 11vw, 148px)", lineHeight: 0.9, letterSpacing: "0.02em", marginBottom: "36px", textAlign: "center",
               }}>
@@ -346,6 +330,16 @@ export default function Landing() {
               )}
             </div>
           </div>
+        </div>
+
+        {/* Indicateur de défilement */}
+        <div style={{
+          position: "absolute", bottom: "28px", left: "50%", transform: "translateX(-50%)",
+          display: "flex", flexDirection: "column", alignItems: "center", gap: "8px",
+          zIndex: 1, animation: "scrollHintBounce 2s ease-in-out infinite",
+        }}>
+          <Mouse size={22} style={{ color: "rgba(240,235,227,0.5)" }} />
+          <span style={{ fontSize: "10px", color: "rgba(240,235,227,0.4)", letterSpacing: "0.15em", textTransform: "uppercase" }}>Scroll</span>
         </div>
       </section>
 
@@ -796,6 +790,7 @@ export default function Landing() {
         .comment-card { width: calc((100vw - 96px) / 3 - 8px); flex-shrink: 0; }
         @keyframes scrollComments { 0% { transform: translateX(0); } 100% { transform: translateX(-33.3333%); } }
         @keyframes heroKenBurns { from { transform: scale(1); } to { transform: scale(1.08); } }
+        @keyframes scrollHintBounce { 0%, 100% { transform: translateX(-50%) translateY(0); opacity: 0.7; } 50% { transform: translateX(-50%) translateY(8px); opacity: 1; } }
         @media (max-width: 1024px) { .comment-card { width: calc((100vw - 96px) / 2 - 8px); } }
         @media (max-width: 640px) { .comment-card { width: calc(100vw - 64px); } }
       `}</style>
