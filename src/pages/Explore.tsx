@@ -371,6 +371,22 @@ export default function Explore() {
           </div>
         ) : (
           <>
+            {/* ══════════ NOUVEAUTÉS ══════════ */}
+            <div style={{ marginBottom: "56px" }}>
+              <h2 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "22px", fontWeight: 800, color: "var(--text)", marginBottom: "16px" }}>
+                ✨ Nouveautés
+              </h2>
+              {renderTrackRow(newList, catalogLoading)}
+            </div>
+
+            {/* ══════════ TENDANCES ══════════ */}
+            <div style={{ marginBottom: "56px" }}>
+              <h2 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "22px", fontWeight: 800, color: "var(--text)", marginBottom: "16px" }}>
+                <TrendingUp size={19} style={{ color: "var(--amber)" }} /> Tendances
+              </h2>
+              {renderTrackRow(trendingList, catalogLoading)}
+            </div>
+
             {/* ══════════ RECOMMANDATIONS ══════════ */}
             {(recLoading || recTracks.length > 0) && (
               <div style={{ marginBottom: "56px" }}>
@@ -452,6 +468,14 @@ export default function Explore() {
               </div>
             )}
 
+            {/* ══════════ RÉTRO ══════════ */}
+            <div style={{ marginBottom: "56px" }}>
+              <h2 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "22px", fontWeight: 800, color: "var(--text)", marginBottom: "16px" }}>
+                <Disc size={19} style={{ color: "var(--amber)" }} /> Rétro
+              </h2>
+              {renderTrackRow(retroList, catalogLoading)}
+            </div>
+
             {/* ── CTA: Devenir artiste ── */}
             <div style={{
               marginBottom: "56px", padding: "40px 48px",
@@ -491,33 +515,12 @@ export default function Explore() {
               </button>
             </div>
 
-            {/* ══════════ POUR VOUS / TENDANCES / NOUVEAUTÉS / RÉTRO ══════════ */}
-            <div style={{ marginBottom: "56px" }}>
+            {/* ══════════ POUR VOUS ══════════ */}
+            <div>
               <h2 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "22px", fontWeight: 800, color: "var(--text)", marginBottom: "16px" }}>
                 🎯 Pour vous
               </h2>
               {renderTrackRow(recTracks, recLoading)}
-            </div>
-
-            <div style={{ marginBottom: "56px" }}>
-              <h2 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "22px", fontWeight: 800, color: "var(--text)", marginBottom: "16px" }}>
-                <TrendingUp size={19} style={{ color: "var(--amber)" }} /> Tendances
-              </h2>
-              {renderTrackRow(trendingList, catalogLoading)}
-            </div>
-
-            <div style={{ marginBottom: "56px" }}>
-              <h2 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "22px", fontWeight: 800, color: "var(--text)", marginBottom: "16px" }}>
-                ✨ Nouveautés
-              </h2>
-              {renderTrackRow(newList, catalogLoading)}
-            </div>
-
-            <div>
-              <h2 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "22px", fontWeight: 800, color: "var(--text)", marginBottom: "16px" }}>
-                <Disc size={19} style={{ color: "var(--amber)" }} /> Rétro
-              </h2>
-              {renderTrackRow(retroList, catalogLoading)}
             </div>
           </>
         )}
