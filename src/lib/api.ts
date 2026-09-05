@@ -184,6 +184,36 @@ export const getMyStats = () =>
 export const deleteMyTrack = (trackId: string) =>
   del<{ message: string }>(`/api/v1/artists/me/tracks/${trackId}`);
 
+/* ── Événements ── */
+export type EventItem = {
+  id: string; artistId: string; artistName?: string; artistSlug?: string; artistAvatarUrl?: string;
+  title: string; description?: string; venue: string; city: string;
+  eventDate: string; eventTime?: string; genre?: string;
+  free: boolean; ticketPrice?: number; capacity?: number;
+  coverImageUrl?: string; status: "pending" | "approved" | "rejected";
+  rejectionReason?: string; createdAt: string;
+};
+
+export const getEvents = () =>
+  get<{ data: EventItem[]; total: number }>("/api/v1/events");
+
+export const getEvent = (id: string) =>
+  get<EventItem>(`/api/v1/events/${id}`);
+
+export const getMyEventRequests = () =>
+  get<{ data: EventItem[]; total: number }>("/api/v1/artists/me/events");
+
+export const submitEventRequest = (formData: FormData): Promise<EventItem> =>
+  fetch(`${BASE}/api/v1/artists/me/events`, {
+    method: "POST",
+    headers: (localStorage.getItem('ebia_token') || keycloak.token) ? { Authorization: `Bearer ${localStorage.getItem('ebia_token') || keycloak.token!}` } : undefined,
+    body: formData,
+  }).then(async res => {
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
+    return body as EventItem;
+  });
+
 /* ── Titres tendances & rétro ── */
 export const getTrendingTracks = (limit = 20) =>
   get<Track[]>(`/api/v1/tracks/trending?limit=${limit}`);
@@ -680,6 +710,20 @@ export const approveTrack = (id: string) =>
   post<{ message: string }>(`/api/admin/validations/tracks/${id}/approve`, {});
 export const rejectTrack = (id: string, reason?: string) =>
   post<{ message: string }>(`/api/admin/validations/tracks/${id}/reject`, { reason });
+
+export type EventValidation = {
+  id: string; title: string; description?: string; venue: string; city: string;
+  eventDate: string; eventTime?: string; genre?: string; free: boolean;
+  ticketPrice?: number; capacity?: number; coverImageUrl?: string;
+  artistId: string; artistName: string; createdAt: string;
+};
+
+export const getEventValidations = () =>
+  get<EventValidation[]>(`/api/admin/validations/events`);
+export const approveEvent = (id: string) =>
+  post<{ message: string }>(`/api/admin/validations/events/${id}/approve`, {});
+export const rejectEvent = (id: string, reason?: string) =>
+  post<{ message: string }>(`/api/admin/validations/events/${id}/reject`, { reason });
 
 /* ── User Settings ── */
 export type UserSettings = {

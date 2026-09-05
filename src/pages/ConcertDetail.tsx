@@ -1,11 +1,12 @@
 import { useTranslation } from "react-i18next";
 import { useParams, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
-  Calendar, MapPin, Clock, Users, Music2, ArrowLeft, Bell, CheckCircle2,
-  Share2, Heart, Ticket, Tag, Mic2, Star, ChevronRight, ExternalLink,
+  Calendar, MapPin, Clock, Ticket, Music2, ArrowLeft, Bell, CheckCircle2,
+  Share2, Heart, ChevronRight, ExternalLink, Loader,
 } from "lucide-react";
-import { CONCERTS, STATUS_CONFIG } from "../data/concerts";
+import { getEvent, getEvents, type EventItem } from "../lib/api";
+import { eventColor, fmtEventDate } from "../lib/eventColors";
 
 export default function ConcertDetail() {
   const { t } = useTranslation();
@@ -13,10 +14,26 @@ export default function ConcertDetail() {
   const navigate = useNavigate();
   const [subscribed, setSubscribed] = useState(false);
   const [liked, setLiked] = useState(false);
+  const [event, setEvent] = useState<EventItem | null>(null);
+  const [otherEvents, setOtherEvents] = useState<EventItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const concert = CONCERTS.find(c => c.id === id);
+  useEffect(() => {
+    if (!id) return;
+    setLoading(true);
+    getEvent(id).then(setEvent).catch(() => setEvent(null)).finally(() => setLoading(false));
+    getEvents().then(r => setOtherEvents(r.data)).catch(() => setOtherEvents([]));
+  }, [id]);
 
-  if (!concert) {
+  if (loading) {
+    return (
+      <div style={{ minHeight: "100vh", background: "var(--bg)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <Loader size={28} style={{ color: "var(--muted)", animation: "spin 1s linear infinite" }} />
+      </div>
+    );
+  }
+
+  if (!event) {
     return (
       <div style={{ minHeight: "100vh", background: "var(--bg)", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <div style={{ textAlign: "center" }}>
@@ -43,7 +60,7 @@ export default function ConcertDetail() {
     );
   }
 
-  const status = STATUS_CONFIG[concert.status];
+  const color = eventColor(event.genre);
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg)", paddingBottom: "120px" }}>
@@ -52,20 +69,22 @@ export default function ConcertDetail() {
       <section style={{
         position: "relative", overflow: "hidden",
         padding: "120px 24px 60px",
-        background: `linear-gradient(135deg, ${concert.coverColor}15, rgba(240,235,227,0.02))`,
+        background: event.coverImageUrl
+          ? `linear-gradient(135deg, rgba(0,0,0,0.55), rgba(0,0,0,0.75)), url(${event.coverImageUrl}) center/cover`
+          : `linear-gradient(135deg, ${color}15, rgba(240,235,227,0.02))`,
       }}>
         {/* Decorative elements */}
         <div style={{
           position: "absolute", top: "-30%", right: "-10%",
           width: "500px", height: "500px", borderRadius: "50%",
-          background: `radial-gradient(circle, ${concert.coverColor}12 0%, transparent 65%)`,
+          background: `radial-gradient(circle, ${color}12 0%, transparent 65%)`,
           pointerEvents: "none",
         }} />
         {[240, 160, 100].map((s, i) => (
           <div key={i} style={{
             position: "absolute", top: `${20 + i * 15}%`, right: `${5 + i * 8}%`,
             width: s, height: s, borderRadius: "50%",
-            border: `1px solid ${concert.coverColor}${10 + i * 4}`,
+            border: `1px solid ${color}${10 + i * 4}`,
             pointerEvents: "none",
           }} />
         ))}
@@ -87,54 +106,60 @@ export default function ConcertDetail() {
             <ArrowLeft size={14} /> {t("common.back")}
           </button>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "48px", alignItems: "center" }}>
+          <div style={{ display: "grid", gridTemplateColumns: event.coverImageUrl ? "1fr" : "1fr 1fr", gap: "48px", alignItems: "center" }}>
             {/* Left: Info */}
             <div>
               {/* Badges */}
               <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px", flexWrap: "wrap" }}>
                 <span style={{
                   padding: "5px 14px", borderRadius: "99px",
-                  background: status.bg, color: status.color,
+                  background: event.free ? "rgba(16,185,129,0.15)" : "rgba(232,96,26,0.15)",
+                  color: event.free ? "#10B981" : "var(--amber)",
                   fontSize: "11px", fontWeight: 700, letterSpacing: "0.05em",
-                }}>{status.label}</span>
-                <span style={{
-                  padding: "5px 12px", borderRadius: "99px",
-                  background: "rgba(240,235,227,0.06)", color: "var(--muted)",
-                  fontSize: "11px", fontWeight: 600,
-                }}>{concert.genre}</span>
+                }}>{event.free ? t("concerts.free") : t("concerts.paid")}</span>
+                {event.genre && (
+                  <span style={{
+                    padding: "5px 12px", borderRadius: "99px",
+                    background: "rgba(240,235,227,0.06)", color: "var(--muted)",
+                    fontSize: "11px", fontWeight: 600,
+                  }}>{event.genre}</span>
+                )}
               </div>
 
               <h1 style={{
                 fontSize: "clamp(32px, 5vw, 48px)", fontWeight: 800,
                 color: "var(--text)", lineHeight: 1.05, marginBottom: "8px",
               }}>
-                {concert.title}
+                {event.title}
               </h1>
 
-              <p style={{
-                fontSize: "16px", color: concert.coverColor,
-                fontWeight: 600, marginBottom: "16px",
-              }}>
-                {concert.artist}
-              </p>
+              {event.artistName && (
+                <p style={{
+                  fontSize: "16px", color, fontWeight: 600, marginBottom: "16px",
+                }}>
+                  {event.artistName}
+                </p>
+              )}
 
-              <p style={{
-                fontSize: "15px", color: "var(--muted)", lineHeight: 1.8,
-                marginBottom: "32px", maxWidth: "520px",
-              }}>
-                {concert.longDescription || concert.description}
-              </p>
+              {event.description && (
+                <p style={{
+                  fontSize: "15px", color: "var(--muted)", lineHeight: 1.8,
+                  marginBottom: "32px", maxWidth: "520px",
+                }}>
+                  {event.description}
+                </p>
+              )}
 
               {/* Info grid */}
               <div style={{
                 display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px",
-                marginBottom: "32px",
+                marginBottom: "32px", maxWidth: event.coverImageUrl ? "560px" : "none",
               }}>
                 {[
-                  { icon: Calendar, label: t("concerts.detail.date"), value: concert.date },
-                  { icon: Clock, label: t("concerts.detail.time"), value: concert.time },
-                  { icon: MapPin, label: t("concerts.detail.location"), value: concert.location },
-                  { icon: Users, label: t("concerts.detail.capacity"), value: `${concert.attendees?.toLocaleString("fr-FR")} ${t("concerts.attendees")}` },
+                  { icon: Calendar, label: t("concerts.detail.date"), value: fmtEventDate(event.eventDate) },
+                  ...(event.eventTime ? [{ icon: Clock, label: t("concerts.detail.time"), value: event.eventTime }] : []),
+                  { icon: MapPin, label: t("concerts.detail.location"), value: `${event.venue}, ${event.city}` },
+                  ...(event.capacity ? [{ icon: Ticket, label: t("concerts.detail.capacity"), value: `${event.capacity.toLocaleString("fr-FR")} places` }] : []),
                 ].map((item, i) => (
                   <div key={i} style={{
                     padding: "14px 16px", borderRadius: "12px",
@@ -142,7 +167,7 @@ export default function ConcertDetail() {
                     border: "1px solid rgba(240,235,227,0.05)",
                   }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
-                      <item.icon size={13} style={{ color: concert.coverColor }} />
+                      <item.icon size={13} style={{ color }} />
                       <span style={{ fontSize: "10px", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)" }}>
                         {item.label}
                       </span>
@@ -156,34 +181,22 @@ export default function ConcertDetail() {
 
               {/* Actions */}
               <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-                {concert.status === "sold_out" ? (
-                  <div style={{
+                <button
+                  onClick={() => setSubscribed(true)}
+                  style={{
                     display: "inline-flex", alignItems: "center", gap: "8px",
                     padding: "14px 28px", borderRadius: "99px",
-                    background: "rgba(240,128,128,0.1)", color: "#f08080",
-                    border: "1px solid rgba(240,128,128,0.2)",
-                    fontWeight: 700, fontSize: "14px",
-                  }}>
-                    <Ticket size={16} /> {t("concerts.detail.soldOut")}
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => setSubscribed(true)}
-                    style={{
-                      display: "inline-flex", alignItems: "center", gap: "8px",
-                      padding: "14px 28px", borderRadius: "99px",
-                      background: subscribed ? "rgba(16,185,129,0.15)" : concert.coverColor,
-                      color: subscribed ? "#10B981" : "#fff",
-                      border: subscribed ? "1px solid rgba(16,185,129,0.3)" : "none",
-                      fontWeight: 700, fontSize: "14px", cursor: "pointer",
-                      transition: "all 0.2s",
-                    }}
-                    onMouseEnter={e => { if (!subscribed) (e.currentTarget as HTMLElement).style.boxShadow = `0 8px 24px ${concert.coverColor}40`; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}
-                  >
-                    {subscribed ? <><CheckCircle2 size={16} /> {t("concerts.subscribed")}</> : <><Bell size={16} /> {t("concerts.detail.register")}</>}
-                  </button>
-                )}
+                    background: subscribed ? "rgba(16,185,129,0.15)" : color,
+                    color: subscribed ? "#10B981" : "#fff",
+                    border: subscribed ? "1px solid rgba(16,185,129,0.3)" : "none",
+                    fontWeight: 700, fontSize: "14px", cursor: "pointer",
+                    transition: "all 0.2s",
+                  }}
+                  onMouseEnter={e => { if (!subscribed) (e.currentTarget as HTMLElement).style.boxShadow = `0 8px 24px ${color}40`; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}
+                >
+                  {subscribed ? <><CheckCircle2 size={16} /> {t("concerts.subscribed")}</> : <><Bell size={16} /> {t("concerts.detail.register")}</>}
+                </button>
 
                 <button
                   onClick={() => setLiked(!liked)}
@@ -212,33 +225,37 @@ export default function ConcertDetail() {
               </div>
             </div>
 
-            {/* Right: Visual */}
-            <div style={{
-              display: "flex", alignItems: "center", justifyContent: "center",
-              position: "relative", minHeight: "360px",
-            }}>
-              <div style={{ textAlign: "center", position: "relative", zIndex: 1 }}>
-                <Music2 size={80} style={{ color: concert.coverColor, opacity: 0.2, marginBottom: "20px" }} />
-                <div className="bebas" style={{
-                  fontSize: "96px", color: concert.coverColor, opacity: 0.1, lineHeight: 1,
-                }}>
-                  {concert.date.split(" ")[1]}
+            {/* Right: Visual (only when no cover image) */}
+            {!event.coverImageUrl && (
+              <div style={{
+                display: "flex", alignItems: "center", justifyContent: "center",
+                position: "relative", minHeight: "360px",
+              }}>
+                <div style={{ textAlign: "center", position: "relative", zIndex: 1 }}>
+                  <Music2 size={80} style={{ color, opacity: 0.2, marginBottom: "20px" }} />
+                  <div className="bebas" style={{
+                    fontSize: "96px", color, opacity: 0.1, lineHeight: 1,
+                  }}>
+                    {fmtEventDate(event.eventDate, { day: "numeric", month: "short" })}
+                  </div>
+                  {event.genre && (
+                    <div style={{
+                      marginTop: "8px", fontSize: "14px", fontWeight: 600,
+                      color, opacity: 0.5,
+                    }}>
+                      {event.genre}
+                    </div>
+                  )}
                 </div>
-                <div style={{
-                  marginTop: "8px", fontSize: "14px", fontWeight: 600,
-                  color: concert.coverColor, opacity: 0.5,
-                }}>
-                  {concert.genre}
-                </div>
+                {/* Concentric circles */}
+                {[280, 200, 120].map((s, i) => (
+                  <div key={i} style={{
+                    position: "absolute", width: s, height: s, borderRadius: "50%",
+                    border: `1px solid ${color}${8 + i * 4}`,
+                  }} />
+                ))}
               </div>
-              {/* Concentric circles */}
-              {[280, 200, 120].map((s, i) => (
-                <div key={i} style={{
-                  position: "absolute", width: s, height: s, borderRadius: "50%",
-                  border: `1px solid ${concert.coverColor}${8 + i * 4}`,
-                }} />
-              ))}
-            </div>
+            )}
           </div>
         </div>
       </section>
@@ -246,83 +263,9 @@ export default function ConcertDetail() {
       {/* ── MAIN CONTENT ── */}
       <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "0 24px" }}>
 
-        {/* ── LINEUP ── */}
-        {concert.lineup && concert.lineup.length > 0 && (
-          <div style={{ marginTop: "48px", marginBottom: "48px" }}>
-            <div style={{
-              display: "flex", alignItems: "center", gap: "10px", marginBottom: "24px",
-            }}>
-              <Mic2 size={18} style={{ color: concert.coverColor }} />
-              <h2 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text)" }}>
-                {t("concerts.detail.lineup")}
-              </h2>
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "12px" }}>
-              {concert.lineup.map((artist, i) => (
-                <div key={i} style={{
-                  display: "flex", alignItems: "center", gap: "12px",
-                  padding: "16px 18px", borderRadius: "14px",
-                  background: i === 0 ? `${concert.coverColor}10` : "rgba(240,235,227,0.03)",
-                  border: `1px solid ${i === 0 ? `${concert.coverColor}25` : "rgba(240,235,227,0.05)"}`,
-                  transition: "border-color 0.2s, transform 0.2s", cursor: "pointer",
-                }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = `${concert.coverColor}40`; (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = i === 0 ? `${concert.coverColor}25` : "rgba(240,235,227,0.05)"; (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; }}
-                >
-                  <div style={{
-                    width: "40px", height: "40px", borderRadius: "50%",
-                    background: i === 0 ? `${concert.coverColor}20` : "rgba(240,235,227,0.06)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    flexShrink: 0,
-                  }}>
-                    {i === 0 ? (
-                      <Star size={16} style={{ color: concert.coverColor }} />
-                    ) : (
-                      <Music2 size={14} style={{ color: "var(--muted)" }} />
-                    )}
-                  </div>
-                  <div>
-                    <p style={{ fontSize: "14px", fontWeight: 700, color: "var(--text)" }}>{artist}</p>
-                    {i === 0 && (
-                      <p style={{ fontSize: "10px", fontWeight: 600, color: concert.coverColor, letterSpacing: "0.1em", textTransform: "uppercase" }}>
-                        Tête d'affiche
-                      </p>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* ── TAGS ── */}
-        {concert.tags && concert.tags.length > 0 && (
-          <div style={{ marginBottom: "48px" }}>
-            <div style={{
-              display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px",
-            }}>
-              <Tag size={16} style={{ color: concert.coverColor }} />
-              <h3 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text)" }}>
-                {t("concerts.detail.tags")}
-              </h3>
-            </div>
-            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-              {concert.tags.map((tag, i) => (
-                <span key={i} style={{
-                  padding: "6px 14px", borderRadius: "99px",
-                  background: `${concert.coverColor}08`,
-                  border: `1px solid ${concert.coverColor}20`,
-                  color: concert.coverColor, fontSize: "12px", fontWeight: 600,
-                }}>{tag}</span>
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* ── PRACTICAL INFO ── */}
         <div style={{
-          padding: "32px", borderRadius: "20px",
+          padding: "32px", borderRadius: "20px", marginTop: "48px",
           background: "rgba(240,235,227,0.02)", border: "1px solid rgba(240,235,227,0.05)",
           marginBottom: "48px",
         }}>
@@ -334,19 +277,23 @@ export default function ConcertDetail() {
               {
                 icon: MapPin,
                 title: t("concerts.detail.howToGetThere"),
-                value: concert.location,
-                color: concert.coverColor,
+                value: `${event.venue}, ${event.city}`,
+                color,
               },
               {
                 icon: Clock,
                 title: t("concerts.detail.schedule"),
-                value: `${t("concerts.detail.doors")} 18h00 · ${t("concerts.detail.show")} ${concert.time}`,
+                value: event.eventTime ? `${t("concerts.detail.show")} ${event.eventTime}` : t("concerts.detail.schedule"),
                 color: "#8B5CF6",
               },
               {
                 icon: Ticket,
                 title: t("concerts.detail.tickets"),
-                value: concert.status === "free" ? t("concerts.detail.freeEntry") : concert.status === "sold_out" ? t("concerts.detail.soldOut") : t("concerts.detail.onSale"),
+                value: event.free
+                  ? t("concerts.detail.freeEntry")
+                  : event.ticketPrice
+                    ? `${event.ticketPrice.toLocaleString("fr-FR")} FCFA`
+                    : t("concerts.detail.onSale"),
                 color: "#10B981",
               },
             ].map((item, i) => (
@@ -376,60 +323,66 @@ export default function ConcertDetail() {
         </div>
 
         {/* ── OTHER CONCERTS ── */}
-        <div style={{ marginBottom: "48px" }}>
-          <div style={{
-            display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px",
-          }}>
-            <h2 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text)" }}>
-              {t("concerts.detail.otherConcerts")}
-            </h2>
-            <button
-              onClick={() => navigate("/concerts")}
-              style={{
-                display: "inline-flex", alignItems: "center", gap: "6px",
-                fontSize: "13px", fontWeight: 600, color: "var(--amber)",
-                background: "none", border: "none", cursor: "pointer",
-              }}
-            >
-              {t("concerts.detail.viewAll")} <ChevronRight size={14} />
-            </button>
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "14px" }}>
-            {CONCERTS.filter(c => c.id !== concert.id).slice(0, 3).map(other => (
-              <div key={other.id} onClick={() => navigate(`/concerts/${other.id}`)} style={{
-                padding: "20px", borderRadius: "14px",
-                background: "rgba(240,235,227,0.02)", border: "1px solid rgba(240,235,227,0.05)",
-                transition: "transform 0.2s, border-color 0.2s", cursor: "pointer",
-              }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(-3px)"; (e.currentTarget as HTMLElement).style.borderColor = `${other.coverColor}30`; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(240,235,227,0.05)"; }}
+        {otherEvents.filter(o => o.id !== event.id).length > 0 && (
+          <div style={{ marginBottom: "48px" }}>
+            <div style={{
+              display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px",
+            }}>
+              <h2 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text)" }}>
+                {t("concerts.detail.otherConcerts")}
+              </h2>
+              <button
+                onClick={() => navigate("/concerts")}
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: "6px",
+                  fontSize: "13px", fontWeight: 600, color: "var(--amber)",
+                  background: "none", border: "none", cursor: "pointer",
+                }}
               >
-                <div style={{
-                  display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px",
-                }}>
-                  <span style={{
-                    padding: "3px 10px", borderRadius: "99px",
-                    background: STATUS_CONFIG[other.status].bg, color: STATUS_CONFIG[other.status].color,
-                    fontSize: "10px", fontWeight: 700,
-                  }}>{STATUS_CONFIG[other.status].label}</span>
-                  <ExternalLink size={12} style={{ color: "var(--muted)" }} />
-                </div>
-                <p style={{ fontSize: "16px", fontWeight: 700, color: "var(--text)", marginBottom: "4px" }}>{other.title}</p>
-                <p style={{ fontSize: "12px", color: other.coverColor, fontWeight: 600, marginBottom: "10px" }}>{other.artist}</p>
-                <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11px", color: "var(--muted)" }}>
-                  <Calendar size={11} /> {other.date} · <MapPin size={11} /> {other.location.split(",")[0]}
-                </div>
-              </div>
-            ))}
+                {t("concerts.detail.viewAll")} <ChevronRight size={14} />
+              </button>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "14px" }}>
+              {otherEvents.filter(o => o.id !== event.id).slice(0, 3).map(other => {
+                const otherColor = eventColor(other.genre);
+                return (
+                  <div key={other.id} onClick={() => navigate(`/concerts/${other.id}`)} style={{
+                    padding: "20px", borderRadius: "14px",
+                    background: "rgba(240,235,227,0.02)", border: "1px solid rgba(240,235,227,0.05)",
+                    transition: "transform 0.2s, border-color 0.2s", cursor: "pointer",
+                  }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(-3px)"; (e.currentTarget as HTMLElement).style.borderColor = `${otherColor}30`; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(240,235,227,0.05)"; }}
+                  >
+                    <div style={{
+                      display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px",
+                    }}>
+                      <span style={{
+                        padding: "3px 10px", borderRadius: "99px",
+                        background: other.free ? "rgba(16,185,129,0.1)" : "rgba(232,96,26,0.1)",
+                        color: other.free ? "#10B981" : "var(--amber)",
+                        fontSize: "10px", fontWeight: 700,
+                      }}>{other.free ? t("concerts.free") : t("concerts.paid")}</span>
+                      <ExternalLink size={12} style={{ color: "var(--muted)" }} />
+                    </div>
+                    <p style={{ fontSize: "16px", fontWeight: 700, color: "var(--text)", marginBottom: "4px" }}>{other.title}</p>
+                    {other.artistName && <p style={{ fontSize: "12px", color: otherColor, fontWeight: 600, marginBottom: "10px" }}>{other.artistName}</p>}
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11px", color: "var(--muted)" }}>
+                      <Calendar size={11} /> {fmtEventDate(other.eventDate)} · <MapPin size={11} /> {other.city}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* ── BOTTOM CTA ── */}
         <div style={{
           padding: "40px", borderRadius: "20px",
-          background: `linear-gradient(135deg, ${concert.coverColor}10, ${concert.coverColor}04)`,
-          border: `1px solid ${concert.coverColor}20`,
+          background: `linear-gradient(135deg, ${color}10, ${color}04)`,
+          border: `1px solid ${color}20`,
           display: "flex", alignItems: "center", justifyContent: "space-between",
           flexWrap: "wrap", gap: "20px",
         }}>
@@ -446,13 +399,13 @@ export default function ConcertDetail() {
             style={{
               display: "inline-flex", alignItems: "center", gap: "8px",
               padding: "14px 28px", borderRadius: "99px",
-              background: subscribed ? "rgba(16,185,129,0.15)" : concert.coverColor,
+              background: subscribed ? "rgba(16,185,129,0.15)" : color,
               color: subscribed ? "#10B981" : "#fff",
               border: subscribed ? "1px solid rgba(16,185,129,0.3)" : "none",
               fontWeight: 700, fontSize: "14px", cursor: "pointer",
               transition: "all 0.2s",
             }}
-            onMouseEnter={e => { if (!subscribed) (e.currentTarget as HTMLElement).style.boxShadow = `0 8px 24px ${concert.coverColor}40`; }}
+            onMouseEnter={e => { if (!subscribed) (e.currentTarget as HTMLElement).style.boxShadow = `0 8px 24px ${color}40`; }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}
           >
             {subscribed ? <><CheckCircle2 size={16} /> {t("concerts.subscribed")}</> : <><Bell size={16} /> {t("concerts.subscribe")}</>}

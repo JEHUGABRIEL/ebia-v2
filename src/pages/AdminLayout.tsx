@@ -44,6 +44,7 @@ const NAV_ITEMS: NavGroup[] = [
       { to: "/admin/validations/artists", label: "Comptes artistes" },
       { to: "/admin/validations/profile", label: "Modifications de profil" },
       { to: "/admin/validations/tracks", label: "Titres" },
+      { to: "/admin/validations/events", label: "Événements" },
     ],
   },
   {

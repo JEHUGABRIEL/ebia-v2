@@ -4,21 +4,22 @@ import { useNavigate, Link } from "react-router-dom";
 import {
   Home, Music2, Upload, BarChart2, Settings, LogOut,
   Play, Pause, Trash2, Eye, Heart, Headphones, TrendingUp,
-  Camera, Plus, Mic2, Lock, Crown, Zap, Menu, X as XIcon
+  Camera, Plus, Mic2, Lock, Crown, Zap, Menu, X as XIcon, CalendarPlus, MapPin, Calendar,
 } from "lucide-react";
 import LogoutModal from "../components/LogoutModal";
 import EbiaLogo from "../components/EbiaLogo";
 import UploadTrackModal from "../components/UploadTrackModal";
+import SubmitEventModal from "../components/SubmitEventModal";
 import {
   getMyArtistProfile, getMyTracks, getMyStats, deleteMyTrack,
-  updateMyArtistProfile, uploadArtistImage,
-  type MyArtistProfile, type MyTrack, type ArtistStats
+  updateMyArtistProfile, uploadArtistImage, getMyEventRequests,
+  type MyArtistProfile, type MyTrack, type ArtistStats, type EventItem
 } from "../lib/api";
 import ReleaseScheduler from "../components/ReleaseScheduler";
 import AlbumSection from "../components/AlbumSection";
 import EnhancedStats from "../components/EnhancedStats";
 
-type Section = "accueil" | "titres" | "albums" | "profil" | "stats" | "parametres";
+type Section = "accueil" | "titres" | "albums" | "evenements" | "profil" | "stats" | "parametres";
 
 const FREE_LIMIT = 5;
 const fmtNum = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
@@ -32,6 +33,15 @@ const TRACK_STATUS_STYLES: Record<string, { label: string; color: string; bg: st
   rejected: { label: "Rejeté", color: "#f08080", bg: "rgba(220,50,50,0.1)", border: "rgba(220,50,50,0.25)" },
   draft: { label: "Brouillon", color: "var(--muted)", bg: "rgba(240,235,227,0.06)", border: "var(--border)" },
 };
+
+const EVENT_STATUS_STYLES: Record<string, { label: string; color: string; bg: string; border: string }> = {
+  approved: { label: "Validé", color: "#4caf82", bg: "rgba(76,175,130,0.12)", border: "rgba(76,175,130,0.25)" },
+  pending: { label: "En attente", color: "var(--amber)", bg: "rgba(232,96,26,0.12)", border: "rgba(232,96,26,0.3)" },
+  rejected: { label: "Rejeté", color: "#f08080", bg: "rgba(220,50,50,0.1)", border: "rgba(220,50,50,0.25)" },
+};
+
+const fmtEventDate = (iso: string) =>
+  new Date(iso + "T00:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
 
 interface FreeBannerProps { isFreeTierFull: boolean; freeSlotsLeft: number; publishedCount: number; }
 
@@ -107,6 +117,7 @@ export default function ArtistDashboard() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [eventModalOpen, setEventModalOpen] = useState(false);
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [deleteModal, setDeleteModal] = useState<{ open: boolean; trackId: string | null; trackTitle: string }>({ open: false, trackId: null, trackTitle: "" });
 
@@ -117,6 +128,8 @@ export default function ArtistDashboard() {
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [loadingTracks, setLoadingTracks] = useState(true);
   const [loadingStats, setLoadingStats] = useState(true);
+  const [events, setEvents] = useState<EventItem[]>([]);
+  const [loadingEvents, setLoadingEvents] = useState(true);
   // dataError géré par bandeau backend
 
   /* Profil edit */
@@ -162,7 +175,15 @@ export default function ArtistDashboard() {
       .finally(() => setLoadingStats(false));
   }, []);
 
-  useEffect(() => { loadProfile(); loadTracks(); loadStats(); }, [loadProfile, loadTracks, loadStats]);
+  const loadEvents = useCallback(() => {
+    setLoadingEvents(true);
+    getMyEventRequests()
+      .then(r => setEvents(r.data))
+      .catch(() => setEvents([]))
+      .finally(() => setLoadingEvents(false));
+  }, []);
+
+  useEffect(() => { loadProfile(); loadTracks(); loadStats(); loadEvents(); }, [loadProfile, loadTracks, loadStats, loadEvents]);
 
   /* Calculs */
   const publishedCount = tracks.filter(t => t.status === "published").length;
@@ -217,6 +238,7 @@ export default function ArtistDashboard() {
     { key: "titres", icon: Music2, label: "Mes titres", onClick: () => setSection("titres"), active: section === "titres" },
     { key: "albums", icon: Music2, label: "Mes albums", onClick: () => setSection("albums"), active: section === "albums" },
     { key: "upload", icon: Upload, label: "Uploader", onClick: () => setUploadOpen(true), active: false, badge: isFreeTierFull ? "lock" : "plus" },
+    { key: "evenements", icon: Calendar, label: "Mes événements", onClick: () => setSection("evenements"), active: section === "evenements" },
     { key: "stats", icon: BarChart2, label: "Statistiques", onClick: () => setSection("stats"), active: section === "stats" },
     { key: "profil", icon: Mic2, label: "Mon profil", onClick: () => setSection("profil"), active: section === "profil" },
     { key: "parametres", icon: Settings, label: "Paramètres", onClick: () => setSection("parametres"), active: section === "parametres" },
@@ -513,6 +535,59 @@ export default function ArtistDashboard() {
             <AlbumSection tracks={tracks} />
           )}
 
+          {/* ── MES ÉVÉNEMENTS ── */}
+          {section === "evenements" && (
+            <div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
+                <div>
+                  <h1 className="bebas" style={{ fontSize: "36px", color: "var(--text)", lineHeight: 1 }}>Mes événements</h1>
+                  {!loadingEvents && <p style={{ fontSize: "13px", color: "var(--muted)", marginTop: "4px" }}>{events.filter(e => e.status === "approved").length} validé{events.filter(e => e.status === "approved").length !== 1 ? "s" : ""} · {events.filter(e => e.status === "pending").length} en attente</p>}
+                </div>
+                <button onClick={() => setEventModalOpen(true)} style={{ display: "flex", alignItems: "center", gap: "7px", padding: "10px 18px", borderRadius: "99px", background: "var(--amber)", border: "none", color: "#fff", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}>
+                  <Plus size={12} /> Nouvel événement
+                </button>
+              </div>
+
+              {loadingEvents ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                  {[...Array(2)].map((_, i) => <div key={i} style={{ height: "72px", borderRadius: "10px", background: "rgba(240,235,227,0.04)", animation: "pulse 1.5s infinite" }} />)}
+                </div>
+              ) : events.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "60px 0" }}>
+                  <CalendarPlus size={32} style={{ color: "var(--muted)", opacity: 0.4, marginBottom: "12px" }} />
+                  <div className="bebas" style={{ fontSize: "22px", color: "var(--muted)", marginBottom: "8px" }}>Aucun événement encore</div>
+                  <button onClick={() => setEventModalOpen(true)} style={{ padding: "10px 20px", borderRadius: "99px", background: "var(--amber)", border: "none", color: "#fff", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}>Soumettre mon premier événement</button>
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                  {events.map(ev => {
+                    const s = EVENT_STATUS_STYLES[ev.status] ?? EVENT_STATUS_STYLES.pending;
+                    return (
+                      <div key={ev.id} style={{ display: "flex", alignItems: "center", gap: "14px", padding: "14px 16px", borderRadius: "12px", background: "rgba(240,235,227,0.03)", border: "1px solid var(--border)" }}>
+                        <div style={{ width: "44px", height: "44px", borderRadius: "10px", flexShrink: 0, background: "rgba(232,96,26,0.1)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+                          {ev.coverImageUrl
+                            ? <img src={ev.coverImageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                            : <Calendar size={18} style={{ color: "var(--amber)" }} />}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{ fontSize: "14px", fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ev.title}</p>
+                          <p style={{ fontSize: "12px", color: "var(--muted)", marginTop: "2px", display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}><Calendar size={11} /> {fmtEventDate(ev.eventDate)}</span>
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}><MapPin size={11} /> {ev.venue}, {ev.city}</span>
+                          </p>
+                        </div>
+                        <span title={ev.status === "rejected" ? ev.rejectionReason : undefined}
+                          style={{ padding: "4px 9px", borderRadius: "99px", fontSize: "10px", fontWeight: 700, background: s.bg, color: s.color, border: `1px solid ${s.border}`, cursor: ev.status === "rejected" && ev.rejectionReason ? "help" : "default", flexShrink: 0 }}>
+                          {s.label}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* ── STATS ── */}
           {section === "stats" && (
             <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
@@ -736,6 +811,12 @@ export default function ArtistDashboard() {
         onClose={() => setUploadOpen(false)}
         onUploaded={() => { loadTracks(); loadStats(); loadProfile(); }}
         onViewTracks={() => { setUploadOpen(false); setSection("titres"); }}
+      />
+
+      <SubmitEventModal
+        open={eventModalOpen}
+        onClose={() => setEventModalOpen(false)}
+        onSubmitted={loadEvents}
       />
 
       {/* ── MODAL SUPPRESSION TITRE ── */}

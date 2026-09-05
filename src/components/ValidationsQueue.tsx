@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
-import { Loader2, Check, X, ExternalLink } from "lucide-react";
+import { Loader2, Check, X, ExternalLink, Calendar, MapPin } from "lucide-react";
 import {
   getArtistValidations, approveArtist, rejectArtist,
   getProfileChangeValidations, approveProfileChange, rejectProfileChange,
   getTrackValidations, approveTrack, rejectTrack,
-  type ArtistValidation, type ProfileChangeValidation, type TrackValidation,
+  getEventValidations, approveEvent, rejectEvent,
+  type ArtistValidation, type ProfileChangeValidation, type TrackValidation, type EventValidation,
 } from "../lib/api";
 
-export type ValidationTab = "artists" | "profile" | "tracks";
+export type ValidationTab = "artists" | "profile" | "tracks" | "events";
 
 const CHANGE_TYPE_LABELS: Record<string, string> = {
   PASSWORD: "Changement de mot de passe",
@@ -25,6 +26,7 @@ export default function ValidationsQueue({ tab }: { tab: ValidationTab }) {
   const [artists, setArtists] = useState<ArtistValidation[]>([]);
   const [profileChanges, setProfileChanges] = useState<ProfileChangeValidation[]>([]);
   const [tracks, setTracks] = useState<TrackValidation[]>([]);
+  const [events, setEvents] = useState<EventValidation[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -35,7 +37,8 @@ export default function ValidationsQueue({ tab }: { tab: ValidationTab }) {
     try {
       if (tab === "artists") setArtists(await getArtistValidations());
       else if (tab === "profile") setProfileChanges(await getProfileChangeValidations());
-      else setTracks(await getTrackValidations());
+      else if (tab === "tracks") setTracks(await getTrackValidations());
+      else setEvents(await getEventValidations());
     } catch {
       setLoadError(true);
     } finally {
@@ -50,7 +53,8 @@ export default function ValidationsQueue({ tab }: { tab: ValidationTab }) {
     try {
       if (tab === "artists") await approveArtist(id);
       else if (tab === "profile") await approveProfileChange(id);
-      else await approveTrack(id);
+      else if (tab === "tracks") await approveTrack(id);
+      else await approveEvent(id);
       await load();
     } catch (e) {
       alert(e instanceof Error ? e.message : "Erreur lors de la validation");
@@ -65,7 +69,8 @@ export default function ValidationsQueue({ tab }: { tab: ValidationTab }) {
     try {
       if (tab === "artists") await rejectArtist(id, reason);
       else if (tab === "profile") await rejectProfileChange(id, reason);
-      else await rejectTrack(id, reason);
+      else if (tab === "tracks") await rejectTrack(id, reason);
+      else await rejectEvent(id, reason);
       await load();
     } catch (e) {
       alert(e instanceof Error ? e.message : "Erreur lors du rejet");
@@ -74,7 +79,7 @@ export default function ValidationsQueue({ tab }: { tab: ValidationTab }) {
     }
   };
 
-  const currentCount = tab === "artists" ? artists.length : tab === "profile" ? profileChanges.length : tracks.length;
+  const currentCount = tab === "artists" ? artists.length : tab === "profile" ? profileChanges.length : tab === "tracks" ? tracks.length : events.length;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
@@ -162,6 +167,30 @@ export default function ValidationsQueue({ tab }: { tab: ValidationTab }) {
                   />
                 </div>
                 <ApproveRejectButtons busy={busyId === t.id} onApprove={() => handleApprove(t.id)} onReject={() => handleReject(t.id)} />
+              </div>
+            ))}
+
+            {tab === "events" && events.map((ev, idx) => (
+              <div key={ev.id} style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "16px", padding: "18px", borderBottom: idx < events.length - 1 ? "1px solid rgba(240,235,227,0.04)" : "none", flexWrap: "wrap" }}>
+                <div style={{ flex: 1, minWidth: "220px" }}>
+                  <p style={{ fontSize: "14px", fontWeight: 700, color: "var(--text)", marginBottom: "3px" }}>{ev.title}</p>
+                  <p style={{ fontSize: "12px", color: "var(--muted)" }}>{ev.artistName || "—"}{ev.genre ? ` · ${ev.genre}` : ""}</p>
+                  <p style={{ fontSize: "11px", color: "var(--muted)", marginTop: "4px", display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}><Calendar size={11} /> {fmtDate(ev.eventDate)}{ev.eventTime ? ` · ${ev.eventTime}` : ""}</span>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}><MapPin size={11} /> {ev.venue}, {ev.city}</span>
+                    <span>{ev.free ? "Gratuit" : ev.ticketPrice ? `${ev.ticketPrice.toLocaleString("fr-FR")} FCFA` : "Payant"}</span>
+                  </p>
+                  {ev.description && <p style={{ fontSize: "12px", color: "var(--text)", marginTop: "6px", maxWidth: "420px" }}>{ev.description}</p>}
+                  {ev.coverImageUrl && (
+                    <img src={ev.coverImageUrl} alt="" style={{ width: "96px", height: "64px", borderRadius: "8px", objectFit: "cover", marginTop: "8px" }} />
+                  )}
+                  <input
+                    value={reasonDrafts[ev.id] || ""} onChange={e => setReasonDrafts(d => ({ ...d, [ev.id]: e.target.value }))}
+                    placeholder="Motif de rejet (optionnel)"
+                    style={{ marginTop: "10px", width: "100%", maxWidth: "320px", padding: "7px 10px", borderRadius: "8px", border: "1px solid var(--border)", background: "rgba(240,235,227,0.04)", color: "var(--text)", fontSize: "12px" }}
+                  />
+                </div>
+                <ApproveRejectButtons busy={busyId === ev.id} onApprove={() => handleApprove(ev.id)} onReject={() => handleReject(ev.id)} />
               </div>
             ))}
           </div>

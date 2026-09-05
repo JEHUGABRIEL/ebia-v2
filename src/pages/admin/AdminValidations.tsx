@@ -1,7 +1,7 @@
 import { useParams, Navigate } from "react-router-dom";
 import ValidationsQueue, { type ValidationTab } from "../../components/ValidationsQueue";
 
-const VALID_TABS: ValidationTab[] = ["artists", "profile", "tracks"];
+const VALID_TABS: ValidationTab[] = ["artists", "profile", "tracks", "events"];
 
 export default function AdminValidationsPage() {
   const { tab } = useParams<{ tab: string }>();
