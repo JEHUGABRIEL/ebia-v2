@@ -20,12 +20,24 @@ interface CallCtx {
   remoteStream: MediaStream | null;
   micEnabled: boolean;
   camEnabled: boolean;
+  callError: string | null;
+  clearCallError: () => void;
   startCall: (peer: CallPeerInfo, conversationId: string, type: CallType) => Promise<void>;
   answerCall: () => Promise<void>;
   rejectCall: () => void;
   hangUp: () => void;
   toggleMic: () => void;
   toggleCam: () => void;
+}
+
+/** Message d'erreur lisible pour un échec d'accès micro/caméra. */
+function mediaErrorMessage(e: unknown): string {
+  if (e instanceof DOMException) {
+    if (e.name === "NotAllowedError") return "Accès au micro/caméra refusé. Vérifiez les autorisations de votre navigateur.";
+    if (e.name === "NotFoundError") return "Aucun micro ou caméra détecté sur cet appareil.";
+    if (e.name === "NotReadableError") return "Le micro ou la caméra est déjà utilisé par une autre application.";
+  }
+  return "Impossible de démarrer l'appel (micro/caméra indisponible).";
 }
 
 const CallContext = createContext<CallCtx | undefined>(undefined);
@@ -43,6 +55,8 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const [micEnabled, setMicEnabled] = useState(true);
   const [camEnabled, setCamEnabled] = useState(true);
+  const [callError, setCallError] = useState<string | null>(null);
+  const clearCallError = useCallback(() => setCallError(null), []);
 
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const callIdRef = useRef<string | null>(null);
@@ -131,49 +145,62 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
     setType(callType);
     setPeer(targetPeer);
     setStatus("calling");
+    setCallError(null);
 
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: callType === "video" });
-    setLocalStream(stream);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: callType === "video" });
+      setLocalStream(stream);
 
-    const pc = createPeerConnection(targetPeer.userId, send);
-    stream.getTracks().forEach((t) => pc.addTrack(t, stream));
+      const pc = createPeerConnection(targetPeer.userId, send);
+      stream.getTracks().forEach((t) => pc.addTrack(t, stream));
 
-    const offer = await pc.createOffer();
-    await pc.setLocalDescription(offer);
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
 
-    send(targetPeer.userId, "offer", {
-      callId,
-      conversationId,
-      type: callType,
-      sdp: offer,
-      callerName: user.displayName,
-      callerAvatar: user.avatarUrl,
-    });
+      send(targetPeer.userId, "offer", {
+        callId,
+        conversationId,
+        type: callType,
+        sdp: offer,
+        callerName: user.displayName,
+        callerAvatar: user.avatarUrl,
+      });
 
-    ringTimeoutRef.current = setTimeout(() => {
-      send(targetPeer.userId, "hangup", { callId, reason: "no_answer" });
-      void reportMissedCall(targetPeer.userId, callType).catch(() => {});
+      ringTimeoutRef.current = setTimeout(() => {
+        send(targetPeer.userId, "hangup", { callId, reason: "no_answer" });
+        void reportMissedCall(targetPeer.userId, callType).catch(() => {});
+        cleanup();
+      }, RING_TIMEOUT_MS);
+    } catch (e) {
+      setCallError(mediaErrorMessage(e));
       cleanup();
-    }, RING_TIMEOUT_MS);
+    }
   }, [status, user, createPeerConnection, send, cleanup]);
 
   const answerCall = useCallback(async () => {
     const offerEvent = pendingOfferRef.current;
     if (!offerEvent || !offerEvent.sdp || !peer) return;
+    setCallError(null);
 
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: type === "video" });
-    setLocalStream(stream);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: type === "video" });
+      setLocalStream(stream);
 
-    const pc = createPeerConnection(peer.userId, send);
-    stream.getTracks().forEach((t) => pc.addTrack(t, stream));
+      const pc = createPeerConnection(peer.userId, send);
+      stream.getTracks().forEach((t) => pc.addTrack(t, stream));
 
-    await pc.setRemoteDescription(new RTCSessionDescription(offerEvent.sdp));
-    const answer = await pc.createAnswer();
-    await pc.setLocalDescription(answer);
+      await pc.setRemoteDescription(new RTCSessionDescription(offerEvent.sdp));
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
 
-    send(peer.userId, "answer", { callId: offerEvent.callId, sdp: answer });
-    setStatus("connected");
-  }, [peer, type, createPeerConnection, send]);
+      send(peer.userId, "answer", { callId: offerEvent.callId, sdp: answer });
+      setStatus("connected");
+    } catch (e) {
+      setCallError(mediaErrorMessage(e));
+      send(peer.userId, "hangup", { callId: offerEvent.callId, reason: "media_error" });
+      cleanup();
+    }
+  }, [peer, type, createPeerConnection, send, cleanup]);
 
   const rejectCall = useCallback(() => {
     if (peer && callIdRef.current) {
@@ -213,6 +240,7 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
   return (
     <CallContext.Provider value={{
       status, type, peer, localStream, remoteStream, micEnabled, camEnabled,
+      callError, clearCallError,
       startCall, answerCall, rejectCall, hangUp, toggleMic, toggleCam,
     }}>
       {children}

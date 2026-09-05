@@ -1234,7 +1234,7 @@ export default function Messaging() {
 
         {/* ═══════════ ZONE DE DISCUSSION ═══════════ */}
         {showChat && (
-          <section style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", background: "#0a0a0a" }}>
+          <section style={{ flex: 1, minWidth: 0, minHeight: 0, display: "flex", flexDirection: "column", background: "#0a0a0a" }}>
             {activeConv ? (
               <>
                 {/* En-tête de conversation */}

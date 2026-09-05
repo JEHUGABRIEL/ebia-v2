@@ -1,14 +1,16 @@
 import { useEffect, useRef } from "react";
-import { Mic, MicOff, PhoneOff, Video, VideoOff } from "lucide-react";
+import { Mic, MicOff, PhoneOff, Video, VideoOff, AlertCircle, X } from "lucide-react";
 import { useCall } from "../context/CallContext";
 
 /**
  * Écran d'appel plein écran (audio ou vidéo). Monté globalement dans App.tsx
  * — visible dès qu'un appel est en cours ("calling" ou "connected"), quelle
- * que soit la page active.
+ * que soit la page active. Affiche aussi un toast d'erreur (micro/caméra
+ * indisponible) même quand aucun appel n'est en cours, puisque l'échec peut
+ * survenir avant que le statut ne redevienne "idle".
  */
 export default function CallScreen() {
-  const { status, type, peer, localStream, remoteStream, micEnabled, camEnabled, hangUp, toggleMic, toggleCam } = useCall();
+  const { status, type, peer, localStream, remoteStream, micEnabled, camEnabled, callError, clearCallError, hangUp, toggleMic, toggleCam } = useCall();
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
@@ -23,7 +25,29 @@ export default function CallScreen() {
     if (type === "audio" && remoteAudioRef.current) remoteAudioRef.current.srcObject = remoteStream;
   }, [remoteStream, type]);
 
-  if (status !== "calling" && status !== "connected") return null;
+  useEffect(() => {
+    if (!callError) return;
+    const t = setTimeout(clearCallError, 6000);
+    return () => clearTimeout(t);
+  }, [callError, clearCallError]);
+
+  if (status !== "calling" && status !== "connected") {
+    if (!callError) return null;
+    return (
+      <div style={{
+        position: "fixed", top: 20, left: "50%", transform: "translateX(-50%)", zIndex: 300,
+        display: "flex", alignItems: "center", gap: 10, maxWidth: "90vw",
+        padding: "12px 16px", borderRadius: 12, background: "#1a1210",
+        border: "1px solid rgba(244,63,94,0.35)", color: "#fff", boxShadow: "0 12px 32px rgba(0,0,0,0.4)",
+      }}>
+        <AlertCircle size={16} style={{ color: "#f43f5e", flexShrink: 0 }} />
+        <span style={{ fontSize: 13 }}>{callError}</span>
+        <button onClick={clearCallError} style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer", display: "flex", flexShrink: 0 }}>
+          <X size={14} />
+        </button>
+      </div>
+    );
+  }
 
   const isVideo = type === "video";
 
