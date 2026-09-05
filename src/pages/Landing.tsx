@@ -303,7 +303,7 @@ export default function Landing() {
                 fontSize: "clamp(72px, 11vw, 148px)", lineHeight: 0.9, letterSpacing: "0.02em", marginBottom: "36px", textAlign: "center",
               }}>
                 {HERO_SLIDES[heroSlide].lines.map((line, i) => (
-                  <span key={i} style={{ display: "block", color: line.color }}>{line.text}</span>
+                  <span key={i} style={{ display: "block", color: line.color, whiteSpace: "nowrap" }}>{line.text}</span>
                 ))}
               </h1>
               <p className="fade-up-3" style={{
