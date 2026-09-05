@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
 import { Bell, CheckCheck, Heart, UserPlus, Music, Smartphone, AlertTriangle, MessageSquare, X, ShieldCheck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -71,6 +71,28 @@ export default function NotificationCenter() {
   const [hasMore, setHasMore] = useState(true);
   const panelRef = useRef<HTMLDivElement>(null);
   const bellRef = useRef<HTMLButtonElement>(null);
+  const [panelPos, setPanelPos] = useState<{ top: number; left: number; width: number } | null>(null);
+
+  // Position calculée en `fixed` à partir de la cloche : évite que le panneau
+  // soit rogné par un ancêtre `overflow: hidden` (ex. la sidebar admin) ou
+  // qu'il déborde de l'écran quand la cloche est près du bord gauche (dans la
+  // sidebar) plutôt que du bord droit (navbar) où le CSS pur suffisait.
+  useLayoutEffect(() => {
+    if (!open || !bellRef.current) return;
+    const updatePos = () => {
+      if (!bellRef.current) return;
+      const rect = bellRef.current.getBoundingClientRect();
+      const width = Math.min(380, window.innerWidth * 0.9);
+      const margin = 8;
+      let left = rect.right - width;
+      left = Math.max(margin, Math.min(left, window.innerWidth - width - margin));
+      const top = rect.bottom + margin;
+      setPanelPos({ top, left, width });
+    };
+    updatePos();
+    window.addEventListener("resize", updatePos);
+    return () => window.removeEventListener("resize", updatePos);
+  }, [open]);
 
   // Fermer le panneau quand on clique à l'extérieur
   useEffect(() => {
@@ -261,15 +283,16 @@ export default function NotificationCenter() {
       </button>
 
       {/* Panneau déroulant */}
-      {open && (
+      {open && panelPos && (
         <div
           ref={panelRef}
           style={{
-            position: "absolute",
-            right: 0,
-            top: "calc(100% + 8px)",
-            width: "min(380px, 90vw)",
+            position: "fixed",
+            top: panelPos.top,
+            left: panelPos.left,
+            width: panelPos.width,
             maxHeight: "480px",
+            zIndex: 250,
             borderRadius: "14px",
             overflow: "hidden",
             background: "var(--bg3)",
