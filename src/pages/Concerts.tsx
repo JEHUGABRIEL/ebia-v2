@@ -35,23 +35,33 @@ export default function Concerts() {
 
       {/* ── HERO ── */}
       <section style={{
-        padding: "120px 24px 60px", maxWidth: "1360px", margin: "0 auto",
         position: "relative", overflow: "hidden",
+        minHeight: "560px", display: "flex", alignItems: "flex-end",
       }}>
+        <img
+          src="https://images.unsplash.com/photo-1521337581100-8ca9a73a5f79?w=1600&q=70&auto=format&fit=crop"
+          alt=""
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
+        />
+        <div style={{
+          position: "absolute", inset: 0,
+          background: "linear-gradient(180deg, rgba(8,8,8,0.35) 0%, rgba(8,8,8,0.8) 60%, #080808 100%), linear-gradient(90deg, rgba(8,8,8,0.95) 0%, rgba(8,8,8,0.55) 45%, rgba(8,8,8,0.15) 100%)",
+        }} />
         <div style={{
           position: "absolute", top: "-20%", right: "-15%",
           width: "600px", height: "600px", borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(232,96,26,0.08) 0%, transparent 65%)",
+          background: "radial-gradient(circle, rgba(232,96,26,0.14) 0%, transparent 65%)",
           pointerEvents: "none",
         }} />
 
-        <div style={{ position: "relative", zIndex: 1 }}>
+        <div style={{ position: "relative", zIndex: 1, maxWidth: "1360px", margin: "0 auto", width: "100%", padding: "160px 24px 64px" }}>
           <div style={{
             display: "inline-flex", alignItems: "center", gap: "8px",
             padding: "5px 12px", borderRadius: "99px",
             border: "1px solid rgba(232,96,26,0.3)", marginBottom: "20px",
             fontSize: "11px", fontWeight: 700, letterSpacing: "0.15em",
             textTransform: "uppercase", color: "var(--amber)",
+            background: "rgba(8,8,8,0.4)", backdropFilter: "blur(8px)",
           }}>
             <Calendar size={12} />
             {t("concerts.title")}

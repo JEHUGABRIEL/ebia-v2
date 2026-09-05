@@ -39,7 +39,7 @@ export default function Navbar() {
 
   const navLinks = [
     { to: "/explore", label: t("nav.artists") },
-    { to: "/concerts", label: t("nav.concerts") },
+    { to: "/concerts", label: t("nav.events") },
     { to: "/radio", label: t("nav.radios"), icon: Radio },
     { to: "/recognize", label: t("nav.identify"), icon: Mic },
   ];

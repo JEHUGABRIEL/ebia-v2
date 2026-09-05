@@ -7,7 +7,7 @@ function useFooterLinks() {
   const { t } = useTranslation();
   return {
     [t("footer.company")]: [{ label: t("footer.about"), to: "/about" }, { label: t("footer.press"), to: "/press" }, { label: t("footer.investors"), to: "/investors" }],
-    [t("footer.community")]: [{ label: t("nav.artists"), to: "/explore" }, { label: t("nav.concerts"), to: "/concerts" }, { label: t("footer.blog"), to: "/blog" }],
+    [t("footer.community")]: [{ label: t("nav.artists"), to: "/explore" }, { label: t("nav.events"), to: "/concerts" }, { label: t("footer.blog"), to: "/blog" }],
     [t("footer.help")]: [{ label: t("footer.helpCenter"), to: "/help" }, { label: t("footer.contact"), to: "/contact" }, { label: t("footer.privacy"), to: "/privacy" }],
     [t("footer.legal")]: [{ label: t("footer.terms"), to: "/terms" }, { label: t("footer.privateLife"), to: "/privacy" }, { label: t("footer.cookies"), to: "/cookies" }],
   };
