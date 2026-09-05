@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   getArtists, getTracks, searchTracks, getTrendingTracks, getRetroTracks,
@@ -6,7 +6,7 @@ import {
   type DiscoverArtist, type DiscoverMode,
 } from "../lib/api";
 import { filterFeedByQuery } from "../lib/preferences";
-import { MapPin, Search, CheckCircle, Pause, Music2, Clock, Headphones, Mic2, ArrowRight, Sparkles } from "lucide-react";
+import { MapPin, Search, CheckCircle, Pause, Play, Music2, Clock, Headphones, Mic2, ArrowRight, Sparkles, ListMusic } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useApp } from "../context/AppContext";
 
@@ -48,6 +48,11 @@ export default function Explore() {
   const [artistsMode, setArtistsMode] = useState<DiscoverMode | "catalog">("catalog");
   const [tracksMode, setTracksMode] = useState<DiscoverMode | "catalog">("catalog");
   const [prefGenres, setPrefGenres] = useState<string[]>([]);
+  /* Flux "Recommandations" / "Mixés pour vous" — indépendant des onglets de la section Titres. */
+  const [recTracks, setRecTracks] = useState<RowTrack[]>([]);
+  const [recMode, setRecMode] = useState<DiscoverMode | "catalog">("catalog");
+  const [recGenres, setRecGenres] = useState<string[]>([]);
+  const [recLoading, setRecLoading] = useState(true);
 
   /* Restreint la personnalisation aux auditeurs connectés. */
   const personalized = !!user && user.role !== "artist" && user.role !== "admin";
@@ -176,6 +181,30 @@ export default function Explore() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  /* ── Flux "Recommandations" (l'algo de préférence), indépendant des onglets ci-dessous ── */
+  useEffect(() => {
+    (async () => {
+      setRecLoading(true);
+      try {
+        const res = await getDiscoverTracks();
+        setRecTracks(res.data.map(toRow));
+        setRecMode(res.mode);
+        setRecGenres(res.genres);
+      } catch {
+        try {
+          const res = await getTracks({ limit: "30" });
+          setRecTracks(res.data.map(toRow));
+          setRecMode("catalog");
+        } catch {
+          setRecTracks([]);
+        }
+      } finally {
+        setRecLoading(false);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Debounced search when typing (filtre les artistes côté client, cherche les titres côté serveur)
   useEffect(() => {
     if (search.length >= 2) {
@@ -212,6 +241,33 @@ export default function Explore() {
 
   const showArtistModeBanner = personalized && artistsMode !== "catalog";
   const showTrackModeBanner = personalized && trackFilter === "all" && search.length < 2 && tracksMode !== "catalog";
+
+  const toPlayable = (t: RowTrack) => ({
+    id: t.id, title: t.title, artist: t.artist_name || "", audioUrl: t.audioUrl || "",
+    coverUrl: t.coverUrl, duration: t.duration_s,
+  });
+
+  /**
+   * "Mixés pour vous" : regroupe le flux de recommandations par genre, à la
+   * manière des Daily Mix Spotify / Mix Deezer — pas d'endpoint public pour
+   * parcourir les albums (seule la gestion d'albums d'un artiste existe côté
+   * API), donc le regroupement se fait sur les titres.
+   */
+  const genreMixes = useMemo(() => {
+    const byGenre = new Map<string, RowTrack[]>();
+    recTracks.forEach(track => {
+      const g = track.genre || "Autres";
+      if (!byGenre.has(g)) byGenre.set(g, []);
+      byGenre.get(g)!.push(track);
+    });
+    const order = recGenres.length > 0
+      ? [...recGenres.filter(g => byGenre.has(g)), ...Array.from(byGenre.keys()).filter(g => !recGenres.includes(g))]
+      : Array.from(byGenre.keys()).sort((a, b) => (byGenre.get(b)?.length || 0) - (byGenre.get(a)?.length || 0));
+    return order
+      .map(g => ({ genre: g, tracks: byGenre.get(g)! }))
+      .filter(mix => mix.tracks.length >= 2)
+      .slice(0, 6);
+  }, [recTracks, recGenres]);
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg)", paddingBottom: "120px" }}>
@@ -292,6 +348,142 @@ export default function Explore() {
                 >{g}</button>
               );
             })}
+          </div>
+        )}
+
+        {/* ══════════ RECOMMANDATIONS ══════════ */}
+        {(recLoading || recTracks.length > 0) && (
+          <div style={{ marginBottom: "56px" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px", flexWrap: "wrap", gap: "10px" }}>
+              <h2 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "22px", fontWeight: 800, color: "var(--text)" }}>
+                <Sparkles size={19} style={{ color: "var(--amber)" }} /> Recommandations
+              </h2>
+            </div>
+
+            {personalized && recMode !== "catalog" && (
+              <div style={{
+                display: "flex", alignItems: "center", gap: "10px",
+                marginBottom: "18px", padding: "10px 16px", borderRadius: "12px",
+                background: "rgba(232,96,26,0.06)", border: "1px solid rgba(232,96,26,0.15)",
+                color: "var(--amber)", fontSize: "12.5px", fontWeight: 600,
+              }}>
+                <Sparkles size={14} style={{ flexShrink: 0 }} />
+                <span>{MODE_LABEL[recMode]}{recMode === "explicit" && recGenres.length > 0 ? ` — ${recGenres.join(", ")}` : ""}</span>
+              </div>
+            )}
+
+            <div style={{ display: "flex", gap: "16px", overflowX: "auto", paddingBottom: "8px", scrollbarWidth: "none" }}>
+              {recLoading
+                ? [...Array(6)].map((_, i) => (
+                  <div key={i} style={{ width: "170px", flexShrink: 0 }}>
+                    <div style={{ aspectRatio: "1", borderRadius: "12px", background: "rgba(240,235,227,0.06)", animation: "pulse 1.5s infinite", marginBottom: "10px" }} />
+                    <div style={{ height: "12px", width: "80%", borderRadius: "99px", background: "rgba(240,235,227,0.06)", marginBottom: "6px" }} />
+                    <div style={{ height: "10px", width: "50%", borderRadius: "99px", background: "rgba(240,235,227,0.04)" }} />
+                  </div>
+                ))
+                : recTracks.slice(0, 14).map(track => {
+                  const isCurrentTrack = currentTrack?.id === track.id;
+                  return (
+                    <div key={track.id} style={{ width: "170px", flexShrink: 0, cursor: "pointer" }}
+                      onClick={() => playTrack(toPlayable(track), recTracks.slice(0, 14).map(toPlayable))}
+                    >
+                      <div style={{
+                        position: "relative", aspectRatio: "1", borderRadius: "12px", overflow: "hidden", marginBottom: "10px",
+                        background: "linear-gradient(135deg, rgba(232,96,26,0.18), rgba(201,147,10,0.08))",
+                      }}>
+                        {track.coverUrl ? (
+                          <img src={track.coverUrl} alt={track.title} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                        ) : (
+                          <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <Music2 size={32} style={{ color: "var(--amber)", opacity: 0.5 }} />
+                          </div>
+                        )}
+                        <div style={{
+                          position: "absolute", inset: 0,
+                          background: "linear-gradient(180deg, transparent 55%, rgba(0,0,0,0.55) 100%)",
+                        }} />
+                        <div style={{
+                          position: "absolute", bottom: "10px", right: "10px",
+                          width: "34px", height: "34px", borderRadius: "50%",
+                          background: "var(--amber)", display: "flex", alignItems: "center", justifyContent: "center",
+                          boxShadow: "0 6px 16px rgba(232,96,26,0.4)",
+                        }}>
+                          {isCurrentTrack && isPlaying
+                            ? <Pause size={13} fill="white" color="white" />
+                            : <Play size={13} fill="white" color="white" style={{ marginLeft: "1px" }} />}
+                        </div>
+                      </div>
+                      <p style={{
+                        fontSize: "13px", fontWeight: 700, color: isCurrentTrack ? "var(--amber)" : "var(--text)",
+                        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: "3px",
+                      }}>{track.title}</p>
+                      <p style={{ fontSize: "11px", color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {track.artist_name || "Artiste inconnu"}
+                      </p>
+                    </div>
+                  );
+                })}
+            </div>
+          </div>
+        )}
+
+        {/* ══════════ MIXÉS POUR VOUS (playlists par genre, façon Daily Mix) ══════════ */}
+        {genreMixes.length > 0 && (
+          <div style={{ marginBottom: "56px" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px", flexWrap: "wrap", gap: "10px" }}>
+              <h2 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "22px", fontWeight: 800, color: "var(--text)" }}>
+                <ListMusic size={19} style={{ color: "var(--amber)" }} /> Mixés pour vous
+              </h2>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "20px" }}>
+              {genreMixes.map(({ genre: mixGenre, tracks: mixTracks }) => {
+                const covers = mixTracks.slice(0, 4).map(t => t.coverUrl);
+                return (
+                  <div key={mixGenre}
+                    onClick={() => playTrack(toPlayable(mixTracks[0]), mixTracks.map(toPlayable))}
+                    style={{
+                      borderRadius: "16px", overflow: "hidden", cursor: "pointer",
+                      background: "rgba(240,235,227,0.03)", border: "1px solid rgba(240,235,227,0.07)",
+                      transition: "transform 0.22s ease, border-color 0.22s ease",
+                    }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(-6px)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(232,96,26,0.25)"; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(240,235,227,0.07)"; }}
+                  >
+                    <div style={{ position: "relative", aspectRatio: "1" }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gridTemplateRows: "1fr 1fr", width: "100%", height: "100%" }}>
+                        {[0, 1, 2, 3].map(i => (
+                          <div key={i} style={{
+                            overflow: "hidden",
+                            background: "linear-gradient(135deg, rgba(232,96,26,0.2), rgba(201,147,10,0.1))",
+                          }}>
+                            {covers[i] ? (
+                              <img src={covers[i]!} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                            ) : (
+                              <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                <Music2 size={20} style={{ color: "var(--amber)", opacity: 0.4 }} />
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{
+                        position: "absolute", bottom: "12px", right: "12px",
+                        width: "40px", height: "40px", borderRadius: "50%",
+                        background: "var(--amber)", display: "flex", alignItems: "center", justifyContent: "center",
+                        boxShadow: "0 8px 20px rgba(232,96,26,0.45)",
+                      }}>
+                        <Play size={15} fill="white" color="white" style={{ marginLeft: "1px" }} />
+                      </div>
+                    </div>
+                    <div style={{ padding: "16px" }}>
+                      <p style={{ fontSize: "15px", fontWeight: 700, color: "var(--text)", marginBottom: "4px" }}>Mix {mixGenre}</p>
+                      <p style={{ fontSize: "12px", color: "var(--muted)" }}>{mixTracks.length} titres</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
 
