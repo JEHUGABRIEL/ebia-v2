@@ -6,7 +6,7 @@ import {
   type DiscoverArtist, type DiscoverMode,
 } from "../lib/api";
 import { filterFeedByQuery } from "../lib/preferences";
-import { MapPin, Search, CheckCircle, Pause, Play, Music2, Clock, Mic2, ArrowRight, Sparkles, ListMusic, TrendingUp, Disc } from "lucide-react";
+import { Search, Pause, Play, Music2, Clock, Mic2, ArrowRight, ChevronRight, Sparkles, ListMusic, TrendingUp, Disc } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useApp } from "../context/AppContext";
 
@@ -529,74 +529,76 @@ export default function Explore() {
             )}
 
             {loading ? (
-              [...Array(2)].map((_, i) => (
-                <div key={i} style={{ marginBottom: "40px" }}>
-                  <div style={{ height: "20px", width: "160px", borderRadius: "99px", background: "rgba(240,235,227,0.06)", marginBottom: "16px" }} />
-                  <div style={{ display: "flex", gap: "16px", overflowX: "hidden" }}>
-                    {[...Array(6)].map((_, j) => (
-                      <div key={j} style={{ width: "170px", flexShrink: 0 }}>
-                        <div style={{ aspectRatio: "1", borderRadius: "16px", background: "rgba(240,235,227,0.06)", animation: "pulse 1.5s infinite" }} />
-                      </div>
-                    ))}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "20px" }}>
+                {[...Array(8)].map((_, i) => (
+                  <div key={i} style={{ borderRadius: "16px", overflow: "hidden", background: "rgba(240,235,227,0.04)" }}>
+                    <div style={{ aspectRatio: "1", background: "rgba(240,235,227,0.06)", animation: "pulse 1.5s infinite" }} />
+                    <div style={{ padding: "16px" }}>
+                      <div style={{ height: "14px", borderRadius: "99px", background: "rgba(240,235,227,0.06)", marginBottom: "8px" }} />
+                      <div style={{ height: "11px", width: "60%", borderRadius: "99px", background: "rgba(240,235,227,0.04)" }} />
+                    </div>
                   </div>
-                </div>
-              ))
+                ))}
+              </div>
             ) : artistGenreGroups.length === 0 ? (
               <div style={{ textAlign: "center", padding: "60px 0", marginBottom: "56px" }}>
                 <div className="bebas" style={{ fontSize: "28px", color: "var(--muted)" }}>{t("explore.noArtists")}</div>
                 <p style={{ color: "var(--muted)", fontSize: "14px", marginTop: "8px" }}>{t("explore.noArtistsHint")}</p>
               </div>
-            ) : artistGenreGroups.map(({ genre: rowGenre, artists: rowArtists }) => (
-              <div key={rowGenre} style={{ marginBottom: "48px" }}>
-                <h2 style={{ fontSize: "18px", fontWeight: 800, color: "var(--text)", marginBottom: "16px" }}>{rowGenre}</h2>
-                <div style={{ display: "flex", gap: "16px", overflowX: "auto", paddingBottom: "8px", scrollbarWidth: "none" }}>
-                  {rowArtists.map(artist => (
-                    <Link key={artist.id} to={`/artist/${artist.slug}`} style={{ textDecoration: "none", width: "170px", flexShrink: 0 }}>
+            ) : (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "20px" }}>
+                {artistGenreGroups.map(({ genre: rowGenre, artists: rowArtists }) => {
+                  const avatars = rowArtists.slice(0, 4);
+                  return (
+                    <Link key={rowGenre} to={`/artist/${rowArtists[0].slug}`} style={{ textDecoration: "none" }}>
                       <div style={{
-                        borderRadius: "16px", overflow: "hidden",
+                        borderRadius: "16px", overflow: "hidden", cursor: "pointer",
                         background: "rgba(240,235,227,0.03)", border: "1px solid rgba(240,235,227,0.07)",
-                        transition: "transform 0.22s ease, border-color 0.22s ease", cursor: "pointer",
+                        transition: "transform 0.22s ease, border-color 0.22s ease",
                       }}
                         onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(-6px)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(232,96,26,0.25)"; }}
                         onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(240,235,227,0.07)"; }}
                       >
-                        <div style={{ aspectRatio: "1", overflow: "hidden", position: "relative" }}>
-                          {artist.avatar_url ? (
-                            <img src={artist.avatar_url} alt={artist.name}
-                              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transition: "transform 0.5s ease" }}
-                              onMouseEnter={e => (e.currentTarget as HTMLElement).style.transform = "scale(1.08)"}
-                              onMouseLeave={e => (e.currentTarget as HTMLElement).style.transform = "scale(1)"} />
-                          ) : (
-                            <div style={{
-                              width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center",
-                              background: "linear-gradient(135deg, rgba(232,96,26,0.2), rgba(201,147,10,0.1))",
-                            }}>
-                              <span className="bebas" style={{ fontSize: "48px", color: "var(--amber)", opacity: 0.6 }}>{artist.name[0]}</span>
-                            </div>
-                          )}
-                          {artist.verified && (
-                            <div style={{
-                              position: "absolute", top: "10px", right: "10px", width: "24px", height: "24px",
-                              borderRadius: "50%", background: "rgba(8,8,8,0.75)", display: "flex",
-                              alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)",
-                            }}>
-                              <CheckCircle size={13} style={{ color: "var(--amber)" }} />
-                            </div>
-                          )}
-                        </div>
-                        <div style={{ padding: "12px" }}>
-                          <p style={{ fontSize: "13px", fontWeight: 700, color: "var(--text)", marginBottom: "4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{artist.name}</p>
-                          <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                            <MapPin size={10} style={{ color: "var(--muted)", flexShrink: 0 }} />
-                            <span style={{ fontSize: "11px", color: "var(--muted)" }}>{artist.city}</span>
+                        <div style={{ position: "relative", aspectRatio: "1" }}>
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gridTemplateRows: "1fr 1fr", width: "100%", height: "100%" }}>
+                            {[0, 1, 2, 3].map(i => (
+                              <div key={i} style={{
+                                overflow: "hidden",
+                                background: "linear-gradient(135deg, rgba(232,96,26,0.2), rgba(201,147,10,0.1))",
+                              }}>
+                                {avatars[i]?.avatar_url ? (
+                                  <img src={avatars[i].avatar_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                                ) : avatars[i] ? (
+                                  <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                    <span className="bebas" style={{ fontSize: "24px", color: "var(--amber)", opacity: 0.6 }}>{avatars[i].name[0]}</span>
+                                  </div>
+                                ) : (
+                                  <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                    <Music2 size={20} style={{ color: "var(--amber)", opacity: 0.4 }} />
+                                  </div>
+                                )}
+                              </div>
+                            ))}
                           </div>
+                          <div style={{
+                            position: "absolute", bottom: "12px", right: "12px",
+                            width: "40px", height: "40px", borderRadius: "50%",
+                            background: "var(--amber)", display: "flex", alignItems: "center", justifyContent: "center",
+                            boxShadow: "0 8px 20px rgba(232,96,26,0.45)",
+                          }}>
+                            <ChevronRight size={18} color="white" />
+                          </div>
+                        </div>
+                        <div style={{ padding: "16px" }}>
+                          <p style={{ fontSize: "15px", fontWeight: 700, color: "var(--text)", marginBottom: "4px" }}>{rowGenre}</p>
+                          <p style={{ fontSize: "12px", color: "var(--muted)" }}>{rowArtists.length} artiste{rowArtists.length > 1 ? "s" : ""}</p>
                         </div>
                       </div>
                     </Link>
-                  ))}
-                </div>
+                  );
+                })}
               </div>
-            ))}
+            )}
 
             {/* ── CTA: Devenir artiste ── */}
             <div style={{
