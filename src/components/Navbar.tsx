@@ -1,12 +1,11 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { Menu, X, LogOut, LayoutDashboard, ChevronDown, Radio, Mic } from "lucide-react";
+import { Menu, X, LogOut, LayoutDashboard, ChevronDown, Radio, Mic, Headphones, Mic2, Check } from "lucide-react";
 import EbiaLogo from "./EbiaLogo";
 import { useState, useEffect, useRef } from "react";
 import { useApp } from "../context/AppContext";
 import LogoutModal from "./LogoutModal";
 import LanguageSwitcher from "./LanguageSwitcher";
 import NotificationCenter from "./NotificationCenter";
-import ModeSwitch from "./ModeSwitch";
 import { useTranslation } from "react-i18next";
 
 export default function Navbar() {
@@ -46,6 +45,47 @@ export default function Navbar() {
   ];
 
   const isActive = (to: string) => location.pathname.startsWith(to);
+
+  /* ── Bascule d'espace façon Facebook (auditeur ⇄ artiste) ── */
+  const canSwitchSpace = !!user && (user.role === "artist" || user.role === "admin");
+  const activeSpace: "listener" | "artist" = location.pathname.startsWith("/me") ? "listener" : "artist";
+  const goToSpace = (space: "listener" | "artist", close: () => void) => {
+    navigate(space === "listener" ? "/me" : "/artist-dashboard");
+    close();
+  };
+
+  const renderSpaceRow = (space: "listener" | "artist", close: () => void, size = 32) => {
+    const active = activeSpace === space;
+    const Icon = space === "listener" ? Headphones : Mic2;
+    return (
+      <button onClick={() => goToSpace(space, close)} style={{
+        width: "100%", display: "flex", alignItems: "center", gap: size > 32 ? "14px" : "10px",
+        padding: size > 32 ? "10px 8px" : "7px 8px", borderRadius: "10px",
+        background: active ? "rgba(232,96,26,0.1)" : "transparent",
+        border: "none", cursor: "pointer", textAlign: "left", transition: "background 0.15s",
+      }}
+        onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.05)"; }}
+        onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+      >
+        <div style={{
+          width: size, height: size, borderRadius: "50%", flexShrink: 0,
+          background: active ? "var(--amber)" : "rgba(240,235,227,0.08)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>
+          <Icon size={size > 32 ? 18 : 14} color={active ? "#fff" : "var(--muted)"} strokeWidth={2} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ fontSize: size > 32 ? "14px" : "12.5px", fontWeight: 700, color: "var(--text)" }}>
+            {space === "listener" ? "Espace Auditeur" : "Espace Artiste"}
+          </p>
+          <p style={{ fontSize: size > 32 ? "11px" : "10px", color: "var(--muted)" }}>
+            {space === "listener" ? "Écouter et découvrir" : "Gérer mes titres"}
+          </p>
+        </div>
+        {active && <Check size={15} style={{ color: "var(--amber)", flexShrink: 0 }} />}
+      </button>
+    );
+  };
 
   return (
     <>
@@ -92,12 +132,6 @@ export default function Navbar() {
 
           {/* Right */}
           <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-            {/* Bascule globale Auditeur ⇄ Artiste (desktop) */}
-            {user && (user.role === "artist" || user.role === "admin") && (
-              <div className="nav-desktop" style={{ display: "flex", alignItems: "center" }}>
-                <ModeSwitch />
-              </div>
-            )}
             <LanguageSwitcher />
             {user && <NotificationCenter />}
             {user ? (
@@ -126,22 +160,31 @@ export default function Navbar() {
 
                 {dropdownOpen && (
                   <div style={{
-                    position: "absolute", right: 0, top: "calc(100% + 8px)", width: "190px",
-                    borderRadius: "12px", overflow: "hidden",
+                    position: "absolute", right: 0, top: "calc(100% + 8px)", width: "240px",
+                    borderRadius: "14px", overflow: "hidden",
                     background: "var(--bg3)", border: "1px solid var(--border)",
                     boxShadow: "0 16px 48px rgba(0,0,0,0.5)",
                   }}>
-                    <div style={{ padding: "10px 14px", borderBottom: "1px solid var(--border)" }}>
-                      <p style={{ fontSize: "12px", fontWeight: 700, color: "var(--text)" }}>{user.displayName}</p>
-                      <p style={{ fontSize: "10px", color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user.email}</p>
+                    <div style={{ padding: "12px 14px", borderBottom: "1px solid var(--border)" }}>
+                      <p style={{ fontSize: "13px", fontWeight: 700, color: "var(--text)" }}>{user.displayName}</p>
+                      <p style={{ fontSize: "11px", color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user.email}</p>
                     </div>
-                    <button onClick={() => { navigate(user.role === "admin" ? "/admin" : user.role === "artist" ? "/artist-dashboard" : "/me"); setDropdownOpen(false); }} style={{ width: "100%", display: "flex", alignItems: "center", gap: "8px", padding: "10px 14px", fontSize: "12px", color: "var(--muted)", background: "none", border: "none", cursor: "pointer", textAlign: "left", transition: "all 0.1s" }}
-                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.04)"; (e.currentTarget as HTMLElement).style.color = "var(--text)"; }}
-                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--muted)"; }}
-                    ><LayoutDashboard size={13} /> {t("nav.mySpace")}</button>
-                    <button onClick={() => { setDropdownOpen(false); setLogoutOpen(true); }} style={{ width: "100%", display: "flex", alignItems: "center", gap: "8px", padding: "10px 14px", fontSize: "12px", color: "var(--muted)", background: "none", border: "none", cursor: "pointer", textAlign: "left", transition: "all 0.1s" }}
-                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.04)"; (e.currentTarget as HTMLElement).style.color = "var(--text)"; }}
-                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--muted)"; }}
+
+                    {canSwitchSpace ? (
+                      <div style={{ padding: "6px", display: "flex", flexDirection: "column", gap: "2px", borderBottom: "1px solid var(--border)" }}>
+                        {renderSpaceRow("listener", () => setDropdownOpen(false))}
+                        {renderSpaceRow("artist", () => setDropdownOpen(false))}
+                      </div>
+                    ) : (
+                      <button onClick={() => { navigate("/me"); setDropdownOpen(false); }} style={{ width: "100%", display: "flex", alignItems: "center", gap: "8px", padding: "10px 14px", fontSize: "12px", color: "var(--muted)", background: "none", border: "none", cursor: "pointer", textAlign: "left", transition: "all 0.1s" }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.04)"; (e.currentTarget as HTMLElement).style.color = "var(--text)"; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--muted)"; }}
+                      ><LayoutDashboard size={13} /> {t("nav.mySpace")}</button>
+                    )}
+
+                    <button onClick={() => { setDropdownOpen(false); setLogoutOpen(true); }} style={{ width: "100%", display: "flex", alignItems: "center", gap: "8px", padding: "10px 14px", fontSize: "12px", color: "#f08080", background: "none", border: "none", cursor: "pointer", textAlign: "left", transition: "all 0.1s" }}
+                      onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "rgba(240,128,128,0.06)"}
+                      onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}
                     ><LogOut size={13} /> {t("nav.logout")}</button>
                   </div>
                 )}
@@ -212,10 +255,11 @@ export default function Navbar() {
                       <p style={{ fontSize: "12px", color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user.email}</p>
                     </div>
                   </div>
-                  {/* Bascule globale Auditeur ⇄ Artiste (mobile) */}
-                  {(user.role === "artist" || user.role === "admin") && (
-                    <div style={{ marginTop: 14 }}>
-                      <ModeSwitch fluid onNavigate={() => setMobileOpen(false)} />
+                  {/* Bascule d'espace façon Facebook (mobile) */}
+                  {canSwitchSpace && (
+                    <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: "4px" }}>
+                      {renderSpaceRow("listener", () => setMobileOpen(false), 40)}
+                      {renderSpaceRow("artist", () => setMobileOpen(false), 40)}
                     </div>
                   )}
                 </div>
@@ -249,16 +293,18 @@ export default function Navbar() {
 
                 {user ? (
                   <>
-                    <button onClick={() => { navigate(user.role === "admin" ? "/admin" : user.role === "artist" ? "/artist-dashboard" : "/me"); setMobileOpen(false); }} style={{
-                      width: "100%", display: "flex", alignItems: "center", gap: "14px",
-                      padding: "13px 14px", borderRadius: "10px", background: "none",
-                      border: "none", cursor: "pointer", color: "var(--muted)",
-                      fontWeight: 600, fontSize: "15px", textAlign: "left",
-                      transition: "background 0.15s, color 0.15s",
-                    }}
-                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.04)"; (e.currentTarget as HTMLElement).style.color = "var(--text)"; }}
-                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--muted)"; }}
-                    ><LayoutDashboard size={18} strokeWidth={1.8} /> {t("nav.mySpace")}</button>
+                    {!canSwitchSpace && (
+                      <button onClick={() => { navigate("/me"); setMobileOpen(false); }} style={{
+                        width: "100%", display: "flex", alignItems: "center", gap: "14px",
+                        padding: "13px 14px", borderRadius: "10px", background: "none",
+                        border: "none", cursor: "pointer", color: "var(--muted)",
+                        fontWeight: 600, fontSize: "15px", textAlign: "left",
+                        transition: "background 0.15s, color 0.15s",
+                      }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.04)"; (e.currentTarget as HTMLElement).style.color = "var(--text)"; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--muted)"; }}
+                      ><LayoutDashboard size={18} strokeWidth={1.8} /> {t("nav.mySpace")}</button>
+                    )}
                     <button onClick={() => { setLogoutOpen(true); setMobileOpen(false); }} style={{
                       width: "100%", display: "flex", alignItems: "center", gap: "14px",
                       padding: "13px 14px", borderRadius: "10px", background: "none",
