@@ -42,7 +42,7 @@ export default function RadioPage() {
     ? stations
     : stations.filter(s => s.category === activeCategory);
 
-  const featured = stations.find(s => s.id === "ndeke-luka");
+  const featured = stations[0];
   const currentStation = stations.find(s => s.id === currentId);
 
   useEffect(() => {
