@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Users, Music2, Play, UserCheck, FileEdit, Shield, Loader2, ChevronRight, Sparkles } from "lucide-react";
+import { Users, Music2, Play, UserCheck, FileEdit, Shield, Loader2, ChevronRight } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import {
   getAdminStats,
@@ -69,10 +69,6 @@ export default function AdminOverview() {
       }}>
         <div style={{ position: "absolute", top: "-40px", right: "-30px", width: "180px", height: "180px", borderRadius: "50%", background: "radial-gradient(circle, rgba(139,92,246,0.15), transparent 70%)" }} />
         <div style={{ position: "relative" }}>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "4px 10px", borderRadius: "99px", background: "rgba(139,92,246,0.15)", marginBottom: "14px" }}>
-            <Sparkles size={11} style={{ color: "#8B5CF6" }} />
-            <span style={{ fontSize: "10px", fontWeight: 700, color: "#8B5CF6", letterSpacing: "0.08em", textTransform: "uppercase" }}>Backoffice E-BIA</span>
-          </div>
           <h1 className="bebas" style={{ fontSize: "38px", color: "var(--text)", lineHeight: 1, marginBottom: "8px" }}>
             {greeting}, {user?.displayName || "Admin"}
           </h1>

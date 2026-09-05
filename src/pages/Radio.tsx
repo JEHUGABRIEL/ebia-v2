@@ -17,22 +17,22 @@ type StationStatus = "idle" | "loading" | "playing" | "error";
 const RADIO_SLIDES: HeroSlide[] = [
   {
     img: "https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=1600&q=70&auto=format&fit=crop",
-    tag: "En direct", titleTop: "Radios", titleAccent: "Centrafricaines",
+    titleTop: "Radios", titleAccent: "Centrafricaines",
     description: "Écoutez les radios de la République Centrafricaine en direct, depuis partout dans le monde.",
   },
   {
     img: "https://images.unsplash.com/photo-1590602847861-f357a9332bbc?w=1600&q=70&auto=format&fit=crop",
-    tag: "Studio live", titleTop: "La voix", titleAccent: "de la RCA",
+    titleTop: "La voix", titleAccent: "de la RCA",
     description: "Des animateurs passionnés, des voix qui rassemblent tout un pays autour des ondes.",
   },
   {
     img: "https://images.unsplash.com/photo-1594623930572-300a3011d9ae?w=1600&q=70&auto=format&fit=crop",
-    tag: "Mix & Ambiance", titleTop: "Le son qui", titleAccent: "fait vibrer",
+    titleTop: "Le son qui", titleAccent: "fait vibrer",
     description: "Des playlists non-stop, du gospel à l'afro-pop, pensées pour tous les goûts.",
   },
   {
     img: "https://images.unsplash.com/photo-1471478331149-c72f17e33c73?w=1600&q=70&auto=format&fit=crop",
-    tag: "Session acoustique", titleTop: "La musique", titleAccent: "en direct",
+    titleTop: "La musique", titleAccent: "en direct",
     description: "Vivez des sessions live exclusives diffusées directement sur nos radios partenaires.",
   },
 ];
@@ -151,11 +151,6 @@ export default function RadioPage() {
         accentColor="#4caf82"
         glowColor="rgba(16,185,129,0.14)"
         glowSide="left"
-        badgeIcon={<span style={{
-          width: "6px", height: "6px", borderRadius: "50%",
-          background: "#4CAF50", display: "inline-block",
-          animation: "radioPulse 1.5s infinite",
-        }} />}
       />
 
       <div style={{ maxWidth: "1360px", margin: "0 auto", padding: "0 24px" }}>

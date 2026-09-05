@@ -2,7 +2,6 @@ import { useEffect, useState, type ReactNode } from "react";
 
 export type HeroSlide = {
   img: string;
-  tag: string;
   titleTop: string;
   titleAccent: string;
   description: string;
@@ -13,14 +12,13 @@ type Props = {
   accentColor: string;
   glowColor: string;
   glowSide?: "left" | "right";
-  badgeIcon?: ReactNode;
   interval?: number;
   /** Contenu statique affiché sous le texte (bouton, stats...), ne défile pas avec les slides. */
   children?: ReactNode;
 };
 
 export default function HeroCarousel({
-  slides, accentColor, glowColor, glowSide = "right", badgeIcon, interval = 6000, children,
+  slides, accentColor, glowColor, glowSide = "right", interval = 6000, children,
 }: Props) {
   const [current, setCurrent] = useState(0);
 
@@ -68,18 +66,6 @@ export default function HeroCarousel({
 
       <div style={{ position: "relative", zIndex: 1, maxWidth: "1360px", margin: "0 auto", width: "100%", padding: "160px 24px 64px" }}>
         <div key={current} style={{ animation: "heroFadeIn 0.6s ease" }}>
-          <div style={{
-            display: "inline-flex", alignItems: "center", gap: "8px",
-            padding: "5px 14px", borderRadius: "99px",
-            border: `1px solid ${accentColor}4D`, marginBottom: "20px",
-            fontSize: "11px", fontWeight: 700, letterSpacing: "0.15em",
-            textTransform: "uppercase", color: accentColor,
-            background: "rgba(8,8,8,0.4)", backdropFilter: "blur(8px)",
-          }}>
-            {badgeIcon}
-            {slide.tag}
-          </div>
-
           <h1 className="bebas" style={{
             fontSize: "clamp(48px, 8vw, 96px)", color: "var(--text)",
             lineHeight: 0.92, marginBottom: "16px",

@@ -140,26 +140,6 @@ export default function Playlists() {
         }}
       >
         <div style={{ position: "relative", zIndex: 1 }}>
-          <div
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "8px",
-              padding: "5px 12px",
-              borderRadius: "99px",
-              border: "1px solid rgba(232,96,26,0.3)",
-              marginBottom: "20px",
-              fontSize: "11px",
-              fontWeight: 700,
-              letterSpacing: "0.15em",
-              textTransform: "uppercase",
-              color: "var(--amber)",
-            }}
-          >
-            <ListMusic size={12} />
-            Playlists
-          </div>
-
           <h1
             className="bebas"
             style={{

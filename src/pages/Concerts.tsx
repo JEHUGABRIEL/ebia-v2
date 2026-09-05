@@ -11,22 +11,22 @@ import HeroCarousel, { type HeroSlide } from "../components/HeroCarousel";
 const EVENT_SLIDES: HeroSlide[] = [
   {
     img: "https://images.unsplash.com/photo-1521337581100-8ca9a73a5f79?w=1600&q=70&auto=format&fit=crop",
-    tag: "Concerts", titleTop: "Prochains", titleAccent: "Événements",
+    titleTop: "Prochains", titleAccent: "Événements",
     description: "Ne manquez aucun concert, festival ou événement musical en République Centrafricaine. Inscrivez-vous pour être notifié des prochaines sorties.",
   },
   {
     img: "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=1600&q=70&auto=format&fit=crop",
-    tag: "Festivals", titleTop: "Vivez", titleAccent: "l'ambiance",
+    titleTop: "Vivez", titleAccent: "l'ambiance",
     description: "Des milliers de festivaliers rassemblés pour une même passion : la musique centrafricaine.",
   },
   {
     img: "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=1600&q=70&auto=format&fit=crop",
-    tag: "En direct", titleTop: "Ne manquez", titleAccent: "aucun show",
+    titleTop: "Ne manquez", titleAccent: "aucun show",
     description: "Des scènes qui vibrent, des artistes en feu. Suivez tous les concerts près de chez vous.",
   },
   {
     img: "https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?w=1600&q=70&auto=format&fit=crop",
-    tag: "Communauté", titleTop: "Partagez", titleAccent: "l'émotion",
+    titleTop: "Partagez", titleAccent: "l'émotion",
     description: "Chaque concert est un moment unique à vivre ensemble, entre fans et artistes.",
   },
 ];
@@ -63,7 +63,6 @@ export default function Concerts() {
         accentColor="#E8601A"
         glowColor="rgba(232,96,26,0.14)"
         glowSide="right"
-        badgeIcon={<Calendar size={12} />}
       >
         <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
           <button

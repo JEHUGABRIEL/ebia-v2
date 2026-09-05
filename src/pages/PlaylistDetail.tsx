@@ -232,20 +232,6 @@ export default function PlaylistDetail() {
           {/* Info */}
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-              <span
-                style={{
-                  padding: "4px 10px",
-                  borderRadius: "99px",
-                  background: "rgba(240,235,227,0.05)",
-                  color: "var(--muted)",
-                  fontSize: "11px",
-                  fontWeight: 600,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                }}
-              >
-                Playlist
-              </span>
               {playlist.isPublic ? (
                 <Eye size={12} style={{ color: "var(--muted)" }} />
               ) : (

@@ -6,7 +6,6 @@ import {
   Trash2,
   Play,
   Loader2,
-  History,
   X,
 } from "lucide-react";
 import {
@@ -107,26 +106,6 @@ export default function PlayHistoryPage() {
         }}
       >
         <div style={{ position: "relative", zIndex: 1 }}>
-          <div
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "8px",
-              padding: "5px 12px",
-              borderRadius: "99px",
-              border: "1px solid rgba(232,96,26,0.3)",
-              marginBottom: "20px",
-              fontSize: "11px",
-              fontWeight: 700,
-              letterSpacing: "0.15em",
-              textTransform: "uppercase",
-              color: "var(--amber)",
-            }}
-          >
-            <History size={12} />
-            Historique
-          </div>
-
           <h1
             className="bebas"
             style={{

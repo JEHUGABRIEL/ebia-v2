@@ -2,15 +2,13 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   getArtists, getTracks, searchTracks, getTrendingTracks, getRetroTracks,
-  getDiscoverArtists, getDiscoverTracks, canonGenre,
+  getDiscoverArtists, getDiscoverTracks,
   type DiscoverArtist, type DiscoverMode,
 } from "../lib/api";
 import { filterFeedByQuery } from "../lib/preferences";
-import { MapPin, Search, CheckCircle, Pause, Play, Music2, Clock, Headphones, Mic2, ArrowRight, Sparkles, ListMusic } from "lucide-react";
+import { MapPin, Search, CheckCircle, Pause, Play, Music2, Clock, Mic2, ArrowRight, Sparkles, ListMusic, TrendingUp, Disc } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useApp } from "../context/AppContext";
-
-type TrackFilter = "all" | "trending" | "new" | "retro";
 
 /**
  * Forme normalisée d'un titre affiché dans la liste (catalogue ou flux
@@ -38,21 +36,24 @@ export default function Explore() {
   const navigate = useNavigate();
   const { user, playTrack, currentTrack, isPlaying } = useApp();
   const [artists, setArtists] = useState<DiscoverArtist[]>([]);
-  const [tracks, setTracks] = useState<RowTrack[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [genre, setGenre] = useState<string | null>(null);
-  const [trackFilter, setTrackFilter] = useState<TrackFilter>("all");
-  const [searching, setSearching] = useState(false);
   /* Personnalisation */
   const [artistsMode, setArtistsMode] = useState<DiscoverMode | "catalog">("catalog");
-  const [tracksMode, setTracksMode] = useState<DiscoverMode | "catalog">("catalog");
   const [prefGenres, setPrefGenres] = useState<string[]>([]);
-  /* Flux "Recommandations" / "Mixés pour vous" — indépendant des onglets de la section Titres. */
+  /* Flux "Recommandations" / "Mixés pour vous" / "Pour vous" (même algo de préférence). */
   const [recTracks, setRecTracks] = useState<RowTrack[]>([]);
   const [recMode, setRecMode] = useState<DiscoverMode | "catalog">("catalog");
   const [recGenres, setRecGenres] = useState<string[]>([]);
   const [recLoading, setRecLoading] = useState(true);
+  /* Catalogue : tendances / nouveautés / rétro — chargés une fois, indépendamment */
+  const [trendingList, setTrendingList] = useState<RowTrack[]>([]);
+  const [newList, setNewList] = useState<RowTrack[]>([]);
+  const [retroList, setRetroList] = useState<RowTrack[]>([]);
+  const [catalogLoading, setCatalogLoading] = useState(true);
+  /* Recherche (remplace les sections catalogue tant qu'une requête est active) */
+  const [searchResults, setSearchResults] = useState<RowTrack[]>([]);
+  const [searching, setSearching] = useState(false);
 
   /* Restreint la personnalisation aux auditeurs connectés. */
   const personalized = !!user && user.role !== "artist" && user.role !== "admin";
@@ -90,7 +91,6 @@ export default function Explore() {
     }
   }, [personalized]);
 
-  /* ── Chargement du flux de titres ── */
   const toRow = (d: {
     id: string; title: string; genre: string; duration_s: number;
     plays_count: number; likes_count: number;
@@ -107,140 +107,97 @@ export default function Explore() {
     createdAt: d.createdAt ?? undefined,
   });
 
-  const loadTracksFeed = useCallback(async (silent = false) => {
-    if (!silent) setSearching(true);
+  /* ── Flux "Pour vous" (l'algo de préférence) : Recommandations + Mixés + section Pour vous ── */
+  const loadRecommended = useCallback(async (silent = false) => {
+    if (!silent) setRecLoading(true);
     try {
-      if (personalized) {
-        const res = await getDiscoverTracks();
-        setTracks(res.data.map(toRow));
-        setTracksMode(res.mode);
-        if (res.genres.length) setPrefGenres(res.genres);
-      } else {
-        const res = await getTracks();
-        setTracks(res.data.map(toRow));
-        setTracksMode("catalog");
+      const res = await getDiscoverTracks();
+      setRecTracks(res.data.map(toRow));
+      setRecMode(res.mode);
+      setRecGenres(res.genres);
+    } catch {
+      try {
+        const res = await getTracks({ limit: "30" });
+        setRecTracks(res.data.map(toRow));
+        setRecMode("catalog");
+      } catch {
+        setRecTracks([]);
       }
-    } catch {
-      const res = await getTracks().catch(() => ({ data: [] }));
-      setTracks(res.data.map(toRow));
-      setTracksMode("catalog");
     } finally {
-      if (!silent) setSearching(false);
+      if (!silent) setRecLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [personalized]);
-
-  /* ── Chargement du catalogue complet (tendances / nouveautés / rétro) ── */
-  const loadCatalogTracks = useCallback(async (filter: TrackFilter) => {
-    setSearching(true);
-    setTracksMode("catalog");
-    try {
-      let data: RowTrack[] = [];
-      if (filter === "trending") {
-        const res = await getTrendingTracks(50);
-        data = (Array.isArray(res) ? res : []).map(toRow);
-      } else if (filter === "retro") {
-        const res = await getRetroTracks(50);
-        data = (Array.isArray(res) ? res : []).map(toRow);
-      } else if (filter === "new") {
-        const res = await getTracks();
-        data = (res.data || []).map(toRow).sort((a, b) =>
-          new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
-        );
-      } else {
-        await loadTracksFeed(true);
-        return;
-      }
-      setTracks(data);
-    } catch {
-      setTracks([]);
-    } finally {
-      setSearching(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loadTracksFeed]);
-
-  // Search tracks by query (catalogue complet)
-  const doSearch = useCallback(async (q: string) => {
-    if (q.length < 2) { loadCatalogTracks(trackFilter); return; }
-    setSearching(true);
-    try {
-      const results = await searchTracks(q, 50);
-      setTracks(results.map(toRow));
-    } catch {
-      setTracks([]);
-    } finally {
-      setSearching(false);
-    }
-  }, [loadCatalogTracks, trackFilter]);
-
-  /* ── Chargement initial : artistes + titres ── */
-  useEffect(() => {
-    loadArtistsFeed();
-    loadCatalogTracks(trackFilter);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /* ── Flux "Recommandations" (l'algo de préférence), indépendant des onglets ci-dessous ── */
+  /* ── Catalogue : tendances / nouveautés / rétro, chargés une fois ── */
+  const loadCatalog = useCallback(async () => {
+    setCatalogLoading(true);
+    const [trendRes, allRes, retroRes] = await Promise.allSettled([
+      getTrendingTracks(20),
+      getTracks({ limit: "50" }),
+      getRetroTracks(20),
+    ]);
+    setTrendingList(trendRes.status === "fulfilled" && Array.isArray(trendRes.value) ? trendRes.value.map(toRow) : []);
+    if (allRes.status === "fulfilled") {
+      const sorted = [...(allRes.value.data || [])].sort((a, b) =>
+        new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+      );
+      setNewList(sorted.slice(0, 20).map(toRow));
+    } else {
+      setNewList([]);
+    }
+    setRetroList(retroRes.status === "fulfilled" && Array.isArray(retroRes.value) ? retroRes.value.map(toRow) : []);
+    setCatalogLoading(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Search tracks by query (catalogue complet)
+  const doSearch = useCallback(async (q: string) => {
+    setSearching(true);
+    try {
+      const results = await searchTracks(q, 50);
+      setSearchResults(results.map(toRow));
+    } catch {
+      setSearchResults([]);
+    } finally {
+      setSearching(false);
+    }
+  }, []);
+
+  /* ── Chargement initial ── */
   useEffect(() => {
-    (async () => {
-      setRecLoading(true);
-      try {
-        const res = await getDiscoverTracks();
-        setRecTracks(res.data.map(toRow));
-        setRecMode(res.mode);
-        setRecGenres(res.genres);
-      } catch {
-        try {
-          const res = await getTracks({ limit: "30" });
-          setRecTracks(res.data.map(toRow));
-          setRecMode("catalog");
-        } catch {
-          setRecTracks([]);
-        }
-      } finally {
-        setRecLoading(false);
-      }
-    })();
+    loadArtistsFeed();
+    loadRecommended();
+    loadCatalog();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Debounced search when typing (filtre les artistes côté client, cherche les titres côté serveur)
   useEffect(() => {
-    if (search.length >= 2) {
-      const timer = setTimeout(() => doSearch(search), 300);
+    if (search.trim().length >= 2) {
+      const timer = setTimeout(() => doSearch(search.trim()), 300);
       return () => clearTimeout(timer);
     }
-    loadCatalogTracks(trackFilter);
-  }, [search]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Reload tracks when filter changes
-  useEffect(() => {
-    if (search.length >= 2) return; // don't override search results
-    loadCatalogTracks(trackFilter);
-  }, [trackFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+    setSearchResults([]);
+  }, [search, doSearch]);
 
   /* ── L'activité (une écoute) affine le feed implicite/aléatoire ── */
   const lastPlayedRef = { id: currentTrack?.id };
   useEffect(() => {
     if (!personalized) return;
     if (!currentTrack?.id) return;
-    if (artistsMode === "explicit" && tracksMode === "explicit") return;
+    if (artistsMode === "explicit" && recMode === "explicit") return;
     // Rafraîchit discrètement les flux non explicites après une écoute.
     loadArtistsFeed(true);
-    loadTracksFeed(true);
+    loadRecommended(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lastPlayedRef.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const feedGenres = prefGenres.length > 0
-    ? prefGenres
-    : Array.from(new Set([...artists.map(a => a.genre), ...tracks.map(t => t.genre)].filter(Boolean)));
-
-  const filteredArtists = filterFeedByQuery(artists, search, genre);
-  const filteredTracks = filterFeedByQuery(tracks, "", genre);
+  const isSearching = search.trim().length >= 2;
+  const filteredArtists = filterFeedByQuery(artists, search);
 
   const showArtistModeBanner = personalized && artistsMode !== "catalog";
-  const showTrackModeBanner = personalized && trackFilter === "all" && search.length < 2 && tracksMode !== "catalog";
+  const showRecModeBanner = personalized && recMode !== "catalog";
 
   const toPlayable = (t: RowTrack) => ({
     id: t.id, title: t.title, artist: t.artist_name || "", audioUrl: t.audioUrl || "",
@@ -269,6 +226,78 @@ export default function Explore() {
       .slice(0, 6);
   }, [recTracks, recGenres]);
 
+  /** Regroupe les artistes affichés par genre, pour remplacer la grille plate. */
+  const artistGenreGroups = useMemo(() => {
+    const byGenre = new Map<string, DiscoverArtist[]>();
+    filteredArtists.forEach(a => {
+      const g = a.genre || "Autres";
+      if (!byGenre.has(g)) byGenre.set(g, []);
+      byGenre.get(g)!.push(a);
+    });
+    const order = prefGenres.length > 0
+      ? [...prefGenres.filter(g => byGenre.has(g)), ...Array.from(byGenre.keys()).filter(g => !prefGenres.includes(g))]
+      : Array.from(byGenre.keys()).sort((a, b) => (byGenre.get(b)?.length || 0) - (byGenre.get(a)?.length || 0));
+    return order.map(g => ({ genre: g, artists: byGenre.get(g)! }));
+  }, [filteredArtists, prefGenres]);
+
+  /* ── Rendu d'une rangée de titres à défilement horizontal (réutilisé pour Pour vous / Tendances / Nouveautés / Rétro) ── */
+  const renderTrackRow = (list: RowTrack[], isLoading: boolean) => (
+    <div style={{ display: "flex", gap: "16px", overflowX: "auto", paddingBottom: "8px", scrollbarWidth: "none" }}>
+      {isLoading
+        ? [...Array(6)].map((_, i) => (
+          <div key={i} style={{ width: "170px", flexShrink: 0 }}>
+            <div style={{ aspectRatio: "1", borderRadius: "12px", background: "rgba(240,235,227,0.06)", animation: "pulse 1.5s infinite", marginBottom: "10px" }} />
+            <div style={{ height: "12px", width: "80%", borderRadius: "99px", background: "rgba(240,235,227,0.06)", marginBottom: "6px" }} />
+            <div style={{ height: "10px", width: "50%", borderRadius: "99px", background: "rgba(240,235,227,0.04)" }} />
+          </div>
+        ))
+        : list.length === 0 ? (
+          <p style={{ fontSize: "13px", color: "var(--muted)", padding: "16px 0" }}>Rien à afficher pour l'instant.</p>
+        ) : list.map(track => {
+          const isCurrentTrack = currentTrack?.id === track.id;
+          return (
+            <div key={track.id} style={{ width: "170px", flexShrink: 0, cursor: "pointer" }}
+              onClick={() => playTrack(toPlayable(track), list.map(toPlayable))}
+            >
+              <div style={{
+                position: "relative", aspectRatio: "1", borderRadius: "12px", overflow: "hidden", marginBottom: "10px",
+                background: "linear-gradient(135deg, rgba(232,96,26,0.18), rgba(201,147,10,0.08))",
+              }}>
+                {track.coverUrl ? (
+                  <img src={track.coverUrl} alt={track.title} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                ) : (
+                  <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Music2 size={32} style={{ color: "var(--amber)", opacity: 0.5 }} />
+                  </div>
+                )}
+                <div style={{
+                  position: "absolute", inset: 0,
+                  background: "linear-gradient(180deg, transparent 55%, rgba(0,0,0,0.55) 100%)",
+                }} />
+                <div style={{
+                  position: "absolute", bottom: "10px", right: "10px",
+                  width: "34px", height: "34px", borderRadius: "50%",
+                  background: "var(--amber)", display: "flex", alignItems: "center", justifyContent: "center",
+                  boxShadow: "0 6px 16px rgba(232,96,26,0.4)",
+                }}>
+                  {isCurrentTrack && isPlaying
+                    ? <Pause size={13} fill="white" color="white" />
+                    : <Play size={13} fill="white" color="white" style={{ marginLeft: "1px" }} />}
+                </div>
+              </div>
+              <p style={{
+                fontSize: "13px", fontWeight: 700, color: isCurrentTrack ? "var(--amber)" : "var(--text)",
+                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: "3px",
+              }}>{track.title}</p>
+              <p style={{ fontSize: "11px", color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {track.artist_name || "Artiste inconnu"}
+              </p>
+            </div>
+          );
+        })}
+    </div>
+  );
+
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg)", paddingBottom: "120px" }}>
 
@@ -286,12 +315,6 @@ export default function Explore() {
         }} />
 
         <div style={{ position: "relative", zIndex: 1 }}>
-          <div style={{
-            fontSize: "11px", fontWeight: 700, letterSpacing: "0.2em",
-            color: "var(--amber)", textTransform: "uppercase", marginBottom: "12px",
-          }}>
-            {t("explore.tag")}
-          </div>
           <h1 className="bebas" style={{
             fontSize: "clamp(48px, 8vw, 96px)", color: "var(--text)",
             lineHeight: 0.92, marginBottom: "12px",
@@ -307,7 +330,7 @@ export default function Explore() {
       <div style={{ maxWidth: "1360px", margin: "0 auto", padding: "0 24px" }}>
 
         {/* ── SEARCH ── */}
-        <div style={{ marginBottom: "24px" }}>
+        <div style={{ marginBottom: "40px" }}>
           <div style={{ position: "relative", minWidth: "280px", maxWidth: "480px" }}>
             <Search size={15} style={{
               position: "absolute", left: "16px", top: "50%",
@@ -329,433 +352,321 @@ export default function Explore() {
           </div>
         </div>
 
-        {/* ── GENRE FILTERS (genres présents dans les flux affichés) ── */}
-        {feedGenres.length > 0 && (
-          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "40px" }}>
-            {feedGenres.map(g => {
-              const sel = genre !== null && canonGenre(genre) === canonGenre(g);
-              return (
-                <button key={g} onClick={() => setGenre(sel ? null : g)} style={{
-                  padding: "8px 18px", borderRadius: "99px", cursor: "pointer",
-                  fontSize: "12px", fontWeight: 600, letterSpacing: "0.05em",
-                  border: `1px solid ${sel ? "var(--amber)" : "rgba(240,235,227,0.1)"}`,
-                  background: sel ? "rgba(232,96,26,0.15)" : "transparent",
-                  color: sel ? "var(--amber)" : "var(--muted)",
-                  transition: "all 0.15s",
-                }}
-                  onMouseEnter={e => { if (!sel) { (e.currentTarget as HTMLElement).style.borderColor = "rgba(240,235,227,0.25)"; (e.currentTarget as HTMLElement).style.color = "var(--text)"; } }}
-                  onMouseLeave={e => { if (!sel) { (e.currentTarget as HTMLElement).style.borderColor = "rgba(240,235,227,0.1)"; (e.currentTarget as HTMLElement).style.color = "var(--muted)"; } }}
-                >{g}</button>
-              );
-            })}
-          </div>
-        )}
-
-        {/* ══════════ RECOMMANDATIONS ══════════ */}
-        {(recLoading || recTracks.length > 0) && (
+        {isSearching ? (
+          /* ══════════ RÉSULTATS DE RECHERCHE ══════════ */
           <div style={{ marginBottom: "56px" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px", flexWrap: "wrap", gap: "10px" }}>
-              <h2 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "22px", fontWeight: 800, color: "var(--text)" }}>
-                <Sparkles size={19} style={{ color: "var(--amber)" }} /> Recommandations
-              </h2>
-            </div>
+            <h2 style={{ fontSize: "22px", fontWeight: 800, color: "var(--text)", marginBottom: "16px" }}>
+              Résultats pour « {search.trim()} »
+            </h2>
+            {searching ? (
+              <div style={{ textAlign: "center", padding: "60px 0" }}>
+                <div style={{
+                  width: "36px", height: "36px", borderRadius: "50%",
+                  border: "3px solid rgba(232,96,26,0.2)", borderTopColor: "var(--amber)",
+                  animation: "spin 0.8s linear infinite", margin: "0 auto 16px",
+                }} />
+                <p style={{ fontSize: "14px", color: "var(--muted)" }}>{t("explore.searching")}</p>
+              </div>
+            ) : searchResults.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "60px 0" }}>
+                <Music2 size={40} style={{ color: "var(--muted)", opacity: 0.3, marginBottom: "16px" }} />
+                <p style={{ fontSize: "16px", fontWeight: 600, color: "var(--text)" }}>{t("explore.noTracks")}</p>
+                <p style={{ fontSize: "13px", color: "var(--muted)", marginTop: "6px" }}>{t("explore.noTracksHint")}</p>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                {searchResults.map((track, idx) => {
+                  const isCurrentTrack = currentTrack?.id === track.id;
+                  return (
+                    <div key={track.id}
+                      onClick={() => playTrack(toPlayable(track), searchResults.map(toPlayable))}
+                      style={{
+                        display: "grid", gridTemplateColumns: "48px 1fr auto auto",
+                        gap: "16px", alignItems: "center",
+                        padding: "12px 16px", borderRadius: "12px",
+                        background: isCurrentTrack ? "rgba(232,96,26,0.08)" : "transparent",
+                        cursor: "pointer", transition: "background 0.15s",
+                      }}
+                      onMouseEnter={e => { if (!isCurrentTrack) (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.04)"; }}
+                      onMouseLeave={e => { if (!isCurrentTrack) (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+                    >
+                      <div style={{
+                        width: "40px", height: "40px", borderRadius: "8px",
+                        background: isCurrentTrack ? "rgba(232,96,26,0.15)" : "rgba(240,235,227,0.05)",
+                        display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                      }}>
+                        {isCurrentTrack && isPlaying ? (
+                          <Pause size={14} style={{ color: "var(--amber)" }} />
+                        ) : (
+                          <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--muted)" }}>{idx + 1}</span>
+                        )}
+                      </div>
+                      <div style={{ minWidth: 0 }}>
+                        <p style={{
+                          fontSize: "14px", fontWeight: 600,
+                          color: isCurrentTrack ? "var(--amber)" : "var(--text)",
+                          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                        }}>{track.title}</p>
+                        <p style={{
+                          fontSize: "12px", color: "var(--muted)",
+                          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                        }}>{track.artist_name || "Artiste inconnu"}</p>
+                      </div>
+                      <span style={{
+                        padding: "3px 10px", borderRadius: "99px",
+                        background: "rgba(240,235,227,0.06)",
+                        fontSize: "10px", fontWeight: 600, color: "var(--muted)",
+                        whiteSpace: "nowrap",
+                      }}>{track.genre}</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <Clock size={12} style={{ color: "var(--muted)" }} />
+                        <span style={{ fontSize: "12px", color: "var(--muted)" }}>{fmtDur(track.duration_s)}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        ) : (
+          <>
+            {/* ══════════ RECOMMANDATIONS ══════════ */}
+            {(recLoading || recTracks.length > 0) && (
+              <div style={{ marginBottom: "56px" }}>
+                <h2 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "22px", fontWeight: 800, color: "var(--text)", marginBottom: "16px" }}>
+                  <Sparkles size={19} style={{ color: "var(--amber)" }} /> Recommandations
+                </h2>
 
-            {personalized && recMode !== "catalog" && (
+                {showRecModeBanner && (
+                  <div style={{
+                    display: "flex", alignItems: "center", gap: "10px",
+                    marginBottom: "18px", padding: "10px 16px", borderRadius: "12px",
+                    background: "rgba(232,96,26,0.06)", border: "1px solid rgba(232,96,26,0.15)",
+                    color: "var(--amber)", fontSize: "12.5px", fontWeight: 600,
+                  }}>
+                    <Sparkles size={14} style={{ flexShrink: 0 }} />
+                    <span>{MODE_LABEL[recMode]}{recMode === "explicit" && recGenres.length > 0 ? ` — ${recGenres.join(", ")}` : ""}</span>
+                  </div>
+                )}
+
+                {renderTrackRow(recTracks.slice(0, 14), recLoading)}
+              </div>
+            )}
+
+            {/* ══════════ MIXÉS POUR VOUS (playlists par genre, façon Daily Mix) ══════════ */}
+            {genreMixes.length > 0 && (
+              <div style={{ marginBottom: "56px" }}>
+                <h2 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "22px", fontWeight: 800, color: "var(--text)", marginBottom: "16px" }}>
+                  <ListMusic size={19} style={{ color: "var(--amber)" }} /> Mixés pour vous
+                </h2>
+
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "20px" }}>
+                  {genreMixes.map(({ genre: mixGenre, tracks: mixTracks }) => {
+                    const covers = mixTracks.slice(0, 4).map(t => t.coverUrl);
+                    return (
+                      <div key={mixGenre}
+                        onClick={() => playTrack(toPlayable(mixTracks[0]), mixTracks.map(toPlayable))}
+                        style={{
+                          borderRadius: "16px", overflow: "hidden", cursor: "pointer",
+                          background: "rgba(240,235,227,0.03)", border: "1px solid rgba(240,235,227,0.07)",
+                          transition: "transform 0.22s ease, border-color 0.22s ease",
+                        }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(-6px)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(232,96,26,0.25)"; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(240,235,227,0.07)"; }}
+                      >
+                        <div style={{ position: "relative", aspectRatio: "1" }}>
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gridTemplateRows: "1fr 1fr", width: "100%", height: "100%" }}>
+                            {[0, 1, 2, 3].map(i => (
+                              <div key={i} style={{
+                                overflow: "hidden",
+                                background: "linear-gradient(135deg, rgba(232,96,26,0.2), rgba(201,147,10,0.1))",
+                              }}>
+                                {covers[i] ? (
+                                  <img src={covers[i]!} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                                ) : (
+                                  <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                    <Music2 size={20} style={{ color: "var(--amber)", opacity: 0.4 }} />
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                          <div style={{
+                            position: "absolute", bottom: "12px", right: "12px",
+                            width: "40px", height: "40px", borderRadius: "50%",
+                            background: "var(--amber)", display: "flex", alignItems: "center", justifyContent: "center",
+                            boxShadow: "0 8px 20px rgba(232,96,26,0.45)",
+                          }}>
+                            <Play size={15} fill="white" color="white" style={{ marginLeft: "1px" }} />
+                          </div>
+                        </div>
+                        <div style={{ padding: "16px" }}>
+                          <p style={{ fontSize: "15px", fontWeight: 700, color: "var(--text)", marginBottom: "4px" }}>Mix {mixGenre}</p>
+                          <p style={{ fontSize: "12px", color: "var(--muted)" }}>{mixTracks.length} titres</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* ══════════ ARTISTES PAR GENRE ══════════ */}
+            {showArtistModeBanner && (
               <div style={{
                 display: "flex", alignItems: "center", gap: "10px",
-                marginBottom: "18px", padding: "10px 16px", borderRadius: "12px",
+                marginBottom: "24px", padding: "10px 16px", borderRadius: "12px",
                 background: "rgba(232,96,26,0.06)", border: "1px solid rgba(232,96,26,0.15)",
                 color: "var(--amber)", fontSize: "12.5px", fontWeight: 600,
               }}>
                 <Sparkles size={14} style={{ flexShrink: 0 }} />
-                <span>{MODE_LABEL[recMode]}{recMode === "explicit" && recGenres.length > 0 ? ` — ${recGenres.join(", ")}` : ""}</span>
+                <span>
+                  {MODE_LABEL[artistsMode]}{artistsMode === "explicit" && prefGenres.length > 0
+                    ? ` — ${prefGenres.join(", ")}`
+                    : ""}
+                </span>
               </div>
             )}
 
-            <div style={{ display: "flex", gap: "16px", overflowX: "auto", paddingBottom: "8px", scrollbarWidth: "none" }}>
-              {recLoading
-                ? [...Array(6)].map((_, i) => (
-                  <div key={i} style={{ width: "170px", flexShrink: 0 }}>
-                    <div style={{ aspectRatio: "1", borderRadius: "12px", background: "rgba(240,235,227,0.06)", animation: "pulse 1.5s infinite", marginBottom: "10px" }} />
-                    <div style={{ height: "12px", width: "80%", borderRadius: "99px", background: "rgba(240,235,227,0.06)", marginBottom: "6px" }} />
-                    <div style={{ height: "10px", width: "50%", borderRadius: "99px", background: "rgba(240,235,227,0.04)" }} />
-                  </div>
-                ))
-                : recTracks.slice(0, 14).map(track => {
-                  const isCurrentTrack = currentTrack?.id === track.id;
-                  return (
-                    <div key={track.id} style={{ width: "170px", flexShrink: 0, cursor: "pointer" }}
-                      onClick={() => playTrack(toPlayable(track), recTracks.slice(0, 14).map(toPlayable))}
-                    >
-                      <div style={{
-                        position: "relative", aspectRatio: "1", borderRadius: "12px", overflow: "hidden", marginBottom: "10px",
-                        background: "linear-gradient(135deg, rgba(232,96,26,0.18), rgba(201,147,10,0.08))",
-                      }}>
-                        {track.coverUrl ? (
-                          <img src={track.coverUrl} alt={track.title} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                        ) : (
-                          <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            <Music2 size={32} style={{ color: "var(--amber)", opacity: 0.5 }} />
-                          </div>
-                        )}
-                        <div style={{
-                          position: "absolute", inset: 0,
-                          background: "linear-gradient(180deg, transparent 55%, rgba(0,0,0,0.55) 100%)",
-                        }} />
-                        <div style={{
-                          position: "absolute", bottom: "10px", right: "10px",
-                          width: "34px", height: "34px", borderRadius: "50%",
-                          background: "var(--amber)", display: "flex", alignItems: "center", justifyContent: "center",
-                          boxShadow: "0 6px 16px rgba(232,96,26,0.4)",
-                        }}>
-                          {isCurrentTrack && isPlaying
-                            ? <Pause size={13} fill="white" color="white" />
-                            : <Play size={13} fill="white" color="white" style={{ marginLeft: "1px" }} />}
-                        </div>
+            {loading ? (
+              [...Array(2)].map((_, i) => (
+                <div key={i} style={{ marginBottom: "40px" }}>
+                  <div style={{ height: "20px", width: "160px", borderRadius: "99px", background: "rgba(240,235,227,0.06)", marginBottom: "16px" }} />
+                  <div style={{ display: "flex", gap: "16px", overflowX: "hidden" }}>
+                    {[...Array(6)].map((_, j) => (
+                      <div key={j} style={{ width: "170px", flexShrink: 0 }}>
+                        <div style={{ aspectRatio: "1", borderRadius: "16px", background: "rgba(240,235,227,0.06)", animation: "pulse 1.5s infinite" }} />
                       </div>
-                      <p style={{
-                        fontSize: "13px", fontWeight: 700, color: isCurrentTrack ? "var(--amber)" : "var(--text)",
-                        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: "3px",
-                      }}>{track.title}</p>
-                      <p style={{ fontSize: "11px", color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {track.artist_name || "Artiste inconnu"}
-                      </p>
-                    </div>
-                  );
-                })}
-            </div>
-          </div>
-        )}
-
-        {/* ══════════ MIXÉS POUR VOUS (playlists par genre, façon Daily Mix) ══════════ */}
-        {genreMixes.length > 0 && (
-          <div style={{ marginBottom: "56px" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px", flexWrap: "wrap", gap: "10px" }}>
-              <h2 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "22px", fontWeight: 800, color: "var(--text)" }}>
-                <ListMusic size={19} style={{ color: "var(--amber)" }} /> Mixés pour vous
-              </h2>
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "20px" }}>
-              {genreMixes.map(({ genre: mixGenre, tracks: mixTracks }) => {
-                const covers = mixTracks.slice(0, 4).map(t => t.coverUrl);
-                return (
-                  <div key={mixGenre}
-                    onClick={() => playTrack(toPlayable(mixTracks[0]), mixTracks.map(toPlayable))}
-                    style={{
-                      borderRadius: "16px", overflow: "hidden", cursor: "pointer",
-                      background: "rgba(240,235,227,0.03)", border: "1px solid rgba(240,235,227,0.07)",
-                      transition: "transform 0.22s ease, border-color 0.22s ease",
-                    }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(-6px)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(232,96,26,0.25)"; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(240,235,227,0.07)"; }}
-                  >
-                    <div style={{ position: "relative", aspectRatio: "1" }}>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gridTemplateRows: "1fr 1fr", width: "100%", height: "100%" }}>
-                        {[0, 1, 2, 3].map(i => (
-                          <div key={i} style={{
-                            overflow: "hidden",
-                            background: "linear-gradient(135deg, rgba(232,96,26,0.2), rgba(201,147,10,0.1))",
-                          }}>
-                            {covers[i] ? (
-                              <img src={covers[i]!} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                            ) : (
-                              <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                <Music2 size={20} style={{ color: "var(--amber)", opacity: 0.4 }} />
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                      <div style={{
-                        position: "absolute", bottom: "12px", right: "12px",
-                        width: "40px", height: "40px", borderRadius: "50%",
-                        background: "var(--amber)", display: "flex", alignItems: "center", justifyContent: "center",
-                        boxShadow: "0 8px 20px rgba(232,96,26,0.45)",
-                      }}>
-                        <Play size={15} fill="white" color="white" style={{ marginLeft: "1px" }} />
-                      </div>
-                    </div>
-                    <div style={{ padding: "16px" }}>
-                      <p style={{ fontSize: "15px", fontWeight: 700, color: "var(--text)", marginBottom: "4px" }}>Mix {mixGenre}</p>
-                      <p style={{ fontSize: "12px", color: "var(--muted)" }}>{mixTracks.length} titres</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* ══════════ SECTION ARTISTES ══════════ */}
-        <div style={{ marginBottom: "56px" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px", flexWrap: "wrap", gap: "10px" }}>
-            <h2 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "22px", fontWeight: 800, color: "var(--text)" }}>
-              <Headphones size={19} style={{ color: "var(--amber)" }} /> {t("explore.tabArtists")}
-            </h2>
-            {!loading && (
-              <p style={{ fontSize: "12px", color: "var(--muted)" }}>
-                {t("explore.artistCount", { count: filteredArtists.length, defaultValue: filteredArtists.length + " artistes" })}
-              </p>
-            )}
-          </div>
-
-          {showArtistModeBanner && (
-            <div style={{
-              display: "flex", alignItems: "center", gap: "10px",
-              marginBottom: "18px", padding: "10px 16px", borderRadius: "12px",
-              background: "rgba(232,96,26,0.06)", border: "1px solid rgba(232,96,26,0.15)",
-              color: "var(--amber)", fontSize: "12.5px", fontWeight: 600,
-            }}>
-              <Sparkles size={14} style={{ flexShrink: 0 }} />
-              <span>
-                {MODE_LABEL[artistsMode]}{artistsMode === "explicit" && prefGenres.length > 0
-                  ? ` — ${prefGenres.join(", ")}`
-                  : ""}
-              </span>
-            </div>
-          )}
-
-          {loading ? (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "20px" }}>
-              {[...Array(8)].map((_, i) => (
-                <div key={i} style={{ borderRadius: "16px", overflow: "hidden", background: "rgba(240,235,227,0.04)" }}>
-                  <div style={{ aspectRatio: "1", background: "rgba(240,235,227,0.06)", animation: "pulse 1.5s infinite" }} />
-                  <div style={{ padding: "16px" }}>
-                    <div style={{ height: "14px", borderRadius: "99px", background: "rgba(240,235,227,0.06)", marginBottom: "8px" }} />
-                    <div style={{ height: "11px", width: "60%", borderRadius: "99px", background: "rgba(240,235,227,0.04)" }} />
+                    ))}
                   </div>
                 </div>
-              ))}
-            </div>
-          ) : filteredArtists.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "60px 0" }}>
-              <div className="bebas" style={{ fontSize: "28px", color: "var(--muted)" }}>{t("explore.noArtists")}</div>
-              <p style={{ color: "var(--muted)", fontSize: "14px", marginTop: "8px" }}>{t("explore.noArtistsHint")}</p>
-            </div>
-          ) : (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "20px" }}>
-              {filteredArtists.map((artist) => (
-                <Link key={artist.id} to={`/artist/${artist.slug}`} style={{ textDecoration: "none" }}>
-                  <div style={{
-                    borderRadius: "16px", overflow: "hidden",
-                    background: "rgba(240,235,227,0.03)", border: "1px solid rgba(240,235,227,0.07)",
-                    transition: "transform 0.22s ease, border-color 0.22s ease", cursor: "pointer",
-                  }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(-6px)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(232,96,26,0.25)"; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(240,235,227,0.07)"; }}
-                  >
-                    <div style={{ aspectRatio: "1", overflow: "hidden", position: "relative" }}>
-                      {artist.avatar_url ? (
-                        <img src={artist.avatar_url} alt={artist.name}
-                          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transition: "transform 0.5s ease" }}
-                          onMouseEnter={e => (e.currentTarget as HTMLElement).style.transform = "scale(1.08)"}
-                          onMouseLeave={e => (e.currentTarget as HTMLElement).style.transform = "scale(1)"} />
-                      ) : (
-                        <div style={{
-                          width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center",
-                          background: "linear-gradient(135deg, rgba(232,96,26,0.2), rgba(201,147,10,0.1))",
-                        }}>
-                          <span className="bebas" style={{ fontSize: "64px", color: "var(--amber)", opacity: 0.6 }}>{artist.name[0]}</span>
+              ))
+            ) : artistGenreGroups.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "60px 0", marginBottom: "56px" }}>
+                <div className="bebas" style={{ fontSize: "28px", color: "var(--muted)" }}>{t("explore.noArtists")}</div>
+                <p style={{ color: "var(--muted)", fontSize: "14px", marginTop: "8px" }}>{t("explore.noArtistsHint")}</p>
+              </div>
+            ) : artistGenreGroups.map(({ genre: rowGenre, artists: rowArtists }) => (
+              <div key={rowGenre} style={{ marginBottom: "48px" }}>
+                <h2 style={{ fontSize: "18px", fontWeight: 800, color: "var(--text)", marginBottom: "16px" }}>{rowGenre}</h2>
+                <div style={{ display: "flex", gap: "16px", overflowX: "auto", paddingBottom: "8px", scrollbarWidth: "none" }}>
+                  {rowArtists.map(artist => (
+                    <Link key={artist.id} to={`/artist/${artist.slug}`} style={{ textDecoration: "none", width: "170px", flexShrink: 0 }}>
+                      <div style={{
+                        borderRadius: "16px", overflow: "hidden",
+                        background: "rgba(240,235,227,0.03)", border: "1px solid rgba(240,235,227,0.07)",
+                        transition: "transform 0.22s ease, border-color 0.22s ease", cursor: "pointer",
+                      }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(-6px)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(232,96,26,0.25)"; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(240,235,227,0.07)"; }}
+                      >
+                        <div style={{ aspectRatio: "1", overflow: "hidden", position: "relative" }}>
+                          {artist.avatar_url ? (
+                            <img src={artist.avatar_url} alt={artist.name}
+                              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transition: "transform 0.5s ease" }}
+                              onMouseEnter={e => (e.currentTarget as HTMLElement).style.transform = "scale(1.08)"}
+                              onMouseLeave={e => (e.currentTarget as HTMLElement).style.transform = "scale(1)"} />
+                          ) : (
+                            <div style={{
+                              width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center",
+                              background: "linear-gradient(135deg, rgba(232,96,26,0.2), rgba(201,147,10,0.1))",
+                            }}>
+                              <span className="bebas" style={{ fontSize: "48px", color: "var(--amber)", opacity: 0.6 }}>{artist.name[0]}</span>
+                            </div>
+                          )}
+                          {artist.verified && (
+                            <div style={{
+                              position: "absolute", top: "10px", right: "10px", width: "24px", height: "24px",
+                              borderRadius: "50%", background: "rgba(8,8,8,0.75)", display: "flex",
+                              alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)",
+                            }}>
+                              <CheckCircle size={13} style={{ color: "var(--amber)" }} />
+                            </div>
+                          )}
                         </div>
-                      )}
-                      {artist.verified && (
-                        <div style={{
-                          position: "absolute", top: "10px", right: "10px", width: "26px", height: "26px",
-                          borderRadius: "50%", background: "rgba(8,8,8,0.75)", display: "flex",
-                          alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)",
-                        }}>
-                          <CheckCircle size={14} style={{ color: "var(--amber)" }} />
+                        <div style={{ padding: "12px" }}>
+                          <p style={{ fontSize: "13px", fontWeight: 700, color: "var(--text)", marginBottom: "4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{artist.name}</p>
+                          <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                            <MapPin size={10} style={{ color: "var(--muted)", flexShrink: 0 }} />
+                            <span style={{ fontSize: "11px", color: "var(--muted)" }}>{artist.city}</span>
+                          </div>
                         </div>
-                      )}
-                    </div>
-                    <div style={{ padding: "16px" }}>
-                      <p style={{ fontSize: "14px", fontWeight: 700, color: "var(--text)", marginBottom: "5px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{artist.name}</p>
-                      <p style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--amber)", marginBottom: "8px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{artist.genre}</p>
-                      <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                        <MapPin size={10} style={{ color: "var(--muted)", flexShrink: 0 }} />
-                        <span style={{ fontSize: "12px", color: "var(--muted)" }}>{artist.city}</span>
                       </div>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* ── CTA: Devenir artiste ── */}
-        <div style={{
-          marginBottom: "56px", padding: "40px 48px",
-          borderRadius: "20px", background: "linear-gradient(135deg, rgba(232,96,26,0.08), rgba(201,147,10,0.04))",
-          border: "1px solid rgba(232,96,26,0.15)",
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-          flexWrap: "wrap", gap: "24px",
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
-            <div style={{
-              width: "56px", height: "56px", borderRadius: "16px",
-              background: "rgba(232,96,26,0.15)", display: "flex",
-              alignItems: "center", justifyContent: "center", flexShrink: 0,
-            }}>
-              <Mic2 size={26} style={{ color: "var(--amber)" }} />
-            </div>
-            <div>
-              <p style={{ fontSize: "20px", fontWeight: 800, color: "var(--text)", marginBottom: "4px" }}>
-                Vous êtes artiste ?
-              </p>
-              <p style={{ fontSize: "14px", color: "var(--muted)", maxWidth: "420px" }}>
-                Publiez votre musique, touchez des milliers d'auditeurs et construisez votre communauté en RCA.
-              </p>
-            </div>
-          </div>
-          <button onClick={() => navigate("/login")} style={{
-            display: "inline-flex", alignItems: "center", gap: "8px",
-            padding: "14px 28px", borderRadius: "99px",
-            background: "var(--amber)", color: "#fff",
-            fontWeight: 700, fontSize: "14px", border: "none", cursor: "pointer",
-            transition: "box-shadow 0.2s",
-          }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 24px rgba(232,96,26,0.4)"; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}
-          >
-            Devenir artiste <ArrowRight size={16} />
-          </button>
-        </div>
-
-        {/* ══════════ SECTION TITRES ══════════ */}
-        <div>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px", flexWrap: "wrap", gap: "10px" }}>
-            <h2 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "22px", fontWeight: 800, color: "var(--text)" }}>
-              <Music2 size={19} style={{ color: "var(--amber)" }} /> {t("explore.tabTracks")}
-            </h2>
-            {!searching && (
-              <p style={{ fontSize: "12px", color: "var(--muted)" }}>
-                {t("explore.trackCount", { count: filteredTracks.length, defaultValue: filteredTracks.length + " titres" })}
-              </p>
-            )}
-          </div>
-
-          {/* Track filters (trending/new/retro) */}
-          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "16px" }}>
-            {([
-              { key: "all" as TrackFilter, label: "Pour vous", icon: "🎯" },
-              { key: "trending" as TrackFilter, label: "Tendances", icon: "🔥" },
-              { key: "new" as TrackFilter, label: "Nouveautés", icon: "✨" },
-              { key: "retro" as TrackFilter, label: "Rétro", icon: "💿" },
-            ]).map(f => (
-              <button key={f.key} onClick={() => { setTrackFilter(f.key); setSearch(""); }} style={{
-                padding: "8px 18px", borderRadius: "99px", cursor: "pointer",
-                fontSize: "12px", fontWeight: 600, letterSpacing: "0.05em",
-                border: `1px solid ${trackFilter === f.key ? "var(--amber)" : "rgba(240,235,227,0.1)"}`,
-                background: trackFilter === f.key ? "rgba(232,96,26,0.15)" : "transparent",
-                color: trackFilter === f.key ? "var(--amber)" : "var(--muted)",
-                transition: "all 0.15s",
-              }}
-                onMouseEnter={e => { if (trackFilter !== f.key) { (e.currentTarget as HTMLElement).style.borderColor = "rgba(240,235,227,0.25)"; (e.currentTarget as HTMLElement).style.color = "var(--text)"; } }}
-                onMouseLeave={e => { if (trackFilter !== f.key) { (e.currentTarget as HTMLElement).style.borderColor = "rgba(240,235,227,0.1)"; (e.currentTarget as HTMLElement).style.color = "var(--muted)"; } }}
-              >{f.icon} {f.label}</button>
+                    </Link>
+                  ))}
+                </div>
+              </div>
             ))}
-          </div>
 
-          {showTrackModeBanner && (
+            {/* ── CTA: Devenir artiste ── */}
             <div style={{
-              display: "flex", alignItems: "center", gap: "10px",
-              marginBottom: "18px", padding: "10px 16px", borderRadius: "12px",
-              background: "rgba(232,96,26,0.06)", border: "1px solid rgba(232,96,26,0.15)",
-              color: "var(--amber)", fontSize: "12.5px", fontWeight: 600,
+              marginBottom: "56px", padding: "40px 48px",
+              borderRadius: "20px", background: "linear-gradient(135deg, rgba(232,96,26,0.08), rgba(201,147,10,0.04))",
+              border: "1px solid rgba(232,96,26,0.15)",
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+              flexWrap: "wrap", gap: "24px",
             }}>
-              <Sparkles size={14} style={{ flexShrink: 0 }} />
-              <span>{MODE_LABEL[tracksMode]}</span>
+              <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
+                <div style={{
+                  width: "56px", height: "56px", borderRadius: "16px",
+                  background: "rgba(232,96,26,0.15)", display: "flex",
+                  alignItems: "center", justifyContent: "center", flexShrink: 0,
+                }}>
+                  <Mic2 size={26} style={{ color: "var(--amber)" }} />
+                </div>
+                <div>
+                  <p style={{ fontSize: "20px", fontWeight: 800, color: "var(--text)", marginBottom: "4px" }}>
+                    Vous êtes artiste ?
+                  </p>
+                  <p style={{ fontSize: "14px", color: "var(--muted)", maxWidth: "420px" }}>
+                    Publiez votre musique, touchez des milliers d'auditeurs et construisez votre communauté en RCA.
+                  </p>
+                </div>
+              </div>
+              <button onClick={() => navigate("/login")} style={{
+                display: "inline-flex", alignItems: "center", gap: "8px",
+                padding: "14px 28px", borderRadius: "99px",
+                background: "var(--amber)", color: "#fff",
+                fontWeight: 700, fontSize: "14px", border: "none", cursor: "pointer",
+                transition: "box-shadow 0.2s",
+              }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 24px rgba(232,96,26,0.4)"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}
+              >
+                Devenir artiste <ArrowRight size={16} />
+              </button>
             </div>
-          )}
 
-          {searching ? (
-            <div style={{ textAlign: "center", padding: "60px 0" }}>
-              <div style={{
-                width: "36px", height: "36px", borderRadius: "50%",
-                border: "3px solid rgba(232,96,26,0.2)", borderTopColor: "var(--amber)",
-                animation: "spin 0.8s linear infinite", margin: "0 auto 16px",
-              }} />
-              <p style={{ fontSize: "14px", color: "var(--muted)" }}>{t("explore.searching")}</p>
+            {/* ══════════ POUR VOUS / TENDANCES / NOUVEAUTÉS / RÉTRO ══════════ */}
+            <div style={{ marginBottom: "56px" }}>
+              <h2 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "22px", fontWeight: 800, color: "var(--text)", marginBottom: "16px" }}>
+                🎯 Pour vous
+              </h2>
+              {renderTrackRow(recTracks, recLoading)}
             </div>
-          ) : filteredTracks.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "60px 0" }}>
-              <Music2 size={40} style={{ color: "var(--muted)", opacity: 0.3, marginBottom: "16px" }} />
-              <p style={{ fontSize: "16px", fontWeight: 600, color: "var(--text)" }}>{t("explore.noTracks")}</p>
-              <p style={{ fontSize: "13px", color: "var(--muted)", marginTop: "6px" }}>{t("explore.noTracksHint")}</p>
+
+            <div style={{ marginBottom: "56px" }}>
+              <h2 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "22px", fontWeight: 800, color: "var(--text)", marginBottom: "16px" }}>
+                <TrendingUp size={19} style={{ color: "var(--amber)" }} /> Tendances
+              </h2>
+              {renderTrackRow(trendingList, catalogLoading)}
             </div>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-              {filteredTracks.map((track, idx) => {
-                const isCurrentTrack = currentTrack?.id === track.id;
-                return (
-                  <div key={track.id}
-                    onClick={() => playTrack({
-                      id: track.id, title: track.title,
-                      artist: track.artist_name || "",
-                      audioUrl: track.audioUrl || "",
-                      coverUrl: track.coverUrl,
-                      duration: track.duration_s,
-                    }, filteredTracks.map(rt => ({
-                      id: rt.id, title: rt.title, artist: rt.artist_name || "",
-                      audioUrl: rt.audioUrl || "", coverUrl: rt.coverUrl, duration: rt.duration_s,
-                    })))}
-                    style={{
-                      display: "grid", gridTemplateColumns: "48px 1fr auto auto",
-                      gap: "16px", alignItems: "center",
-                      padding: "12px 16px", borderRadius: "12px",
-                      background: isCurrentTrack ? "rgba(232,96,26,0.08)" : "transparent",
-                      cursor: "pointer", transition: "background 0.15s",
-                    }}
-                    onMouseEnter={e => { if (!isCurrentTrack) (e.currentTarget as HTMLElement).style.background = "rgba(240,235,227,0.04)"; }}
-                    onMouseLeave={e => { if (!isCurrentTrack) (e.currentTarget as HTMLElement).style.background = "transparent"; }}
-                  >
-                    {/* Number / Play */}
-                    <div style={{
-                      width: "40px", height: "40px", borderRadius: "8px",
-                      background: isCurrentTrack ? "rgba(232,96,26,0.15)" : "rgba(240,235,227,0.05)",
-                      display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-                    }}>
-                      {isCurrentTrack && isPlaying ? (
-                        <Pause size={14} style={{ color: "var(--amber)" }} />
-                      ) : (
-                        <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--muted)" }}>{idx + 1}</span>
-                      )}
-                    </div>
 
-                    {/* Title + Artist */}
-                    <div style={{ minWidth: 0 }}>
-                      <p style={{
-                        fontSize: "14px", fontWeight: 600,
-                        color: isCurrentTrack ? "var(--amber)" : "var(--text)",
-                        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                      }}>{track.title}</p>
-                      <p style={{
-                        fontSize: "12px", color: "var(--muted)",
-                        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                      }}>{track.artist_name || "Artiste inconnu"}</p>
-                    </div>
-
-                    {/* Genre badge */}
-                    <span style={{
-                      padding: "3px 10px", borderRadius: "99px",
-                      background: "rgba(240,235,227,0.06)",
-                      fontSize: "10px", fontWeight: 600, color: "var(--muted)",
-                      whiteSpace: "nowrap",
-                    }}>{track.genre}</span>
-
-                    {/* Duration */}
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <Clock size={12} style={{ color: "var(--muted)" }} />
-                      <span style={{ fontSize: "12px", color: "var(--muted)" }}>{fmtDur(track.duration_s)}</span>
-                    </div>
-                  </div>
-                );
-              })}
+            <div style={{ marginBottom: "56px" }}>
+              <h2 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "22px", fontWeight: 800, color: "var(--text)", marginBottom: "16px" }}>
+                ✨ Nouveautés
+              </h2>
+              {renderTrackRow(newList, catalogLoading)}
             </div>
-          )}
-        </div>
+
+            <div>
+              <h2 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "22px", fontWeight: 800, color: "var(--text)", marginBottom: "16px" }}>
+                <Disc size={19} style={{ color: "var(--amber)" }} /> Rétro
+              </h2>
+              {renderTrackRow(retroList, catalogLoading)}
+            </div>
+          </>
+        )}
       </div>
 
       <style>{`

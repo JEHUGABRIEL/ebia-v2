@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Settings as SettingsIcon,
   User,
   Bell,
   Globe,
@@ -178,17 +177,6 @@ export default function Settings() {
       {/* Header */}
       <section style={{ padding: "120px 24px 40px", maxWidth: "1360px", margin: "0 auto" }}>
         <div style={{ position: "relative", zIndex: 1 }}>
-          <div style={{
-            display: "inline-flex", alignItems: "center", gap: "8px",
-            padding: "5px 12px", borderRadius: "99px",
-            border: "1px solid rgba(232,96,26,0.3)", marginBottom: "20px",
-            fontSize: "11px", fontWeight: 700, letterSpacing: "0.15em",
-            textTransform: "uppercase", color: "var(--amber)",
-          }}>
-            <SettingsIcon size={12} />
-            Paramètres
-          </div>
-
           <h1 className="bebas" style={{
             fontSize: "clamp(48px, 8vw, 96px)", color: "var(--text)",
             lineHeight: 0.92, marginBottom: "16px",

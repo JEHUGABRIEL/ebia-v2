@@ -391,7 +391,6 @@ export default function ArtistDashboard() {
             <div style={{ display: "flex", flexDirection: "column", gap: "32px" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px" }}>
                 <div>
-                  <p style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.15em", color: "var(--amber)", textTransform: "uppercase", marginBottom: "6px" }}>Tableau de bord</p>
                   <h1 className="bebas" style={{ fontSize: "44px", color: "var(--text)", lineHeight: 1 }}>
                     Bonjour, {profile?.stage_name || user.displayName?.split(" ")[0]}
                   </h1>

@@ -206,9 +206,6 @@ export default function Recognize() {
 
       {/* Titre */}
       <div style={{ textAlign: "center", marginBottom: "48px", position: "relative", zIndex: 1 }}>
-        <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "6px 14px", borderRadius: "99px", border: "1px solid rgba(232,96,26,0.3)", marginBottom: "20px", fontSize: "11px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--amber)" }}>
-          <Search size={11} /> {t("recognize.tag")}
-        </div>
         <h1 className="bebas" style={{ fontSize: "clamp(48px, 8vw, 80px)", color: "var(--text)", lineHeight: 1, marginBottom: "12px" }}>
           {t("recognize.title")}<br /><span style={{ color: "var(--amber)" }}>{t("recognize.titleAccent")}</span>
         </h1>
