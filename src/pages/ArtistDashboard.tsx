@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useApp } from "../context/AppContext";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import {
   Home, Music2, Upload, BarChart2, Settings, LogOut,
   Play, Pause, Trash2, Eye, Heart, Headphones, TrendingUp,
@@ -20,6 +20,7 @@ import AlbumSection from "../components/AlbumSection";
 import EnhancedStats from "../components/EnhancedStats";
 
 type Section = "accueil" | "titres" | "albums" | "evenements" | "profil" | "stats" | "parametres";
+const SECTIONS: Section[] = ["accueil", "titres", "albums", "evenements", "profil", "stats", "parametres"];
 
 const FREE_LIMIT = 5;
 const fmtNum = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
@@ -113,7 +114,21 @@ export default function ArtistDashboard() {
   const { user } = useApp();
   const navigate = useNavigate();
 
-  const [section, setSection] = useState<Section>("accueil");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const sectionParam = searchParams.get("section") as Section | null;
+  const [section, setSectionState] = useState<Section>(
+    sectionParam && SECTIONS.includes(sectionParam) ? sectionParam : "accueil"
+  );
+  // La section active est reflétée dans l'URL (?section=...) pour qu'un refresh
+  // (F5) garde l'utilisateur sur l'onglet où il était, au lieu de revenir à l'accueil.
+  const setSection = (s: Section) => {
+    setSectionState(s);
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      next.set("section", s);
+      return next;
+    }, { replace: true });
+  };
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);

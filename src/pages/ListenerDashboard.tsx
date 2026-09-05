@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useApp, type DownloadableTrack } from "../context/AppContext";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { Home, Search, Library, Heart, Users, Settings, Plus, ChevronRight, LogOut, Camera, Mic2, Music2, Loader, Menu, X as XIcon, Download, DownloadCloud, CheckCircle2, Trash2, WifiOff, Star, Upload, BarChart2, Mic, DollarSign, TrendingUp, ListMusic, History, Rss, BarChart3 } from "lucide-react";
 import LogoutModal from "../components/LogoutModal";
 import EbiaLogo from "../components/EbiaLogo";
@@ -12,6 +12,7 @@ import PlaylistsPanel from "../components/PlaylistsPanel";
 import { daysLeft, type OfflineTrack } from "../lib/offline";
 
 type Section = "accueil" | "recherche" | "bibliotheque" | "favoris" | "suivis" | "parametres" | "decouvrir" | "telechargements" | "playlists" | "play-history" | "activity" | "wrapped";
+const SECTIONS: Section[] = ["accueil", "recherche", "bibliotheque", "favoris", "suivis", "parametres", "decouvrir", "telechargements", "playlists", "play-history", "activity", "wrapped"];
 
 const formatDuration = (seconds?: number) => {
   if (!seconds || seconds <= 0) return "--:--";
@@ -30,7 +31,21 @@ const GENRES = [
 export default function ListenerDashboard() {
   const { user, updateUser, downloadedIds, downloadingIds, downloadProgress, downloadTrack, removeDownload, getDownloadedTracks, networkQuality, playTrack } = useApp();
   const navigate = useNavigate();
-  const [section, setSection] = useState<Section>("accueil");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const sectionParam = searchParams.get("section") as Section | null;
+  const [section, setSectionState] = useState<Section>(
+    sectionParam && SECTIONS.includes(sectionParam) ? sectionParam : "accueil"
+  );
+  // La section active est reflétée dans l'URL (?section=...) pour qu'un refresh
+  // (F5) garde l'utilisateur sur l'onglet où il était, au lieu de revenir à l'accueil.
+  const setSection = (s: Section) => {
+    setSectionState(s);
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      next.set("section", s);
+      return next;
+    }, { replace: true });
+  };
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(user?.avatarUrl ?? null);
