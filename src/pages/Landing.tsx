@@ -1,11 +1,9 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useApp } from "../context/AppContext";
-import { ArrowRight, Play, Star, Quote, ChevronRight, Music2, TrendingUp, Disc, Radio, Mouse } from "lucide-react";
+import { ArrowRight, Play, Star, Quote, ChevronRight, Music2, Radio, Mouse } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { getArtists, getTracks, getTrendingTracks, getRetroTracks, BASE, type Artist, type Track } from "../lib/api";
-
-const TICKER = ["Afro-Pop","Hip-Hop","Afro-Folk","Soukous","Gospel","Afro-Trap","Ndombolo","Bikutsi","Traditionnel","R&B","Afro-Beat","Soul"];
+import { getArtists, getTracks, getRetroTracks, BASE, type Artist, type Track } from "../lib/api";
 
 const COMMENTS = [
   { name: "Aimée K.", role: "Auditrice, Bangui", stars: 5, text: "Enfin une plateforme qui met en valeur notre musique ! J'écoute E-Bia tous les jours pour découvrir de nouveaux artistes centrafricains." },
@@ -16,20 +14,11 @@ const COMMENTS = [
   { name: "Jean-Baptiste O.", role: "Artiste, Berberati", stars: 5, text: "La reconnaissance musicale est bluffante. Enregistre 5 secondes et E-Bia retrouve le morceau. De la magie !" },
 ];
 
-const GENRES = [
-  { id: "rumba", label: "Rumba", icon: Disc, color: "#E8601A" },
-  { id: "ndombolo", label: "Ndombolo", icon: Music2, color: "#C9930A" },
-  { id: "hiphop", label: "Hip-Hop", icon: TrendingUp, color: "#8B5CF6" },
-  { id: "gospel", label: "Gospel", icon: Star, color: "#10B981" },
-  { id: "afrobeat", label: "Afro-Beat", icon: Play, color: "#F59E0B" },
-  { id: "soukous", label: "Soukous", icon: Disc, color: "#EF4444" },
-];
-
 const FEATURED_RADIOS = [
-  { name: "Radio Ndeke Luka", freq: "100.9 FM", desc: "La radio la plus écoutée de RCA", color: "#E8601A", live: true },
-  { name: "Guira FM", freq: "93.3 FM", desc: "Radio de la MINUSCA · Paix et culture", color: "#1565C0", live: true },
-  { name: "Hit Radio RCA", freq: "96.1 FM", desc: "Musique populaire à Bangui", color: "#C62828", live: true },
-  { name: "Radio Lengo Songo", freq: "98.9 FM", desc: "Musique centrafricaine et culture", color: "#2E7D32", live: true },
+  { name: "Radio Ndeke Luka", freq: "100.9 FM", desc: "La radio la plus écoutée de RCA", color: "#E8601A", live: true, url: "https://www.radiondekeluka.org/#launchRadio" },
+  { name: "Guira FM", freq: "93.3 FM", desc: "Radio de la MINUSCA · Paix et culture", color: "#1565C0", live: true, url: "https://www.radioguira.org/" },
+  { name: "Hit Radio RCA", freq: "96.1 FM", desc: "Musique populaire à Bangui", color: "#C62828", live: true, url: undefined as string | undefined },
+  { name: "Radio Lengo Songo", freq: "98.9 FM", desc: "Musique centrafricaine et culture", color: "#2E7D32", live: true, url: undefined as string | undefined },
 ];
 
 const UPCOMING_CONCERTS = [
@@ -42,36 +31,32 @@ const HERO_SLIDES = [
   {
     img: "https://images.unsplash.com/photo-1508973379184-7517410fb0bc?w=1920&q=70&auto=format&fit=crop",
     lines: [
-      { text: "La", color: "var(--text)" },
-      { text: "musique", color: "var(--amber)" },
-      { text: "de chez nous.", color: "var(--gold)" },
+      { text: "La musique", color: "var(--text)" },
+      { text: "de chez nous.", color: "var(--amber)" },
     ],
     description: "Découvrez, écoutez et soutenez les artistes qui définissent le son de la République Centrafricaine.",
   },
   {
     img: "https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=1920&q=70&auto=format&fit=crop",
     lines: [
-      { text: "Toutes", color: "var(--text)" },
-      { text: "les radios", color: "var(--amber)" },
-      { text: "de la RCA.", color: "var(--gold)" },
+      { text: "Toutes les radios", color: "var(--text)" },
+      { text: "de la RCA.", color: "var(--amber)" },
     ],
     description: "Écoutez vos stations préférées en direct, 24h/24, où que vous soyez dans le monde.",
   },
   {
     img: "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=1920&q=70&auto=format&fit=crop",
     lines: [
-      { text: "Vivez", color: "var(--text)" },
-      { text: "la scène", color: "var(--amber)" },
-      { text: "en direct.", color: "var(--gold)" },
+      { text: "Vivez la scène", color: "var(--text)" },
+      { text: "en direct.", color: "var(--amber)" },
     ],
     description: "Ne manquez plus aucun concert, festival ou événement musical près de chez vous.",
   },
   {
     img: "https://images.unsplash.com/photo-1520523839897-bd0b52f945a0?w=1920&q=70&auto=format&fit=crop",
     lines: [
-      { text: "Ta voix.", color: "var(--text)" },
-      { text: "Ton public", color: "var(--amber)" },
-      { text: "t'attend.", color: "var(--gold)" },
+      { text: "Ta voix, ton public", color: "var(--text)" },
+      { text: "t'attend.", color: "var(--amber)" },
     ],
     description: "Publiez votre musique, suivez vos statistiques et connectez-vous à vos auditeurs.",
   },
@@ -214,7 +199,6 @@ export default function Landing() {
   const { user } = useApp();
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const full = [...TICKER,...TICKER,...TICKER,...TICKER];
   const [heroSlide, setHeroSlide] = useState(0);
 
   useEffect(() => {
@@ -224,7 +208,6 @@ export default function Landing() {
   const [stats, setStats] = useState({ artists: 0, tracks: 0, total_plays: 0, total_likes: 0 });
   const [artists, setArtists] = useState<Artist[]>([]);
   const [tracks, setTracks] = useState<Track[]>([]);
-  const [trendingTracks, setTrendingTracks] = useState<Track[]>([]);
   const [retroTracks, setRetroTracks] = useState<Track[]>([]);
   const [artistMap, setArtistMap] = useState<Record<string, Artist>>({});
 
@@ -237,7 +220,6 @@ export default function Landing() {
       setArtistMap(map);
     }).catch(() => {});
     getTracks({ limit: "20" }).then(r => setTracks(r.data)).catch(() => {});
-    getTrendingTracks(15).then(r => setTrendingTracks(Array.isArray(r) ? r : [])).catch(() => {});
     getRetroTracks(15).then(r => setRetroTracks(Array.isArray(r) ? r : [])).catch(() => {});
   }, []);
 
@@ -249,8 +231,8 @@ export default function Landing() {
 
       {/* ── HERO ── */}
       <section style={{
-        minHeight: "100vh", display: "flex", alignItems: "center",
-        padding: "100px 0 60px", position: "relative", overflow: "hidden",
+        minHeight: "68vh", display: "flex", alignItems: "center",
+        padding: "120px 0 40px", position: "relative", overflow: "hidden",
       }}>
         {HERO_SLIDES.map((s, i) => (
           <div key={i} style={{
@@ -343,17 +325,6 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── TICKER ── */}
-      <div style={{ borderTop: "1px solid var(--border)", borderBottom: "1px solid var(--border)", overflow: "hidden", padding: "14px 0", background: "#0D0D0D" }}>
-        <div className="marquee-track">
-          {full.map((g, i) => (
-            <span key={i} style={{ padding: "0 28px", fontSize: "11px", fontWeight: 600, letterSpacing: "0.18em", textTransform: "uppercase", color: i % 2 === 0 ? "var(--muted)" : "var(--amber)" }}>
-              {g}&nbsp;&nbsp;<span style={{ color: "rgba(240,235,227,0.12)" }}>•</span>
-            </span>
-          ))}
-        </div>
-      </div>
-
       {/* ── CATALOG SECTIONS ── */}
       <div style={{ maxWidth: "1360px", margin: "0 auto", padding: "64px 48px 0" }}>
 
@@ -429,32 +400,6 @@ export default function Landing() {
           </div>
         )}
 
-        {/* Découvrir par genre */}
-        <div style={{ marginBottom: "64px" }}>
-          <SectionHeader title="Découvrir par genre" />
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "16px" }}>
-            {GENRES.map(g => (
-              <Link key={g.id} to="/explore" style={{ textDecoration: "none" }}>
-                <div style={{
-                  padding: "24px 20px", borderRadius: "12px", cursor: "pointer",
-                  background: `linear-gradient(135deg, ${g.color}22, ${g.color}08)`,
-                  border: `1px solid ${g.color}33`,
-                  transition: "transform 0.2s, border-color 0.2s",
-                  display: "flex", alignItems: "center", gap: "14px",
-                }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(-3px)"; (e.currentTarget as HTMLElement).style.borderColor = `${g.color}66`; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.borderColor = `${g.color}33`; }}
-                >
-                  <div style={{ width: "40px", height: "40px", borderRadius: "10px", background: `${g.color}20`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <g.icon size={18} style={{ color: g.color }} />
-                  </div>
-                  <span style={{ fontSize: "14px", fontWeight: 700, color: "var(--text)" }}>{g.label}</span>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
-
         {/* Nouveaux titres */}
         {newTracks.length > 0 && (
           <div style={{ marginBottom: "64px" }}>
@@ -485,51 +430,6 @@ export default function Landing() {
                             <Play size={16} fill="white" color="white" style={{ marginLeft: "2px" }} />
                           </div>
                         </div>
-                      </div>
-                      <div style={{ padding: "14px" }}>
-                        <p style={{ fontSize: "14px", fontWeight: 700, color: "var(--text)", marginBottom: "4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.title}</p>
-                        <p style={{ fontSize: "12px", color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{artist?.name || "Artiste"}</p>
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
-            </ScrollRow>
-          </div>
-        )}
-
-        {/* ── TENDANCES ── */}
-        {trendingTracks.length > 0 && (
-          <div style={{ marginBottom: "64px" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px" }}>
-              <div>
-                <div style={{ fontSize: "11px", fontWeight: 600, letterSpacing: "0.2em", color: "var(--amber)", textTransform: "uppercase", marginBottom: "8px" }}>Tendances</div>
-                <h2 style={{ fontSize: "22px", fontWeight: 800, color: "var(--text)" }}>Les titres les plus écoutés en ce moment</h2>
-              </div>
-            </div>
-            <ScrollRow className="hide-scrollbar">
-              {trendingTracks.map((t, i) => {
-                const artist = artistMap[t.artistId || t.artist_id || ""];
-                return (
-                  <Link key={t.id} to={`/artist/${artist?.slug || ""}`} style={{ textDecoration: "none", flexShrink: 0, width: "180px" }}>
-                    <div style={{ borderRadius: "12px", overflow: "hidden", background: "rgba(232,96,26,0.04)", border: "1px solid rgba(232,96,26,0.12)", transition: "transform 0.2s, border-color 0.2s", cursor: "pointer" }}
-                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(-4px)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(232,96,26,0.35)"; }}
-                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(232,96,26,0.12)"; }}
-                    >
-                      <div style={{ aspectRatio: "1", overflow: "hidden", position: "relative" }}>
-                        {artist?.avatar_url ? (
-                          <img src={artist.avatar_url} alt={t.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                        ) : (
-                          <div style={{ width: "100%", height: "100%", background: `linear-gradient(135deg, rgba(232,96,26,0.2), rgba(201,147,10,0.1))`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            <Music2 size={32} style={{ color: "var(--amber)", opacity: 0.4 }} />
-                          </div>
-                        )}
-                        <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0, transition: "opacity 0.2s" }} className="track-hover-overlay" onMouseEnter={e => (e.currentTarget.style.opacity = "1")} onMouseLeave={e => (e.currentTarget.style.opacity = "0")}>
-                          <div style={{ width: "44px", height: "44px", borderRadius: "50%", background: "var(--amber)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            <Play size={16} fill="white" color="white" style={{ marginLeft: "2px" }} />
-                          </div>
-                        </div>
-                        <div style={{ position: "absolute", top: "10px", right: "10px", padding: "3px 8px", borderRadius: "99px", background: "rgba(232,96,26,0.85)", fontSize: "10px", fontWeight: 700, color: "#fff" }}>🔥 {i + 1}</div>
                       </div>
                       <div style={{ padding: "14px" }}>
                         <p style={{ fontSize: "14px", fontWeight: 700, color: "var(--text)", marginBottom: "4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.title}</p>
@@ -620,56 +520,12 @@ export default function Landing() {
           </div>
         )}
 
-        {/* ── NOUVELLES SORTIES ── */}
-        {newTracks.length > 0 && (
-          <div style={{ marginBottom: "64px" }}>
-            <SectionHeader title="Nouvelles sorties" linkTo="/explore" linkLabel="Tout afficher" />
-            <ScrollRow className="hide-scrollbar">
-              {newTracks.slice(0, 10).map(t => {
-                const artist = artistMap[t.artistId || t.artist_id || ""];
-                return (
-                  <Link key={t.id} to={`/artist/${artist?.slug || ""}`} style={{ textDecoration: "none", flexShrink: 0, width: "280px" }}>
-                    <div style={{
-                      borderRadius: "14px", overflow: "hidden",
-                      background: "rgba(240,235,227,0.03)", border: "1px solid rgba(240,235,227,0.06)",
-                      transition: "transform 0.2s, border-color 0.2s", cursor: "pointer",
-                    }}
-                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(-4px)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(16,185,129,0.3)"; }}
-                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(240,235,227,0.06)"; }}
-                    >
-                      <div style={{ height: "160px", overflow: "hidden", position: "relative" }}>
-                        {artist?.avatar_url ? (
-                          <img src={artist.avatar_url} alt={t.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                        ) : (
-                          <div style={{ width: "100%", height: "100%", background: "linear-gradient(135deg, rgba(16,185,129,0.15), rgba(232,96,26,0.08))", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            <Music2 size={36} style={{ color: "var(--amber)", opacity: 0.3 }} />
-                          </div>
-                        )}
-                        <div style={{
-                          position: "absolute", top: "10px", right: "10px",
-                          padding: "4px 10px", borderRadius: "99px",
-                          background: "rgba(16,185,129,0.85)", backdropFilter: "blur(8px)",
-                          fontSize: "10px", fontWeight: 700, color: "#fff", letterSpacing: "0.05em",
-                        }}>NOUVEAU</div>
-                      </div>
-                      <div style={{ padding: "16px" }}>
-                        <p style={{ fontSize: "15px", fontWeight: 700, color: "var(--text)", marginBottom: "4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.title}</p>
-                        <p style={{ fontSize: "12px", color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{artist?.name || "Artiste"}</p>
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
-            </ScrollRow>
-          </div>
-        )}
-
         {/* ── RADIOS EN DIRECT ── */}
         <div style={{ marginBottom: "64px" }}>
           <SectionHeader title="Écouter en direct" linkTo="/radio" linkLabel="Toutes les radios" />
           <ScrollRow className="hide-scrollbar">
-            {FEATURED_RADIOS.map((radio, i) => (
-              <Link key={i} to="/radio" style={{ textDecoration: "none", flexShrink: 0, width: "260px" }}>
+            {FEATURED_RADIOS.map((radio, i) => {
+              const card = (
                 <div style={{
                   padding: "20px", borderRadius: "14px",
                   background: `${radio.color}0A`, border: `1px solid ${radio.color}20`,
@@ -693,8 +549,14 @@ export default function Landing() {
                   <p style={{ fontSize: "12px", color: radio.color, fontWeight: 600, marginBottom: "6px" }}>{radio.freq}</p>
                   <p style={{ fontSize: "12px", color: "var(--muted)", lineHeight: 1.5 }}>{radio.desc}</p>
                 </div>
-              </Link>
-            ))}
+              );
+              const wrapperStyle = { textDecoration: "none", flexShrink: 0, width: "260px" } as const;
+              return radio.url ? (
+                <a key={i} href={radio.url} target="_blank" rel="noopener noreferrer" style={wrapperStyle}>{card}</a>
+              ) : (
+                <Link key={i} to="/radio" style={wrapperStyle}>{card}</Link>
+              );
+            })}
           </ScrollRow>
         </div>
 
