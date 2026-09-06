@@ -29,6 +29,7 @@ export default function Recognize() {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animRef = useRef<number>(0);
+  const levelSampleRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const peakByteRef = useRef<number>(0);
 
   const getSupportedMimeType = (): string => {
@@ -75,18 +76,27 @@ export default function Recognize() {
       analyserRef.current = analyser;
 
       peakByteRef.current = 0;
+
+      // Animation du visualiseur : requestAnimationFrame, pour rester fluide.
       const updateLevel = () => {
         const data = new Uint8Array(analyser.frequencyBinCount);
         analyser.getByteFrequencyData(data);
-        let sum = 0, max = 0;
-        for (const v of data) { sum += v; if (v > max) max = v; }
-        // Un micro réel capte toujours un plancher de bruit : un pic resté à 0
-        // sur toute la prise = piste morte (micro coupé, mauvais périphérique).
-        if (max > peakByteRef.current) peakByteRef.current = max;
+        let sum = 0;
+        for (const v of data) sum += v;
         setAudioLevel(sum / data.length / 128);
         animRef.current = requestAnimationFrame(updateLevel);
       };
       updateLevel();
+
+      // Mesure du pic : setInterval, PAS requestAnimationFrame. Chrome gèle
+      // complètement les rAF dès que la fenêtre passe en arrière-plan ou est
+      // masquée — le pic resterait alors à 0 sur une prise pourtant correcte.
+      // setInterval continue de tourner (cadencé à 1 s au minimum).
+      levelSampleRef.current = setInterval(() => {
+        const data = new Uint8Array(analyser.frequencyBinCount);
+        analyser.getByteFrequencyData(data);
+        for (const v of data) if (v > peakByteRef.current) peakByteRef.current = v;
+      }, 200);
 
       const mimeType = getSupportedMimeType();
       mimeTypeRef.current = mimeType;
@@ -97,15 +107,12 @@ export default function Recognize() {
       recorder.onstop = () => {
         stream.getTracks().forEach(t => t.stop());
         cancelAnimationFrame(animRef.current);
+        clearInterval(levelSampleRef.current!);
         setAudioLevel(0);
-        if (peakByteRef.current === 0) {
-          // Inutile d'envoyer du silence numérique au serveur : il répondrait
-          // "titre non trouvé", ce qui ferait croire à tort que le titre manque
-          // au catalogue alors que le micro n'a rien capté.
-          setState("error");
-          setErrorMsg(t("recognize.errorNoSignal"));
-          return;
-        }
+        // On envoie TOUJOURS l'enregistrement : c'est le serveur qui tranche, en
+        // lisant les échantillons décodés. Le pic mesuré ici ne sert qu'à
+        // formuler le bon message d'erreur — jamais à jeter une prise, sinon un
+        // simple gel du navigateur ferait perdre un enregistrement valide.
         processAudio();
       };
 
@@ -149,6 +156,7 @@ export default function Recognize() {
       const data = await res.json() as { found: boolean; track?: TrackResult; confidence?: number; message?: string; error?: string };
 
       if (!res.ok) {
+        // 422 = le serveur n'a trouvé aucun son exploitable. Si le micro n'a rien
         const msg = data.error || data.message || `Erreur serveur (${res.status})`;
         setErrorMsg(res.status === 503 ? "Service de reconnaissance temporairement indisponible. Réessayez plus tard." : msg);
         setState("error");
@@ -174,6 +182,14 @@ export default function Recognize() {
         setResult(data.track);
         setConfidence(data.confidence ?? 0);
         setState("found");
+      } else if (peakByteRef.current === 0) {
+        // Le serveur n'a rien reconnu ET le micro n'a capté aucun niveau de toute
+        // la prise : c'est le micro qui est en cause, pas le catalogue. On le dit,
+        // au lieu de laisser croire que le titre n'est pas dans la base.
+        // (Le test ne peut pas se faire sur le statut HTTP : la passerelle répond
+        // toujours 200, même quand le service audio a renvoyé un 422.)
+        setErrorMsg(t("recognize.errorNoSignal"));
+        setState("error");
       } else {
         setErrorMsg(data.message ?? "Titre non reconnu dans notre base.");
         setState("not_found");
