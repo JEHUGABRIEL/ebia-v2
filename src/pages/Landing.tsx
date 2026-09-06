@@ -231,8 +231,8 @@ export default function Landing() {
 
       {/* ── HERO ── */}
       <section style={{
-        minHeight: "68vh", display: "flex", alignItems: "center",
-        padding: "120px 0 40px", position: "relative", overflow: "hidden",
+        minHeight: "100vh", display: "flex", alignItems: "center",
+        padding: "100px 0 60px", position: "relative", overflow: "hidden",
       }}>
         {HERO_SLIDES.map((s, i) => (
           <div key={i} style={{
