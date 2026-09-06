@@ -234,7 +234,8 @@ export default function Recognize() {
               <Mic size={52} color="white" />
             </button>
             <p style={{ fontSize: "14px", fontWeight: 600, color: "var(--text)", marginBottom: "8px" }}>{t("recognize.tapToListen")}</p>
-            <p style={{ fontSize: "12px", color: "var(--muted)" }}>{t("recognize.recordDuration", { seconds: RECORD_SECONDS })}</p>
+            <p style={{ fontSize: "12px", color: "var(--muted)", marginBottom: "10px" }}>{t("recognize.recordDuration", { seconds: RECORD_SECONDS })}</p>
+            <p style={{ fontSize: "11px", color: "var(--muted)", opacity: 0.7, maxWidth: "320px", margin: "0 auto", lineHeight: 1.5 }}>{t("recognize.sameDeviceHint")}</p>
           </div>
         )}
 
