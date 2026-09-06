@@ -37,7 +37,7 @@ const ARTIST_GENRES = [
 /* ── Carousel ── */
 const SLIDES = [
   { img: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=900&h=1200&fit=crop", tag: "Scène centrafricaine", title: "La musique de chez nous,\npour le monde entier.", sub: "Découvrez les artistes qui font vibrer la RCA" },
-  { img: "https://images.unsplash.com/photo-1516585427167-9f4af9627e6c?w=900&h=1200&fit=crop", tag: "Artiste en vedette", title: "Idylle Mamba", sub: "Ambassadrice de la musique centrafricaine" },
+  { img: "http://localhost/ebia-audio/images/artists/idylle-mamba/avatar.jpg", tag: "Artiste en vedette", title: "Idylle Mamba", sub: "Ambassadrice de la musique centrafricaine" },
   { img: "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=900&h=1200&fit=crop", tag: "E-Bia Platform", title: "19 artistes. 54 titres.\n100% gratuit.", sub: "La première plateforme dédiée à la RCA" },
   { img: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=900&h=1200&fit=crop", tag: "Live & Concerts", title: "Vivez la musique\ncentrafricaine en direct.", sub: "Concerts, événements et sessions exclusives" },
 ];
