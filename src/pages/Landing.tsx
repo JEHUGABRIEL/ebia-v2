@@ -15,10 +15,10 @@ const COMMENTS = [
 ];
 
 const FEATURED_RADIOS = [
-  { name: "Radio Ndeke Luka", freq: "100.9 FM", desc: "La radio la plus écoutée de RCA", color: "#E8601A", live: true, url: "https://www.radiondekeluka.org/#launchRadio" },
-  { name: "Guira FM", freq: "93.3 FM", desc: "Radio de la MINUSCA · Paix et culture", color: "#1565C0", live: true, url: "https://www.radioguira.org/" },
-  { name: "Hit Radio RCA", freq: "96.1 FM", desc: "Musique populaire à Bangui", color: "#C62828", live: true, url: undefined as string | undefined },
-  { name: "Radio Lengo Songo", freq: "98.9 FM", desc: "Musique centrafricaine et culture", color: "#2E7D32", live: true, url: undefined as string | undefined },
+  { name: "Radio Ndeke Luka", freq: "100.9 FM", desc: "La radio la plus écoutée de RCA", color: "#E8601A", live: true, path: "/radio/638c5fe2-ad8c-412f-8182-56a672278c97" },
+  { name: "Guira FM", freq: "93.3 FM", desc: "Radio de la MINUSCA · Paix et culture", color: "#1565C0", live: true, path: "/radio/aebc7b87-11e7-4e57-a43d-42380bdd0200" },
+  { name: "Hit Radio RCA", freq: "96.1 FM", desc: "Musique populaire à Bangui", color: "#C62828", live: true, path: "/radio" },
+  { name: "Radio Lengo Songo", freq: "98.9 FM", desc: "Musique centrafricaine et culture", color: "#2E7D32", live: true, path: "/radio" },
 ];
 
 const UPCOMING_CONCERTS = [
@@ -551,10 +551,8 @@ export default function Landing() {
                 </div>
               );
               const wrapperStyle = { textDecoration: "none", flexShrink: 0, width: "260px" } as const;
-              return radio.url ? (
-                <a key={i} href={radio.url} target="_blank" rel="noopener noreferrer" style={wrapperStyle}>{card}</a>
-              ) : (
-                <Link key={i} to="/radio" style={wrapperStyle}>{card}</Link>
+              return (
+                <Link key={i} to={radio.path} style={wrapperStyle}>{card}</Link>
               );
             })}
           </ScrollRow>

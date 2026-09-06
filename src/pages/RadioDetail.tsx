@@ -44,7 +44,9 @@ export default function RadioDetail() {
 
     const audio = new Audio();
     audio.volume = muted ? 0 : volume;
-    audio.crossOrigin = "anonymous";
+    // Pas de crossOrigin ici : aucune fonctionnalité (EQ/visualiseur) n'en a besoin,
+    // et l'imposer fait échouer la lecture des flux qui n'envoient pas d'en-têtes
+    // CORS (ex: Radio Ndeke Luka) alors qu'ils sont parfaitement lisibles en <audio>.
     audioRef.current = audio;
     audio.src = station.streamUrl;
 
