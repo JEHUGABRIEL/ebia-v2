@@ -126,6 +126,14 @@ body {
   .nav-desktop { display: none !important; }
   .nav-mobile-btn { display: flex !important; }
   .nav-mobile-menu { display: block !important; }
+  /* Sur mobile, le fond transparent-au-repos (pensé pour un hero desktop) rend
+     la barre illisible tant qu'on n'a pas scrollé — toujours opaque ici. */
+  .navbar-bar {
+    background: rgba(8,8,8,0.95) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border-bottom: 1px solid rgba(240,235,227,0.07) !important;
+  }
 }
 
 /* ── Sidebar dashboard responsive ── */

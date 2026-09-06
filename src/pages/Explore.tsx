@@ -41,21 +41,39 @@ const prefersReducedMotion = () =>
  */
 function TrackRow({
   list, isLoading, coverRadius = "12px", currentTrackId, isPlaying, onPlay,
-  autoScrollSpeed = 0, autoScrollDirection = 1,
+  autoScrollSpeed = 0, autoScrollDirection = 1, loopSwipe = false,
 }: {
   list: RowTrack[]; isLoading: boolean; coverRadius?: string;
   currentTrackId?: string; isPlaying: boolean;
   onPlay: (track: RowTrack, list: RowTrack[]) => void;
   autoScrollSpeed?: number; autoScrollDirection?: 1 | -1;
+  /** Défilement par sauts discrets (façon "Artistes populaires" en home) plutôt
+   * que le défilement continu — le contenu est dupliqué pour boucler sans à-coup. */
+  loopSwipe?: boolean;
 }) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const pausedRef = useRef(false);
   const dirRef = useRef<1 | -1>(autoScrollDirection);
+  const swipePosRef = useRef(0);
 
   useEffect(() => {
-    if (!autoScrollSpeed || isLoading || list.length === 0 || prefersReducedMotion()) return;
+    if (isLoading || list.length === 0 || prefersReducedMotion()) return;
     const el = scrollerRef.current;
     if (!el) return;
+
+    if (loopSwipe) {
+      swipePosRef.current = 0;
+      const id = setInterval(() => {
+        if (pausedRef.current) return;
+        const halfWidth = el.scrollWidth / 2;
+        swipePosRef.current += 186;
+        if (swipePosRef.current >= halfWidth) swipePosRef.current = 0;
+        el.scrollTo({ left: swipePosRef.current, behavior: "smooth" });
+      }, 2800);
+      return () => clearInterval(id);
+    }
+
+    if (!autoScrollSpeed) return;
     dirRef.current = autoScrollDirection;
     if (autoScrollDirection === -1) el.scrollLeft = el.scrollWidth;
 
@@ -73,10 +91,12 @@ function TrackRow({
     };
     raf = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf);
-  }, [autoScrollSpeed, autoScrollDirection, isLoading, list.length]);
+  }, [autoScrollSpeed, autoScrollDirection, isLoading, list.length, loopSwipe]);
 
   const pause = () => { pausedRef.current = true; };
   const resume = () => { pausedRef.current = false; };
+
+  const renderList = loopSwipe ? [...list, ...list] : list;
 
   return (
     <div ref={scrollerRef}
@@ -94,11 +114,11 @@ function TrackRow({
         ))
         : list.length === 0 ? (
           <p style={{ fontSize: "13px", color: "var(--muted)", padding: "16px 0" }}>Rien à afficher pour l'instant.</p>
-        ) : list.map(track => {
+        ) : renderList.map((track, idx) => {
           const isCurrentTrack = currentTrackId === track.id;
           const isCircular = coverRadius === "9999px";
           return (
-            <div key={track.id} className="track-card" style={{ width: "170px", flexShrink: 0, cursor: "pointer" }}
+            <div key={loopSwipe ? `${track.id}-${idx}` : track.id} className="track-card" style={{ width: "170px", flexShrink: 0, cursor: "pointer" }}
               onClick={() => onPlay(track, list)}
             >
               <div style={{
@@ -439,7 +459,7 @@ export default function Explore() {
               <TrackRow list={newList} isLoading={catalogLoading} coverRadius="9999px"
                 currentTrackId={currentTrack?.id} isPlaying={isPlaying}
                 onPlay={(t, l) => playTrack(toPlayable(t), l.map(toPlayable))}
-                autoScrollSpeed={0.3} autoScrollDirection={1} />
+                loopSwipe />
             </div>
 
             {/* ══════════ TENDANCES ══════════ */}
@@ -486,13 +506,14 @@ export default function Explore() {
                   <ListMusic size={19} style={{ color: "var(--amber)" }} /> Mixés pour vous
                 </h2>
 
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "20px" }}>
+                <div style={{ display: "flex", flexWrap: "nowrap", gap: "20px", overflowX: "auto", paddingBottom: "8px", scrollbarWidth: "none" }}>
                   {genreMixes.map(({ genre: mixGenre, tracks: mixTracks }) => {
                     const covers = mixTracks.slice(0, 4).map(t => t.coverUrl);
                     return (
                       <div key={mixGenre}
                         onClick={() => playTrack(toPlayable(mixTracks[0]), mixTracks.map(toPlayable))}
                         style={{
+                          width: "220px", flexShrink: 0,
                           borderRadius: "16px", overflow: "hidden", cursor: "pointer",
                           background: "rgba(240,235,227,0.03)", border: "1px solid rgba(240,235,227,0.07)",
                           transition: "transform 0.22s ease, border-color 0.22s ease",

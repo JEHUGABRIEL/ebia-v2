@@ -104,7 +104,7 @@ export default function Navbar() {
 
   return (
     <>
-      <nav style={{
+      <nav className="navbar-bar" style={{
         position: "fixed", top: 0, left: 0, right: 0, zIndex: 50,
         background: scrolled ? "rgba(8,8,8,0.95)" : "transparent",
         backdropFilter: scrolled ? "blur(20px)" : "none",
