@@ -97,7 +97,22 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const [authReady, setAuthReady] = useState(false);
 
   /* ── Player ── */
-  const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
+  // Restaure le dernier titre affiché après un refresh — jamais la lecture elle-même
+  // (l'audio ne redémarre pas tout seul), juste pour que l'UI (bouton flottant/disque)
+  // sache qu'un titre était en cours au lieu de disparaître complètement.
+  const [currentTrack, setCurrentTrack] = useState<Track | null>(() => {
+    try {
+      const saved = localStorage.getItem("ebia_last_track");
+      return saved ? (JSON.parse(saved) as Track) : null;
+    } catch { return null; }
+  });
+  // Référence (pas un booléen) vers l'objet restauré : une comparaison par
+  // référence survit au double-appel des effets par React.StrictMode en dev
+  // (un simple flag "consommé une fois" y serait remis à zéro trop tôt, côté
+  // deuxième invocation, et relancerait la lecture toute seule). Un vrai
+  // nouveau titre (playTrack/next/prev) crée toujours un nouvel objet, donc
+  // cette référence devient naturellement obsolète sans jamais être réinitialisée.
+  const restoredTrackRef = useRef<Track | null>(currentTrack);
   const [isPlaying, setIsPlaying] = useState(false);
   const [queue, setQueue] = useState<Track[]>([]);
   const [queueIndex, setQueueIndex] = useState(0);
@@ -183,6 +198,9 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   /* ── Lecture d'un nouveau morceau ── */
   useEffect(() => {
     if (!currentTrack) return;
+    // Un titre restauré depuis localStorage (après un refresh) ne doit jamais se
+    // relancer tout seul — seul le prochain vrai playTrack()/togglePlay() doit jouer.
+    const skipAutoplay = currentTrack === restoredTrackRef.current;
     if (!audioRef.current) audioRef.current = new Audio();
     const audio = audioRef.current;
     const trackId = currentTrack.id;
@@ -248,6 +266,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       }
 
       if (startTime > 0) audio.currentTime = startTime;
+      if (skipAutoplay) return;
       await audio.play();
       if (!cancelled) setIsPlaying(true);
     };
@@ -298,6 +317,15 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       audio.oncanplay = null;
       audio.ontimeupdate = null;
     };
+  }, [currentTrack]);
+
+  /* Persiste le titre affiché pour qu'un refresh le retrouve (en pause) au lieu
+     de le perdre complètement — cf. restoredTrackRef ci-dessus. */
+  useEffect(() => {
+    try {
+      if (currentTrack) localStorage.setItem("ebia_last_track", JSON.stringify(currentTrack));
+      else localStorage.removeItem("ebia_last_track");
+    } catch { /* stockage indisponible (navigation privée…) — pas bloquant */ }
   }, [currentTrack]);
 
   useEffect(() => {

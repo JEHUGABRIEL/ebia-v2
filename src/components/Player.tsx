@@ -12,6 +12,7 @@ import { useEQ } from "../context/EQContext";
 
 export default function Player() {
   const {
+    user,
     currentTrack, isPlaying, togglePlay, nextTrack, prevTrack,
     queue, queueIndex, isShuffle, toggleShuffle, repeatMode, toggleRepeat,
     playTrack, stopTrack, audioEl,
@@ -92,10 +93,11 @@ export default function Player() {
     `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
   const currentTime = (progress * duration) / 100;
 
+  const barVisible = !!currentTrack && user?.role !== "listener";
   const DownloadErrorToast = () =>
     downloadError ? (
       <div style={{
-        position: "fixed", bottom: currentTrack ? "80px" : "24px", left: "50%", transform: "translateX(-50%)", zIndex: 200,
+        position: "fixed", bottom: barVisible ? "80px" : "24px", left: "50%", transform: "translateX(-50%)", zIndex: 200,
         display: "flex", alignItems: "center", gap: "10px",
         padding: "12px 20px", borderRadius: "12px",
         background: "rgba(28,8,8,0.96)", border: "1px solid rgba(220,50,50,0.35)",
@@ -115,7 +117,9 @@ export default function Player() {
       </div>
     ) : null;
 
-  if (!currentTrack) return <DownloadErrorToast />;
+  // Sur le profil auditeur, le bouton flottant (play/pause ou disque qui tourne)
+  // remplace entièrement la bande du bas — cf. ListenerPlayerFab.
+  if (!currentTrack || user?.role === "listener") return <DownloadErrorToast />;
 
   const Cover = ({ size }: { size: number }) =>
     currentTrack.coverUrl ? (

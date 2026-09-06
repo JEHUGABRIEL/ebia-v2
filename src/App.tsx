@@ -9,6 +9,7 @@ import Navbar from "./components/Navbar";
 import Player from "./components/Player";
 import LoginModal from "./components/LoginModal";
 import MessageFab from "./components/MessageFab";
+import ListenerPlayerFab from "./components/ListenerPlayerFab";
 import CallScreen from "./components/CallScreen";
 import IncomingCallToast from "./components/IncomingCallToast";
 import Footer from "./components/Footer";
@@ -146,6 +147,7 @@ function AppContent() {
       {!hideChrome && <Footer />}
       <Player />
       <MessageFab />
+      <ListenerPlayerFab />
       <LoginModal />
       <CallScreen />
       <IncomingCallToast />
