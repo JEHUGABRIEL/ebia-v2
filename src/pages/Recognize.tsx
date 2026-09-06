@@ -29,6 +29,7 @@ export default function Recognize() {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animRef = useRef<number>(0);
+  const peakByteRef = useRef<number>(0);
 
   const getSupportedMimeType = (): string => {
     const types = ["audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus", "audio/mp4", "audio/3gpp"];
@@ -73,11 +74,16 @@ export default function Recognize() {
       src.connect(analyser);
       analyserRef.current = analyser;
 
+      peakByteRef.current = 0;
       const updateLevel = () => {
         const data = new Uint8Array(analyser.frequencyBinCount);
         analyser.getByteFrequencyData(data);
-        const avg = data.reduce((s, v) => s + v, 0) / data.length;
-        setAudioLevel(avg / 128);
+        let sum = 0, max = 0;
+        for (const v of data) { sum += v; if (v > max) max = v; }
+        // Un micro réel capte toujours un plancher de bruit : un pic resté à 0
+        // sur toute la prise = piste morte (micro coupé, mauvais périphérique).
+        if (max > peakByteRef.current) peakByteRef.current = max;
+        setAudioLevel(sum / data.length / 128);
         animRef.current = requestAnimationFrame(updateLevel);
       };
       updateLevel();
@@ -92,6 +98,14 @@ export default function Recognize() {
         stream.getTracks().forEach(t => t.stop());
         cancelAnimationFrame(animRef.current);
         setAudioLevel(0);
+        if (peakByteRef.current === 0) {
+          // Inutile d'envoyer du silence numérique au serveur : il répondrait
+          // "titre non trouvé", ce qui ferait croire à tort que le titre manque
+          // au catalogue alors que le micro n'a rien capté.
+          setState("error");
+          setErrorMsg(t("recognize.errorNoSignal"));
+          return;
+        }
         processAudio();
       };
 

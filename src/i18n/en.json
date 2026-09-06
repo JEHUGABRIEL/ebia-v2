@@ -224,6 +224,7 @@
     "errorMic": "Your device doesn't support audio recording.",
     "errorMicPermission": "Microphone access denied. Allow it in the app settings.",
     "errorMicAccess": "Cannot access the microphone. Check permissions.",
+    "errorNoSignal": "No sound picked up by the microphone. Check that it isn't muted and that the right input device is selected, then try again.",
     "errorService": "Recognition service temporarily unavailable. Try again later.",
     "errorServer": "Cannot reach the recognition server. Check your connection.",
     "errorGeneric": "Recognition error",

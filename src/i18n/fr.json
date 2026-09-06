@@ -224,6 +224,7 @@
     "errorMic": "Votre appareil ne supporte pas l'enregistrement audio.",
     "errorMicPermission": "Accès au microphone refusé. Autorisez-le dans les paramètres de l'application.",
     "errorMicAccess": "Impossible d'accéder au microphone. Vérifiez les permissions.",
+    "errorNoSignal": "Aucun son capté par le micro. Vérifiez qu'il n'est pas coupé et que le bon périphérique d'entrée est sélectionné, puis réessayez.",
     "errorService": "Service de reconnaissance temporairement indisponible. Réessayez plus tard.",
     "errorServer": "Impossible de joindre le serveur de reconnaissance. Vérifiez votre connexion.",
     "errorGeneric": "Erreur lors de la reconnaissance",
