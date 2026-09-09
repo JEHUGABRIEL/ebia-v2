@@ -153,7 +153,7 @@ export default function Recognize() {
       const res = await fetch(`${BASE}/api/v1/recognize`, {
         method: "POST", body: fd,
       });
-      const data = await res.json() as { found: boolean; track?: TrackResult; confidence?: number; message?: string; error?: string };
+      const data = await res.json() as { found: boolean; recognized?: boolean; track?: TrackResult; confidence?: number; message?: string; error?: string };
 
       if (!res.ok) {
         // 422 = le serveur n'a trouvé aucun son exploitable. Si le micro n'a rien
@@ -178,10 +178,6 @@ export default function Recognize() {
         });
         setConfidence(data.confidence ?? 0);
         setState("found");
-      } else if (data.found && data.track) {
-        setResult(data.track);
-        setConfidence(data.confidence ?? 0);
-        setState("found");
       } else if (peakByteRef.current === 0) {
         // Le serveur n'a rien reconnu ET le micro n'a capté aucun niveau de toute
         // la prise : c'est le micro qui est en cause, pas le catalogue. On le dit,
@@ -191,6 +187,9 @@ export default function Recognize() {
         setErrorMsg(t("recognize.errorNoSignal"));
         setState("error");
       } else {
+        // `recognized` distingue « titre identifié mais pas encore diffusable »
+        // de « absent du catalogue » : le message du serveur est alors le bon,
+        // et il ne faut surtout pas le remplacer par « non reconnu ».
         setErrorMsg(data.message ?? "Titre non reconnu dans notre base.");
         setState("not_found");
       }
