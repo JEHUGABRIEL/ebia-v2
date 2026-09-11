@@ -3,7 +3,8 @@ import { useApp } from "../context/AppContext";
 import { ArrowRight, Play, Star, Quote, ChevronRight, Music2, Radio, Mouse } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { getArtists, getTracks, getRetroTracks, BASE, type Artist, type Track } from "../lib/api";
+import { getArtists, getTracks, getRetroTracks, getEvents, getRadios, BASE, type Artist, type Track, type EventItem, type RadioStationApi } from "../lib/api";
+import { fmtEventDate } from "../lib/eventColors";
 
 const COMMENTS = [
   { name: "Aimée K.", role: "Auditrice, Bangui", stars: 5, text: "Enfin une plateforme qui met en valeur notre musique ! J'écoute E-Bia tous les jours pour découvrir de nouveaux artistes centrafricains." },
@@ -12,19 +13,6 @@ const COMMENTS = [
   { name: "Fabrice N.", role: "Artiste, Bangui", stars: 5, text: "E-Bia a changé ma carrière. Je publie mes titres directement et je reçois des retours incroyables des auditeurs." },
   { name: "Sandrine P.", role: "Auditrice, Bambari", stars: 5, text: "La qualité d'écoute est impressionnante, même avec une connexion limitée. C'est vraiment fait pour nous." },
   { name: "Jean-Baptiste O.", role: "Artiste, Berberati", stars: 5, text: "La reconnaissance musicale est bluffante. Enregistre 5 secondes et E-Bia retrouve le morceau. De la magie !" },
-];
-
-const FEATURED_RADIOS = [
-  { name: "Radio Ndeke Luka", freq: "100.9 FM", desc: "La radio la plus écoutée de RCA", color: "#E8601A", live: true, path: "/radio/638c5fe2-ad8c-412f-8182-56a672278c97" },
-  { name: "Guira FM", freq: "93.3 FM", desc: "Radio de la MINUSCA · Paix et culture", color: "#1565C0", live: true, path: "/radio/aebc7b87-11e7-4e57-a43d-42380bdd0200" },
-  { name: "Hit Radio RCA", freq: "96.1 FM", desc: "Musique populaire à Bangui", color: "#C62828", live: true, path: "/radio" },
-  { name: "Radio Lengo Songo", freq: "98.9 FM", desc: "Musique centrafricaine et culture", color: "#2E7D32", live: true, path: "/radio" },
-];
-
-const UPCOMING_CONCERTS = [
-  { title: "Festival Ndeke", location: "Bangui", date: "2026", genre: "Multi-genre", status: "Bientôt" },
-  { title: "Soukous Night", location: "Bangui", date: "2026", genre: "Soukous", status: "Bientôt" },
-  { title: "Gospel Fest RCA", location: "Berberati", date: "2026", genre: "Gospel", status: "Bientôt" },
 ];
 
 const HERO_SLIDES = [
@@ -210,6 +198,26 @@ export default function Landing() {
   const [tracks, setTracks] = useState<Track[]>([]);
   const [retroTracks, setRetroTracks] = useState<Track[]>([]);
   const [artistMap, setArtistMap] = useState<Record<string, Artist>>({});
+  const [radios, setRadios] = useState<RadioStationApi[]>([]);
+  const [events, setEvents] = useState<EventItem[]>([]);
+
+  // Radios et événements viennent des mêmes sources que /radio et /concerts.
+  // La page d'accueil affichait jusqu'ici une liste figée dans le code : deux
+  // des quatre radios ne menaient nulle part, et les « prochains événements »
+  // restaient inchangés pendant que le back-office en validait de vrais.
+  // L'API publique ne renvoie que les événements approuvés et à venir, triés
+  // par date — il n'y a donc rien à filtrer ici.
+  useEffect(() => {
+    getRadios()
+      .then(r => setRadios(r.data.filter(s => s.active)
+                                 .sort((a, b) => a.sortOrder - b.sortOrder)
+                                 .slice(0, 4)))
+      .catch(() => setRadios([]));
+    getEvents()
+      .then(r => setEvents(r.data.slice(0, 3)))
+      .catch(() => setEvents([]));
+  }, []);
+
 
   useEffect(() => {
     fetch(`${BASE}/api/v1/stats`).then(r => r.json()).then(d => setStats(d)).catch(() => {});
@@ -521,10 +529,11 @@ export default function Landing() {
         )}
 
         {/* ── RADIOS EN DIRECT ── */}
+        {radios.length > 0 && (
         <div style={{ marginBottom: "64px" }}>
           <SectionHeader title="Écouter en direct" linkTo="/radio" linkLabel="Toutes les radios" />
           <ScrollRow className="hide-scrollbar">
-            {FEATURED_RADIOS.map((radio, i) => {
+            {radios.map(radio => {
               const card = (
                 <div style={{
                   padding: "20px", borderRadius: "14px",
@@ -538,7 +547,7 @@ export default function Landing() {
                     <div style={{ width: "44px", height: "44px", borderRadius: "12px", background: `${radio.color}18`, display: "flex", alignItems: "center", justifyContent: "center" }}>
                       <Radio size={20} style={{ color: radio.color }} />
                     </div>
-                    {radio.live && (
+                    {radio.active && (
                       <div style={{ display: "flex", alignItems: "center", gap: "5px", padding: "3px 8px", borderRadius: "99px", background: "rgba(76,175,130,0.12)" }}>
                         <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#4caf82", animation: "pulse 1.5s infinite" }} />
                         <span style={{ fontSize: "10px", fontWeight: 700, color: "#4caf82" }}>EN DIRECT</span>
@@ -546,24 +555,30 @@ export default function Landing() {
                     )}
                   </div>
                   <p style={{ fontSize: "15px", fontWeight: 700, color: "var(--text)", marginBottom: "2px" }}>{radio.name}</p>
-                  <p style={{ fontSize: "12px", color: radio.color, fontWeight: 600, marginBottom: "6px" }}>{radio.freq}</p>
-                  <p style={{ fontSize: "12px", color: "var(--muted)", lineHeight: 1.5 }}>{radio.desc}</p>
+                  {radio.freq && (
+                    <p style={{ fontSize: "12px", color: radio.color, fontWeight: 600, marginBottom: "6px" }}>{radio.freq}</p>
+                  )}
+                  {radio.description && (
+                    <p style={{ fontSize: "12px", color: "var(--muted)", lineHeight: 1.5 }}>{radio.description}</p>
+                  )}
                 </div>
               );
               const wrapperStyle = { textDecoration: "none", flexShrink: 0, width: "260px" } as const;
               return (
-                <Link key={i} to={radio.path} style={wrapperStyle}>{card}</Link>
+                <Link key={radio.id} to={`/radio/${radio.id}`} style={wrapperStyle}>{card}</Link>
               );
             })}
           </ScrollRow>
         </div>
+        )}
 
         {/* ── PROCHAINS CONCERTS ── */}
+        {events.length > 0 && (
         <div style={{ marginBottom: "64px" }}>
           <SectionHeader title="Prochains événements" linkTo="/concerts" linkLabel="Tout afficher" />
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "14px" }}>
-            {UPCOMING_CONCERTS.map((concert, i) => (
-              <Link key={i} to="/concerts" style={{ textDecoration: "none" }}>
+            {events.map(event => (
+              <Link key={event.id} to={`/concerts/${event.id}`} style={{ textDecoration: "none" }}>
                 <div style={{
                   padding: "24px 20px", borderRadius: "14px",
                   background: "rgba(240,235,227,0.03)", border: "1px solid rgba(240,235,227,0.06)",
@@ -574,23 +589,26 @@ export default function Landing() {
                 >
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
                     <span style={{ fontSize: "10px", padding: "3px 10px", borderRadius: "99px", background: "rgba(232,96,26,0.1)", color: "var(--amber)", fontWeight: 700, letterSpacing: "0.05em" }}>
-                      {concert.status}
+                      {event.free ? "GRATUIT" : event.ticketPrice ? `${event.ticketPrice.toLocaleString("fr-FR")} FCFA` : "PAYANT"}
                     </span>
-                    <span style={{ fontSize: "10px", padding: "3px 10px", borderRadius: "99px", background: "rgba(240,235,227,0.06)", color: "var(--muted)", fontWeight: 600 }}>
-                      {concert.genre}
-                    </span>
+                    {event.genre && (
+                      <span style={{ fontSize: "10px", padding: "3px 10px", borderRadius: "99px", background: "rgba(240,235,227,0.06)", color: "var(--muted)", fontWeight: 600 }}>
+                        {event.genre}
+                      </span>
+                    )}
                   </div>
-                  <p style={{ fontSize: "16px", fontWeight: 700, color: "var(--text)", marginBottom: "8px" }}>{concert.title}</p>
+                  <p style={{ fontSize: "16px", fontWeight: 700, color: "var(--text)", marginBottom: "8px" }}>{event.title}</p>
                   <div style={{ display: "flex", alignItems: "center", gap: "12px", fontSize: "12px", color: "var(--muted)" }}>
-                    <span>{concert.location}</span>
+                    <span>{event.city}</span>
                     <span style={{ color: "rgba(240,235,227,0.15)" }}>•</span>
-                    <span>{concert.date}</span>
+                    <span>{fmtEventDate(event.eventDate, { day: "numeric", month: "long" })}</span>
                   </div>
                 </div>
               </Link>
             ))}
           </div>
         </div>
+        )}
       </div>
 
       {/* ── STATS ── */}
