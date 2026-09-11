@@ -1,20 +1,25 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Lock, Eye, EyeOff, ArrowLeft, ArrowRight, CheckCircle, AlertCircle, ShieldCheck } from "lucide-react";
 import EbiaLogo from "../components/EbiaLogo";
 import { resetPassword } from "../lib/api";
 
-function normalizeError(e: unknown): string {
+type TFn = (key: string) => string;
+
+// Hors composant : le hook ne peut pas y être appelé, `t` est donc passé.
+function normalizeError(e: unknown, t: TFn): string {
   const msg = e instanceof Error ? e.message : String(e);
-  if (/expired|expir/i.test(msg)) return "Ce lien a expiré. Demandez un nouveau lien de réinitialisation.";
-  if (/invalid|invalide/i.test(msg)) return "Ce lien est invalide. Vérifiez l'URL dans votre email.";
-  if (/network|fetch|connexion|ERR_/i.test(msg)) return "Impossible de joindre le serveur. Vérifiez votre connexion internet.";
-  if (/timeout|trop de temps/i.test(msg)) return "Le serveur met trop de temps à répondre. Réessayez.";
-  return msg || "Une erreur est survenue. Réessayez.";
+  if (/expired|expir/i.test(msg)) return t("resetPassword.errorExpired");
+  if (/invalid|invalide/i.test(msg)) return t("resetPassword.errorInvalid");
+  if (/network|fetch|connexion|ERR_/i.test(msg)) return t("resetPassword.errorNetwork");
+  if (/timeout|trop de temps/i.test(msg)) return t("resetPassword.errorTimeout");
+  return msg || t("resetPassword.errorGeneric");
 }
 
 export default function ResetPassword() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token");
 
@@ -31,20 +36,21 @@ export default function ResetPassword() {
   const canSubmit = pwdValid && pwdMatch && !!token;
 
   useEffect(() => {
-    if (!token) setError("Aucun token de réinitialisation trouvé dans l'URL.");
+    if (!token) setError(t("resetPassword.errorToken"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   const handleSubmit = async () => {
-    if (!token) { setError("Token manquant."); return; }
-    if (!pwdValid) { setError("Le mot de passe doit faire au moins 8 caractères."); return; }
-    if (!pwdMatch) { setError("Les mots de passe ne correspondent pas."); return; }
+    if (!token) { setError(t("resetPassword.errorTokenMissing")); return; }
+    if (!pwdValid) { setError(t("resetPassword.errorPasswordTooShort")); return; }
+    if (!pwdMatch) { setError(t("resetPassword.errorPasswordMismatch")); return; }
 
     setLoading(true); setError("");
     try {
       await resetPassword(token, password);
       setSuccess(true);
     } catch (e: unknown) {
-      setError(normalizeError(e));
+      setError(normalizeError(e, t));
     } finally {
       setLoading(false);
     }
@@ -75,9 +81,9 @@ export default function ResetPassword() {
             }}>
               <CheckCircle size={32} style={{ color: "#22c55e" }} />
             </div>
-            <h2 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text)", marginBottom: "10px" }}>Mot de passe réinitialisé</h2>
+            <h2 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text)", marginBottom: "10px" }}>{t("resetPassword.successTitle")}</h2>
             <p style={{ color: "var(--muted)", fontSize: "13px", lineHeight: 1.6, maxWidth: "300px", margin: "0 auto" }}>
-              Votre mot de passe a été modifié avec succès. Vous pouvez maintenant vous connecter avec votre nouveau mot de passe.
+              {t("resetPassword.successDescription")}
             </p>
           </div>
 
@@ -93,7 +99,7 @@ export default function ResetPassword() {
             onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 8px 32px rgba(232,96,26,0.5)"; e.currentTarget.style.transform = "translateY(-1px)"; }}
             onMouseLeave={e => { e.currentTarget.style.boxShadow = "0 4px 16px rgba(232,96,26,0.3)"; e.currentTarget.style.transform = "translateY(0)"; }}
           >
-            Se connecter <ArrowRight size={14} />
+            {t("resetPassword.goToLogin")} <ArrowRight size={14} />
           </button>
         </div>
       </div>
@@ -115,9 +121,9 @@ export default function ResetPassword() {
           }}>
             <AlertCircle size={32} style={{ color: "#f08080" }} />
           </div>
-          <h2 style={{ fontSize: "22px", fontWeight: 800, color: "var(--text)", marginBottom: "10px" }}>Lien invalide</h2>
+          <h2 style={{ fontSize: "22px", fontWeight: 800, color: "var(--text)", marginBottom: "10px" }}>{t("resetPassword.invalidTitle")}</h2>
           <p style={{ color: "var(--muted)", fontSize: "13px", lineHeight: 1.6, marginBottom: "28px" }}>
-            Ce lien de réinitialisation est invalide ou a expiré. Vérifiez l'URL dans votre email ou demandez un nouveau lien.
+            {t("resetPassword.invalidDescription")}
           </p>
           <button onClick={() => navigate("/forgot-password")} style={{
             width: "100%", padding: "15px 24px", borderRadius: "12px", border: "none",
@@ -126,7 +132,7 @@ export default function ResetPassword() {
             letterSpacing: "0.08em", cursor: "pointer",
             boxShadow: "0 4px 16px rgba(232,96,26,0.3)",
             display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
-          }}>Demander un nouveau lien</button>
+          }}>{t("resetPassword.requestNewLink")}</button>
         </div>
       </div>
     </div>
@@ -149,7 +155,7 @@ export default function ResetPassword() {
           }}
             onMouseEnter={e => (e.currentTarget.style.color = "var(--text)")}
             onMouseLeave={e => (e.currentTarget.style.color = "var(--muted)")}
-          ><ArrowLeft size={14} /> Retour à la connexion</button>
+          ><ArrowLeft size={14} /> {t("resetPassword.back")}</button>
 
           <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "36px" }}>
             <div style={{ width: "42px", height: "42px", borderRadius: "12px", background: "linear-gradient(135deg, var(--amber), #d97706)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 16px rgba(232,96,26,0.3)" }}>
@@ -159,9 +165,9 @@ export default function ResetPassword() {
           </div>
 
           <div style={{ marginBottom: "28px" }}>
-            <h2 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text)", marginBottom: "6px", lineHeight: 1.2 }}>Nouveau mot de passe</h2>
+            <h2 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text)", marginBottom: "6px", lineHeight: 1.2 }}>{t("resetPassword.title")}</h2>
             <p style={{ color: "var(--muted)", fontSize: "13px", lineHeight: 1.5 }}>
-              Choisissez un nouveau mot de passe sécurisé pour votre compte.
+              {t("resetPassword.description")}
             </p>
           </div>
 
@@ -179,7 +185,7 @@ export default function ResetPassword() {
             {/* New password */}
             <div>
               <label style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" as const, color: "var(--muted)", display: "block", marginBottom: "7px" }}>
-                Nouveau mot de passe
+                {t("resetPassword.newPassword")}
               </label>
               <div style={{ position: "relative" }}>
                 <div style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "var(--muted)", pointerEvents: "none", display: "flex", alignItems: "center" }}>
@@ -187,7 +193,7 @@ export default function ResetPassword() {
                 </div>
                 <input
                   type={showPwd ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)}
-                  placeholder="Minimum 8 caractères"
+                  placeholder={t("resetPassword.newPasswordPlaceholder")}
                   autoFocus
                   style={{
                     width: "100%", padding: "14px 48px 14px 42px", borderRadius: "12px",
@@ -209,7 +215,7 @@ export default function ResetPassword() {
               </div>
               {password && !pwdValid && (
                 <p style={{ fontSize: "11px", color: "#f08080", marginTop: "6px", paddingLeft: "4px" }}>
-                  Minimum 8 caractères requis
+                  {t("resetPassword.passwordMinHint")}
                 </p>
               )}
             </div>
@@ -217,7 +223,7 @@ export default function ResetPassword() {
             {/* Confirm password */}
             <div>
               <label style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" as const, color: "var(--muted)", display: "block", marginBottom: "7px" }}>
-                Confirmer le mot de passe
+                {t("resetPassword.confirmPassword")}
               </label>
               <div style={{ position: "relative" }}>
                 <div style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "var(--muted)", pointerEvents: "none", display: "flex", alignItems: "center" }}>
@@ -226,7 +232,7 @@ export default function ResetPassword() {
                 <input
                   type={showConfirmPwd ? "text" : "password"} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)}
                   onKeyDown={e => e.key === "Enter" && handleSubmit()}
-                  placeholder="Retapez votre mot de passe"
+                  placeholder={t("resetPassword.confirmPasswordPlaceholder")}
                   style={{
                     width: "100%", padding: "14px 48px 14px 42px", borderRadius: "12px",
                     border: `1.5px solid ${confirmPassword && !pwdMatch ? "rgba(220,50,50,0.4)" : "rgba(240,235,227,0.08)"}`,
@@ -262,7 +268,9 @@ export default function ResetPassword() {
               }}>
                 <ShieldCheck size={14} style={{ color: pwdValid ? "#22c55e" : "#f08080", flexShrink: 0 }} />
                 <p style={{ fontSize: "11px", color: "var(--muted)", lineHeight: 1.5 }}>
-                  {pwdValid ? "Mot de passe suffisamment sécurisé" : "Encore " + (8 - password.length) + " caractère" + (8 - password.length > 1 ? "s" : "") + " minimum"}
+                  {pwdValid
+                    ? t("resetPassword.passwordStrong")
+                    : t("resetPassword.passwordWeakHint", { count: 8 - password.length })}
                 </p>
               </div>
             )}
@@ -285,11 +293,11 @@ export default function ResetPassword() {
               {loading ? (
                 <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                   <span style={{ width: "16px", height: "16px", border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.6s linear infinite" }} />
-                  Réinitialisation...
+                  {t("resetPassword.resetting")}
                 </span>
               ) : (
                 <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <ShieldCheck size={14} /> Réinitialiser le mot de passe
+                  <ShieldCheck size={14} /> {t("resetPassword.resetBtn")}
                 </span>
               )}
               <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>

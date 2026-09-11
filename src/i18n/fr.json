@@ -344,7 +344,11 @@
     "backToLogin": "Retour à la connexion",
     "resendEmail": "Renvoyer un autre email",
     "rememberPassword": "Vous vous souvenez de votre mot de passe ?",
-    "errorFill": "Veuillez renseigner votre adresse email."
+    "errorFill": "Veuillez renseigner votre adresse email.",
+    "signIn": "Se connecter",
+    "errorNetwork": "Impossible de joindre le serveur. Vérifiez votre connexion internet.",
+    "errorTimeout": "Le serveur met trop de temps à répondre. Réessayez.",
+    "errorGeneric": "Une erreur est survenue. Réessayez."
   },
   "resetPassword": {
     "back": "Retour à la connexion",
@@ -368,7 +372,13 @@
     "requestNewLink": "Demander un nouveau lien",
     "errorToken": "Aucun token de réinitialisation trouvé dans l'URL.",
     "errorExpired": "Ce lien a expiré. Demandez un nouveau lien de réinitialisation.",
-    "errorInvalid": "Ce lien est invalide. Vérifiez l'URL dans votre email."
+    "errorInvalid": "Ce lien est invalide. Vérifiez l'URL dans votre email.",
+    "errorTokenMissing": "Token manquant.",
+    "errorPasswordTooShort": "Le mot de passe doit faire au moins 8 caractères.",
+    "errorPasswordMismatch": "Les mots de passe ne correspondent pas.",
+    "errorNetwork": "Impossible de joindre le serveur. Vérifiez votre connexion internet.",
+    "errorTimeout": "Le serveur met trop de temps à répondre. Réessayez.",
+    "errorGeneric": "Une erreur est survenue. Réessayez."
   },
   "listenerDashboard": {
     "welcome": "Bienvenue, {{name}}",

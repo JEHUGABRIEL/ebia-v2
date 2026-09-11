@@ -344,7 +344,11 @@
     "backToLogin": "Back to login",
     "resendEmail": "Send another email",
     "rememberPassword": "Remember your password?",
-    "errorFill": "Please enter your email address."
+    "errorFill": "Please enter your email address.",
+    "signIn": "Sign In",
+    "errorNetwork": "Can't reach the server. Check your internet connection.",
+    "errorTimeout": "The server is taking too long to respond. Please try again.",
+    "errorGeneric": "Something went wrong. Please try again."
   },
   "resetPassword": {
     "back": "Back to login",
@@ -368,7 +372,13 @@
     "requestNewLink": "Request New Link",
     "errorToken": "No reset token found in the URL.",
     "errorExpired": "This link has expired. Request a new reset link.",
-    "errorInvalid": "This link is invalid. Check the URL in your email."
+    "errorInvalid": "This link is invalid. Check the URL in your email.",
+    "errorTokenMissing": "Missing token.",
+    "errorPasswordTooShort": "Password must be at least 8 characters.",
+    "errorPasswordMismatch": "Passwords do not match.",
+    "errorNetwork": "Can't reach the server. Check your internet connection.",
+    "errorTimeout": "The server is taking too long to respond. Please try again.",
+    "errorGeneric": "Something went wrong. Please try again."
   },
   "listenerDashboard": {
     "welcome": "Welcome, {{name}}",

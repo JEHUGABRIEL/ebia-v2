@@ -1,33 +1,38 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation, Trans } from "react-i18next";
 import { Mail, ArrowLeft, ArrowRight, CheckCircle, AlertCircle, Send } from "lucide-react";
 import EbiaLogo from "../components/EbiaLogo";
 import { forgotPassword } from "../lib/api";
 
-function normalizeError(e: unknown): string {
+type TFn = (key: string) => string;
+
+// Hors composant : le hook ne peut pas y être appelé, `t` est donc passé.
+function normalizeError(e: unknown, t: TFn): string {
   const msg = e instanceof Error ? e.message : String(e);
   if (/network|fetch|connexion|ERR_/i.test(msg))
-    return "Impossible de joindre le serveur. Vérifiez votre connexion internet.";
+    return t("forgotPassword.errorNetwork");
   if (/timeout|trop de temps/i.test(msg))
-    return "Le serveur met trop de temps à répondre. Réessayez.";
-  return msg || "Une erreur est survenue. Réessayez.";
+    return t("forgotPassword.errorTimeout");
+  return msg || t("forgotPassword.errorGeneric");
 }
 
 export default function ForgotPassword() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
 
   const handleSubmit = async () => {
-    if (!email) { setError("Veuillez renseigner votre adresse email."); return; }
+    if (!email) { setError(t("forgotPassword.errorFill")); return; }
     setLoading(true); setError("");
     try {
       await forgotPassword(email);
       setSent(true);
     } catch (e: unknown) {
-      setError(normalizeError(e));
+      setError(normalizeError(e, t));
     } finally {
       setLoading(false);
     }
@@ -58,9 +63,13 @@ export default function ForgotPassword() {
             }}>
               <CheckCircle size={32} style={{ color: "#22c55e" }} />
             </div>
-            <h2 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text)", marginBottom: "10px" }}>Email envoyé</h2>
+            <h2 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text)", marginBottom: "10px" }}>{t("forgotPassword.sentTitle")}</h2>
             <p style={{ color: "var(--muted)", fontSize: "13px", lineHeight: 1.6, maxWidth: "300px", margin: "0 auto" }}>
-              Si un compte existe avec l'adresse <strong style={{ color: "var(--text)" }}>{email}</strong>, vous recevrez un lien pour réinitialiser votre mot de passe.
+              <Trans
+                i18nKey="forgotPassword.sentDescription"
+                values={{ email }}
+                components={{ strong: <strong style={{ color: "var(--text)" }} /> }}
+              />
             </p>
           </div>
 
@@ -69,7 +78,7 @@ export default function ForgotPassword() {
             background: "rgba(240,235,227,0.04)", border: "1px solid rgba(240,235,227,0.08)",
           }}>
             <p style={{ fontSize: "12px", color: "var(--muted)", lineHeight: 1.6 }}>
-              <strong style={{ color: "var(--text)" }}>Astuce :</strong> Vérifiez aussi vos courriers indésirables (spam). Le lien expire dans 24 heures.
+              <strong style={{ color: "var(--text)" }}>{t("forgotPassword.sentTip")}</strong> {t("forgotPassword.sentTipText")}
             </p>
           </div>
 
@@ -86,7 +95,7 @@ export default function ForgotPassword() {
               onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 8px 32px rgba(232,96,26,0.5)"; e.currentTarget.style.transform = "translateY(-1px)"; }}
               onMouseLeave={e => { e.currentTarget.style.boxShadow = "0 4px 16px rgba(232,96,26,0.3)"; e.currentTarget.style.transform = "translateY(0)"; }}
             >
-              Retour à la connexion <ArrowRight size={14} />
+              {t("forgotPassword.backToLogin")} <ArrowRight size={14} />
             </button>
             <button onClick={() => { setSent(false); setEmail(""); }} style={{
               width: "100%", padding: "14px", borderRadius: "12px",
@@ -96,7 +105,7 @@ export default function ForgotPassword() {
             }}
               onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(240,235,227,0.2)"; e.currentTarget.style.color = "var(--text)"; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(240,235,227,0.08)"; e.currentTarget.style.color = "var(--muted)"; }}
-            >Renvoyer un autre email</button>
+            >{t("forgotPassword.resendEmail")}</button>
           </div>
         </div>
       </div>
@@ -120,7 +129,7 @@ export default function ForgotPassword() {
           }}
             onMouseEnter={e => (e.currentTarget.style.color = "var(--text)")}
             onMouseLeave={e => (e.currentTarget.style.color = "var(--muted)")}
-          ><ArrowLeft size={14} /> Retour à la connexion</button>
+          ><ArrowLeft size={14} /> {t("forgotPassword.back")}</button>
 
           <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "36px" }}>
             <div style={{ width: "42px", height: "42px", borderRadius: "12px", background: "linear-gradient(135deg, var(--amber), #d97706)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 16px rgba(232,96,26,0.3)" }}>
@@ -130,9 +139,9 @@ export default function ForgotPassword() {
           </div>
 
           <div style={{ marginBottom: "28px" }}>
-            <h2 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text)", marginBottom: "6px", lineHeight: 1.2 }}>Mot de passe oublié</h2>
+            <h2 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text)", marginBottom: "6px", lineHeight: 1.2 }}>{t("forgotPassword.title")}</h2>
             <p style={{ color: "var(--muted)", fontSize: "13px", lineHeight: 1.5 }}>
-              Entrez votre adresse email et nous vous enverrons un lien pour réinitialiser votre mot de passe.
+              {t("forgotPassword.description")}
             </p>
           </div>
 
@@ -154,7 +163,7 @@ export default function ForgotPassword() {
               <input
                 type="email" value={email} onChange={e => setEmail(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && handleSubmit()}
-                placeholder="Adresse email"
+                placeholder={t("forgotPassword.emailPlaceholder")}
                 autoFocus
                 style={{
                   width: "100%", padding: "14px 16px 14px 42px", borderRadius: "12px",
@@ -184,11 +193,11 @@ export default function ForgotPassword() {
               {loading ? (
                 <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                   <span style={{ width: "16px", height: "16px", border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.6s linear infinite" }} />
-                  Envoi en cours...
+                  {t("forgotPassword.sending")}
                 </span>
               ) : (
                 <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <Send size={14} /> Envoyer le lien
+                  <Send size={14} /> {t("forgotPassword.sendLink")}
                 </span>
               )}
               <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
@@ -197,12 +206,12 @@ export default function ForgotPassword() {
 
           <div style={{ textAlign: "center", marginTop: "24px" }}>
             <p style={{ color: "var(--muted)", fontSize: "13px" }}>
-              Vous vous souvenez de votre mot de passe ?{" "}
+              {t("forgotPassword.rememberPassword")}{" "}
               <button onClick={() => navigate("/login")}
                 style={{ background: "none", border: "none", cursor: "pointer", color: "var(--amber)", fontWeight: 700, fontSize: "13px", transition: "opacity 0.15s" }}
                 onMouseEnter={e => (e.currentTarget.style.opacity = "0.7")}
                 onMouseLeave={e => (e.currentTarget.style.opacity = "1")}
-              >Se connecter</button>
+              >{t("forgotPassword.signIn")}</button>
             </p>
           </div>
         </div>
