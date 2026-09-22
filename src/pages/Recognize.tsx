@@ -2,6 +2,8 @@ import { useState, useRef, useEffect } from "react";
 import { Mic, Search, Music2, ArrowRight, RotateCcw, Loader, XCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { BASE } from "../lib/api";
+import { describeMicFailure, logMicDiagnostics, micPreflight } from "../lib/microphone";
+import MicDiagnosticPanel from "../components/MicDiagnosticPanel";
 import { useTranslation } from "react-i18next";
 
 type RecognizeState = "idle" | "recording" | "processing" | "found" | "not_found" | "error";
@@ -13,6 +15,19 @@ type TrackResult = {
 
 const RECORD_SECONDS = 10;
 
+// Délai maximum avant d'abandonner une analyse et de rendre la main à l'utilisateur.
+//
+// Compromis : trop court, il annule une analyse que le serveur allait rendre —
+// et un « non trouvé » légitime devient un échec côté client, ce qui est pire que
+// d'attendre. Trop long, un fetch qui ne répond jamais garde le spinner à l'écran.
+//
+// Repère mesuré : à index chaud un match revient en ~0,25 s ; le pire cas
+// LÉGITIME est le balayage complet « non trouvé » à index froid, ~30 à 47 s
+// (disque mécanique). 60 s couvre ce pire cas avec ~13 s de marge tout en restant
+// sous le plafond serveur (45 s par tentative ×2 = ~90 s). En dessous de ~50 s on
+// couperait de vraies analyses « non trouvé ».
+const RECOGNIZE_TIMEOUT_MS = 60_000;
+
 export default function Recognize() {
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -22,6 +37,10 @@ export default function Recognize() {
   const [confidence, setConfidence] = useState(0);
   const [errorMsg, setErrorMsg] = useState("");
   const [audioLevel, setAudioLevel] = useState(0);
+  // Panneau de diagnostic : ouvert d'office quand le micro échoue, accessible
+  // à la demande sinon. Le message d'erreur seul ne permet pas de distinguer
+  // « pas de micro » de « permission refusée » ou de « page non HTTPS ».
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
 
   const mediaRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -51,9 +70,19 @@ export default function Recognize() {
     chunksRef.current = [];
 
     try {
-      if (!navigator.mediaDevices?.getUserMedia) {
-        throw new Error("no_support");
+      // Hors contexte sécurisé (http:// sur un hôte non-local, par exemple le
+      // serveur de dev ouvert via l'IP du réseau local) le navigateur masque
+      // `navigator.mediaDevices` : l'API n'existe pas. Sans ce test on annoncerait
+      // « appareil non supporté » alors que c'est la page qui bloque le micro.
+      const preflight = micPreflight();
+      if (preflight) {
+        console.warn("[reconnaissance] micro indisponible :", preflight.detail);
+        setState("error");
+        setErrorMsg(t(preflight.i18nKey));
+        setShowDiagnostics(true);
+        return;
       }
+      void logMicDiagnostics("reconnaissance");
 
       // Le navigateur applique par défaut echoCancellation/noiseSuppression/autoGainControl,
       // des filtres DSP pensés pour la voix qui déforment le spectre et cassent le matching
@@ -66,6 +95,13 @@ export default function Recognize() {
         },
         video: false,
       });
+
+      // Un flux sans piste audio (micro présent dans le système mais muet) doit
+      // être traité comme « aucun périphérique » : sinon on enregistre 10 s de
+      // silence et on laisse croire que le titre manque au catalogue.
+      if (stream.getAudioTracks().length === 0) {
+        throw new DOMException("Aucune piste audio dans le flux", "NotFoundError");
+      }
 
       // Analyser le niveau audio pour les visualisations
       const ctx = new AudioContext();
@@ -130,15 +166,15 @@ export default function Recognize() {
       }, 1000);
 
     } catch (e: unknown) {
+      // Chaque cause a son remède : page non sécurisée, navigateur incompatible,
+      // permission refusée, aucun périphérique ou micro déjà occupé. L'ancien
+      // message unique « votre appareil ne supporte pas » envoyait l'utilisateur
+      // chercher au mauvais endroit.
+      const failure = describeMicFailure(e);
+      console.warn("[reconnaissance] échec de l'accès au micro :", failure.detail);
       setState("error");
-      const msg = e instanceof Error ? e.message : "";
-      if (msg === "no_support") {
-        setErrorMsg("Votre appareil ne supporte pas l'enregistrement audio.");
-      } else if (msg.includes("NotAllowedError") || msg.includes("Permission") || msg.includes("denied")) {
-        setErrorMsg("Accès au microphone refusé. Autorisez-le dans les paramètres de l'application.");
-      } else {
-        setErrorMsg("Impossible d'accéder au microphone. Vérifiez les permissions.");
-      }
+      setErrorMsg(t(failure.i18nKey));
+      setShowDiagnostics(true);
     }
   };
 
@@ -149,9 +185,12 @@ export default function Recognize() {
     const fd = new FormData();
     fd.append("file", blob, "recognition.webm");
 
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), RECOGNIZE_TIMEOUT_MS);
+
     try {
       const res = await fetch(`${BASE}/api/v1/recognize`, {
-        method: "POST", body: fd,
+        method: "POST", body: fd, signal: controller.signal,
       });
       const data = await res.json() as { found: boolean; recognized?: boolean; track?: TrackResult; confidence?: number; message?: string; error?: string };
 
@@ -193,9 +232,19 @@ export default function Recognize() {
         setErrorMsg(data.message ?? "Titre non reconnu dans notre base.");
         setState("not_found");
       }
-    } catch {
-      setErrorMsg("Impossible de joindre le serveur de reconnaissance. Vérifiez votre connexion.");
+    } catch (e) {
+      // Distinguer l'abandon volontaire (délai dépassé) d'une vraie panne réseau :
+      // les deux arrivaient avant en « Impossible de joindre le serveur », ce qui
+      // envoyait l'utilisateur vérifier sa connexion alors que le serveur était
+      // simplement trop lent.
+      if (e instanceof Error && e.name === "AbortError") {
+        setErrorMsg("Le serveur met trop de temps à répondre. Réessayez.");
+      } else {
+        setErrorMsg("Impossible de joindre le serveur de reconnaissance. Vérifiez votre connexion.");
+      }
       setState("error");
+    } finally {
+      clearTimeout(timer);
     }
   };
 
@@ -205,6 +254,7 @@ export default function Recognize() {
     setConfidence(0);
     setErrorMsg("");
     setCountdown(RECORD_SECONDS);
+    setShowDiagnostics(false);
   };
 
   const progress = ((RECORD_SECONDS - countdown) / RECORD_SECONDS) * 100;
@@ -367,6 +417,20 @@ export default function Recognize() {
           </div>
         )}
       </div>
+
+      {/* Diagnostic micro — visible quand ça bloque, repliable autrement */}
+      {(state === "error" || state === "idle") && (
+        <div style={{ width: "100%", maxWidth: "440px" }}>
+          {showDiagnostics
+            ? <MicDiagnosticPanel onClose={() => setShowDiagnostics(false)} />
+            : <button onClick={() => setShowDiagnostics(true)} style={{
+                marginTop: "18px", background: "transparent", border: "none", cursor: "pointer",
+                color: "var(--muted)", fontSize: "11px", textDecoration: "underline", padding: "4px",
+              }}>
+                {t("mic.panel.open")}
+              </button>}
+        </div>
+      )}
 
       {/* Info */}
       {state === "idle" && (
